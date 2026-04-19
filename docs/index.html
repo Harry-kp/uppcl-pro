@@ -10,6 +10,7 @@
   <meta property="og:description" content="Self-hosted analytics dashboard for UPPCL SMART prepaid smart meters."/>
   <meta property="og:type" content="website"/>
   <meta property="og:url" content="https://harry-kp.github.io/uppcl-pro/"/>
+  <meta property="og:image" content="https://harry-kp.github.io/uppcl-pro/screenshots/home-dark.png"/>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%234da8ff'%3E%3Cpath d='M13 2L3 14h7l-1 8 10-12h-7l1-8z'/%3E%3C/svg%3E"/>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -46,10 +47,9 @@
       border-bottom: 1px solid var(--border);
       padding: 0 24px;
       height: 48px;
-      display: flex; align-items: center; gap: 0; justify-content: space-between;
+      display: flex; align-items: center; justify-content: space-between;
     }
-    .nav-brand { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 14px; color: var(--text); }
-    .nav-brand svg { flex-shrink: 0; }
+    .nav-brand { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 14px; color: var(--text); text-decoration: none !important; }
     .nav-links { display: flex; align-items: center; gap: 4px; }
     .nav-links a {
       padding: 6px 12px; border-radius: 6px;
@@ -57,20 +57,14 @@
       transition: background .15s, color .15s;
     }
     .nav-links a:hover { background: var(--surface-hi); color: var(--text); text-decoration: none; }
-    .nav-links .btn-api {
-      background: var(--primary-dim); color: var(--primary);
-      font-weight: 600;
-    }
+    .nav-links .btn-api { background: var(--primary-dim); color: var(--primary); font-weight: 600; }
     .nav-links .btn-api:hover { background: #1f5a9e; }
 
     /* ── Layout ── */
-    .container { max-width: 960px; margin: 0 auto; padding: 0 24px; }
+    .container { max-width: 1000px; margin: 0 auto; padding: 0 24px; }
 
     /* ── Hero ── */
-    .hero {
-      padding: 80px 0 64px;
-      text-align: center;
-    }
+    .hero { padding: 80px 0 56px; text-align: center; }
     .hero-badge {
       display: inline-flex; align-items: center; gap: 6px;
       background: var(--surface-hi); border: 1px solid var(--border);
@@ -80,57 +74,58 @@
     }
     .hero h1 {
       font-size: clamp(32px, 6vw, 52px); font-weight: 700;
-      letter-spacing: -.02em; line-height: 1.1;
-      margin-bottom: 16px;
+      letter-spacing: -.02em; line-height: 1.1; margin-bottom: 16px;
     }
     .hero h1 span { color: var(--primary); }
-    .hero p {
-      font-size: 17px; color: var(--text-dim);
-      max-width: 560px; margin: 0 auto 32px;
-    }
+    .hero p { font-size: 17px; color: var(--text-dim); max-width: 560px; margin: 0 auto 32px; }
     .hero-ctas { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+
     .btn {
       display: inline-flex; align-items: center; gap: 8px;
       padding: 10px 20px; border-radius: 8px;
-      font-size: 14px; font-weight: 600; cursor: pointer;
+      font-size: 14px; font-weight: 600;
       transition: filter .15s, background .15s;
       text-decoration: none !important;
     }
     .btn-primary { background: var(--primary); color: #000; }
     .btn-primary:hover { filter: brightness(1.1); }
-    .btn-secondary {
-      background: var(--surface-hi); color: var(--text);
-      border: 1px solid var(--border);
-    }
+    .btn-secondary { background: var(--surface-hi); color: var(--text); border: 1px solid var(--border); }
     .btn-secondary:hover { background: #252d3d; }
 
-    /* ── Screenshot ── */
-    .screenshot-wrap {
-      margin: 48px auto 0;
-      max-width: 860px;
+    /* ── Hero screenshot ── */
+    .hero-shot {
+      margin: 48px auto 0; max-width: 900px;
       border-radius: 12px; overflow: hidden;
       border: 1px solid var(--border);
-      box-shadow: 0 24px 80px rgba(0,0,0,.6);
+      box-shadow: 0 32px 96px rgba(0,0,0,.7);
     }
-    .screenshot-wrap img { width: 100%; display: block; }
+    .hero-shot img { width: 100%; display: block; }
 
-    /* ── Section ── */
+    /* ── Sections ── */
     section { padding: 64px 0; border-top: 1px solid var(--border); }
-    section h2 {
-      font-size: 24px; font-weight: 700; letter-spacing: -.01em;
-      margin-bottom: 8px;
-    }
+    section h2 { font-size: 24px; font-weight: 700; letter-spacing: -.01em; margin-bottom: 8px; }
     section .sub { color: var(--text-dim); margin-bottom: 40px; font-size: 14px; }
 
-    /* ── Features grid ── */
-    .features { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
-    .feature {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: 10px; padding: 20px;
-    }
+    /* ── Features ── */
+    .features { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+    .feature { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 20px; }
     .feature-icon { font-size: 20px; margin-bottom: 8px; }
     .feature h3 { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
     .feature p { font-size: 13px; color: var(--text-dim); line-height: 1.5; }
+
+    /* ── Screenshot gallery ── */
+    .gallery { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+    @media (max-width: 640px) { .gallery { grid-template-columns: 1fr; } }
+    .gallery-item { position: relative; }
+    .gallery-item picture,
+    .gallery-item img { width: 100%; display: block; border-radius: 10px; border: 1px solid var(--border); }
+    .gallery-item:first-child { grid-column: 1 / -1; }
+    .gallery-caption {
+      margin-top: 8px;
+      font-size: 12px; font-weight: 600; color: var(--text-dim);
+      letter-spacing: .04em;
+    }
+    .gallery-caption span { font-weight: 400; color: #5a7a9a; }
 
     /* ── Quickstart ── */
     .qs-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
@@ -141,32 +136,28 @@
       font-family: var(--mono); font-size: 13px; line-height: 1.7;
       overflow-x: auto; color: #c9d5e3;
     }
-    pre .comment { color: #4a6080; }
-    pre .cmd { color: var(--primary); }
-    pre .ok { color: var(--success); }
+    pre .c { color: #4a6080; }
+    pre .k { color: var(--primary); }
+    pre .s { color: var(--success); }
 
-    /* ── Compatibility table ── */
+    /* ── Compat table ── */
     table { width: 100%; border-collapse: collapse; font-size: 13px; }
     th { text-align: left; padding: 8px 12px; color: var(--text-dim); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .08em; border-bottom: 1px solid var(--border); }
     td { padding: 10px 12px; border-bottom: 1px solid rgba(255,255,255,.04); }
     tr:last-child td { border-bottom: none; }
 
-    /* ── API card ── */
+    /* ── API cards ── */
     .api-card {
       display: flex; align-items: center; justify-content: space-between;
       gap: 24px; flex-wrap: wrap;
       background: var(--surface); border: 1px solid var(--border);
-      border-radius: 12px; padding: 28px 32px;
+      border-radius: 12px; padding: 24px 28px;
     }
-    .api-card h3 { font-size: 18px; font-weight: 600; margin-bottom: 6px; }
-    .api-card p { font-size: 14px; color: var(--text-dim); max-width: 520px; }
+    .api-card h3 { font-size: 16px; font-weight: 600; margin-bottom: 4px; }
+    .api-card p { font-size: 13px; color: var(--text-dim); max-width: 520px; }
 
     /* ── Footer ── */
-    footer {
-      border-top: 1px solid var(--border);
-      padding: 32px 0; text-align: center;
-      font-size: 12px; color: var(--text-dim);
-    }
+    footer { border-top: 1px solid var(--border); padding: 32px 0; text-align: center; font-size: 12px; color: var(--text-dim); }
     footer a { color: var(--text-dim); }
     footer a:hover { color: var(--text); }
   </style>
@@ -174,15 +165,16 @@
 <body>
 
   <nav>
-    <div class="nav-brand">
+    <a class="nav-brand" href="#">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="#4da8ff"><path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z"/></svg>
       UPPCL Pro
-    </div>
+    </a>
     <div class="nav-links">
       <a href="#features">Features</a>
+      <a href="#screenshots">Screenshots</a>
       <a href="#quickstart">Quickstart</a>
       <a href="https://github.com/Harry-kp/uppcl-pro" target="_blank" rel="noopener">GitHub</a>
-      <a href="./swagger.html" class="btn-api" style="margin-right:4px">Swagger →</a>
+      <a href="./swagger.html" class="btn-api">Swagger →</a>
       <a href="./api.html" class="btn-api">ReDoc →</a>
     </div>
   </nav>
@@ -198,21 +190,17 @@
       <h1>Your prepaid meter,<br><span>finally making sense.</span></h1>
       <p>
         Self-hosted analytics dashboard for <strong>UPPCL SMART</strong> prepaid electricity meters.
-        Reverse-engineered FastAPI proxy + Next.js 16 dashboard. Runs on your laptop or a Raspberry Pi.
+        Reverse-engineered FastAPI proxy + Next.js 16 dashboard. Laptop or Raspberry Pi.
       </p>
       <div class="hero-ctas">
-        <a href="https://github.com/Harry-kp/uppcl-pro" class="btn btn-primary" target="_blank" rel="noopener">
-          View on GitHub
-        </a>
-        <a href="./api.html" class="btn btn-secondary">
-          Browse API Reference
-        </a>
+        <a href="https://github.com/Harry-kp/uppcl-pro" class="btn btn-primary" target="_blank" rel="noopener">View on GitHub</a>
+        <a href="#screenshots" class="btn btn-secondary">See screenshots</a>
+        <a href="./swagger.html" class="btn btn-secondary">Browse API</a>
       </div>
-
-      <div class="screenshot-wrap">
+      <div class="hero-shot">
         <picture>
           <source media="(prefers-color-scheme: light)" srcset="screenshots/home-light.png">
-          <img src="screenshots/home-dark.png" alt="UPPCL Pro dashboard — home view">
+          <img src="screenshots/home-dark.png" alt="UPPCL Pro — home dashboard">
         </picture>
       </div>
     </div>
@@ -220,38 +208,110 @@
     <!-- Features -->
     <section id="features">
       <h2>What it does</h2>
-      <p class="sub">The official UPPCL SMART portal stops at "today's balance." This project goes further.</p>
+      <p class="sub">The official UPPCL SMART portal stops at "today's balance." This goes further.</p>
       <div class="features">
         <div class="feature">
           <div class="feature-icon">⚡</div>
           <h3>Live balance + runway</h3>
-          <p>Auto-fallback chain ensures a trustworthy balance number. Fitness-ring gauge shows days remaining at current burn.</p>
+          <p>Auto-fallback chain ensures a trustworthy number. Fitness-ring gauge shows days remaining at current burn, with ETA date.</p>
         </div>
         <div class="feature">
           <div class="feature-icon">📊</div>
           <h3>Anomaly detection</h3>
-          <p>Flags days where consumption is >1.5σ above the 30-day average, with a panel explaining the math.</p>
+          <p>Flags days where consumption is &gt;1.5σ above the 30-day average, with a side panel explaining the math.</p>
         </div>
         <div class="feature">
           <div class="feature-icon">💰</div>
           <h3>Cost breakdown</h3>
-          <p>Effective ₹/unit trend, stacked charge composition, tariff slab usage, and subsidy YTD — all computed from the raw billing data.</p>
+          <p>Effective ₹/unit trend, stacked charge composition (energy / fixed / duty / FPPA / subsidy), tariff slab usage, subsidy YTD.</p>
         </div>
         <div class="feature">
           <div class="feature-icon">🔋</div>
           <h3>Recharge sweet-spot</h3>
-          <p>Interactive sliders recommend amount × frequency for a target runway, based on your actual historical burn rate.</p>
+          <p>Sliders recommend amount × frequency for a target runway, based on your actual historical burn rate and lifespan analytics.</p>
         </div>
         <div class="feature">
           <div class="feature-icon">🛡️</div>
           <h3>Meter health</h3>
-          <p>Reading reliability (Actual vs Estimated), 365-day data-gap calendar, peak-vs-sanctioned load gauge, power-factor trend.</p>
+          <p>Reading reliability donut, 365-day data-gap calendar, peak-vs-sanctioned load gauge, power-factor trend over 12 months.</p>
         </div>
         <div class="feature">
           <div class="feature-icon">📞</div>
           <h3>1912 complaints</h3>
-          <p>Live status of every complaint from your phone, with full JE/AE/XEN officer chain and one-click "Report outage" panel.</p>
+          <p>Live status of every complaint from your phone, full JE/AE/XEN officer chain, one-tap call, and a "Report outage" panel.</p>
         </div>
+      </div>
+    </section>
+
+    <!-- Screenshots -->
+    <section id="screenshots">
+      <h2>Screenshots</h2>
+      <p class="sub">Dark and light themes — follows your OS preference. All data is real; values are redacted.</p>
+      <div class="gallery">
+
+        <!-- Home — full width -->
+        <div class="gallery-item">
+          <picture>
+            <source media="(prefers-color-scheme: light)" srcset="screenshots/home-light.png">
+            <img src="screenshots/home-dark.png" alt="Home dashboard">
+          </picture>
+          <div class="gallery-caption">Home <span>· Balance · Runway · Anomaly · Recharge recommendation</span></div>
+        </div>
+
+        <!-- Analytics -->
+        <div class="gallery-item">
+          <picture>
+            <source media="(prefers-color-scheme: light)" srcset="screenshots/analytics-light.png">
+            <img src="screenshots/analytics-dark.png" alt="Usage analytics">
+          </picture>
+          <div class="gallery-caption">Usage analytics <span>· Calendar heatmap · Day-of-week pattern · Rolling means</span></div>
+        </div>
+
+        <!-- Ledger -->
+        <div class="gallery-item">
+          <picture>
+            <source media="(prefers-color-scheme: light)" srcset="screenshots/ledger-light.png">
+            <img src="screenshots/ledger-dark.png" alt="Bills & cost ledger">
+          </picture>
+          <div class="gallery-caption">Bills &amp; cost <span>· ₹/unit trend · Charge composition · Event timeline</span></div>
+        </div>
+
+        <!-- Recharges -->
+        <div class="gallery-item">
+          <picture>
+            <source media="(prefers-color-scheme: light)" srcset="screenshots/recharges-light.png">
+            <img src="screenshots/recharges-dark.png" alt="Recharges & runway">
+          </picture>
+          <div class="gallery-caption">Recharges &amp; runway <span>· Lifespan analytics · Next-recharge planner</span></div>
+        </div>
+
+        <!-- Meter health -->
+        <div class="gallery-item">
+          <picture>
+            <source media="(prefers-color-scheme: light)" srcset="screenshots/meter-light.png">
+            <img src="screenshots/meter-dark.png" alt="Meter health">
+          </picture>
+          <div class="gallery-caption">Meter health <span>· Data-gap calendar · Peak vs sanctioned load · Power factor</span></div>
+        </div>
+
+        <!-- Complaints -->
+        <div class="gallery-item">
+          <picture>
+            <source media="(prefers-color-scheme: light)" srcset="screenshots/complaints-light.png">
+            <img src="screenshots/complaints-dark.png" alt="1912 complaints">
+          </picture>
+          <div class="gallery-caption">1912 complaints <span>· Officer chain · Live status · Report outage</span></div>
+        </div>
+
+        <!-- Settings -->
+        <div class="gallery-item">
+          <picture>
+            <source media="(prefers-color-scheme: light)" srcset="screenshots/settings-light.png">
+            <img src="screenshots/settings-dark.png" alt="Settings">
+          </picture>
+          <div class="gallery-caption">Settings <span>· Theme · Session management · Data export</span></div>
+        </div>
+
       </div>
     </section>
 
@@ -260,22 +320,22 @@
       <h2>Quickstart</h2>
       <p class="sub">Python 3.10+ and Node 20+ (or Bun 1.1+) required.</p>
       <div class="qs-grid">
-        <pre><span class="comment"># clone and set up</span>
-<span class="cmd">git clone</span> https://github.com/Harry-kp/uppcl-pro.git
-<span class="cmd">cd</span> uppcl-pro
-<span class="cmd">make setup</span>       <span class="comment"># Python + Node deps</span>
-<span class="cmd">make dev</span>         <span class="comment"># proxy :8000 + dashboard :3000</span></pre>
-        <pre><span class="comment"># first-time login</span>
-<span class="cmd">curl</span> -X POST localhost:8000/auth/login \
-  -H <span class="ok">'content-type: application/json'</span> \
-  -d <span class="ok">'{"username":"&lt;phone&gt;","password":"&lt;pw&gt;"}'</span>
+        <pre><span class="c"># clone and set up</span>
+<span class="k">git clone</span> https://github.com/Harry-kp/uppcl-pro.git
+<span class="k">cd</span> uppcl-pro
+<span class="k">make setup</span>       <span class="c"># Python + Node deps</span>
+<span class="k">make dev</span>         <span class="c"># proxy :8000 + dashboard :3000</span></pre>
+        <pre><span class="c"># first-time login</span>
+<span class="k">curl</span> -X POST localhost:8000/auth/login \
+  -H <span class="s">'content-type: application/json'</span> \
+  -d <span class="s">'{"username":"&lt;phone&gt;","password":"&lt;pw&gt;"}'</span>
 
-<span class="comment"># then open</span>
-<span class="cmd">open</span> http://localhost:3000</pre>
+<span class="c"># then open</span>
+<span class="k">open</span> http://localhost:3000</pre>
       </div>
       <p style="margin-top:16px;font-size:13px;color:var(--text-dim)">
-        Using Claude Code?
-        Type <code style="background:var(--surface);padding:2px 6px;border-radius:4px;font-family:var(--mono)">/setup</code>
+        Using Claude Code? Type
+        <code style="background:var(--surface);padding:2px 6px;border-radius:4px;font-family:var(--mono)">/setup</code>
         — skills are bundled in <a href="https://github.com/Harry-kp/uppcl-pro/tree/main/.claude/skills">.claude/skills/</a>.
       </p>
     </section>
@@ -299,7 +359,7 @@
       </p>
     </section>
 
-    <!-- API -->
+    <!-- API reference -->
     <section>
       <h2>API Reference</h2>
       <p class="sub">23 reverse-engineered endpoints, OpenAPI 3.1. Browse without cloning. "Try it out" requires the proxy running locally.</p>
@@ -307,14 +367,14 @@
         <div class="api-card">
           <div>
             <h3>Swagger UI</h3>
-            <p>Interactive explorer — expand endpoints, inspect request/response schemas, and try calls against a local proxy. Identical to <code>/docs</code> on a running proxy.</p>
+            <p>Interactive explorer — expand endpoints, inspect schemas, try calls against a local proxy. Identical to <code>/docs</code> on a running proxy.</p>
           </div>
           <a href="./swagger.html" class="btn btn-primary">Open Swagger UI →</a>
         </div>
         <div class="api-card">
           <div>
             <h3>ReDoc</h3>
-            <p>Clean three-panel reference — all routes, field descriptions, and example payloads in a single scrollable view. Identical to <code>/redoc</code> on a running proxy.</p>
+            <p>Clean three-panel reference — all routes, field descriptions, and example payloads. Identical to <code>/redoc</code> on a running proxy.</p>
           </div>
           <a href="./api.html" class="btn btn-secondary">Open ReDoc →</a>
         </div>
