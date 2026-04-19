@@ -182,7 +182,8 @@
       <a href="#features">Features</a>
       <a href="#quickstart">Quickstart</a>
       <a href="https://github.com/Harry-kp/uppcl-pro" target="_blank" rel="noopener">GitHub</a>
-      <a href="./api.html" class="btn-api">API Reference →</a>
+      <a href="./swagger.html" class="btn-api" style="margin-right:4px">Swagger →</a>
+      <a href="./api.html" class="btn-api">ReDoc →</a>
     </div>
   </nav>
 
@@ -301,13 +302,22 @@
     <!-- API -->
     <section>
       <h2>API Reference</h2>
-      <p class="sub">23 reverse-engineered endpoints, OpenAPI 3.1. Browse without cloning.</p>
-      <div class="api-card">
-        <div>
-          <h3>ReDoc — full schema browser</h3>
-          <p>All proxy routes, request/response shapes, field descriptions, and example payloads. Identical to the <code>/redoc</code> you get when running the proxy locally.</p>
+      <p class="sub">23 reverse-engineered endpoints, OpenAPI 3.1. Browse without cloning. "Try it out" requires the proxy running locally.</p>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div class="api-card">
+          <div>
+            <h3>Swagger UI</h3>
+            <p>Interactive explorer — expand endpoints, inspect request/response schemas, and try calls against a local proxy. Identical to <code>/docs</code> on a running proxy.</p>
+          </div>
+          <a href="./swagger.html" class="btn btn-primary">Open Swagger UI →</a>
         </div>
-        <a href="./api.html" class="btn btn-primary">Open API Reference →</a>
+        <div class="api-card">
+          <div>
+            <h3>ReDoc</h3>
+            <p>Clean three-panel reference — all routes, field descriptions, and example payloads in a single scrollable view. Identical to <code>/redoc</code> on a running proxy.</p>
+          </div>
+          <a href="./api.html" class="btn btn-secondary">Open ReDoc →</a>
+        </div>
       </div>
     </section>
 
