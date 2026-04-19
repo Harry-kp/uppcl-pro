@@ -66,6 +66,13 @@ export default function GridNodesPage() {
     [billsAsc]
   );
 
+  // Days-covered stat for integrity section
+  const daysCovered = useMemo(() => {
+    // eslint-disable-next-line react-hooks/purity -- Date.now() inside useMemo is intentional; value captured once per recompute
+    const now = Date.now();
+    return Math.round((now - new Date(cells[0]?.date ?? now).getTime()) / 86_400_000) || 1;
+  }, [cells]);
+
   // Stability matrix — peak power (kW) from consumption series + power factor from yearly
   const consAsc = useMemo(
     () =>
@@ -220,7 +227,7 @@ export default function GridNodesPage() {
             </p>
           </div>
           <div className="text-right font-mono text-[11px] text-on-surface-variant">
-            {cells.length} / {Math.round((Date.now() - new Date(cells[0]?.date ?? Date.now()).getTime()) / 86_400_000) || 1} days covered
+            {cells.length} / {daysCovered} days covered
           </div>
         </div>
         <CalendarHeatmap cells={cells} unit="bill" />

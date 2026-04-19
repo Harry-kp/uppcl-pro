@@ -19,6 +19,7 @@ export default function ComplaintsPage() {
   const [draft, setDraft] = useState("");
 
   // Pre-fill draft with the auto phone when it arrives.
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: syncs derived state from async data once autoPhone resolves
   useEffect(() => { if (autoPhone && !draft) setDraft(autoPhone); }, [autoPhone, draft]);
 
   const activePhone = override ?? autoPhone ?? null;

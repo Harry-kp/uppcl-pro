@@ -27,6 +27,7 @@ function useTheme() {
 
   useEffect(() => {
     const stored = (typeof window !== "undefined" && (localStorage.getItem("theme") as Theme | null)) || "dark";
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: one-time client-side theme init from localStorage
     setThemeState(stored);
     document.documentElement.classList.toggle("dark", stored === "dark");
     document.documentElement.classList.toggle("light", stored === "light");

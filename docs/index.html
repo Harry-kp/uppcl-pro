@@ -46,16 +46,68 @@
     <span>This is the <b>schema only</b> — clone the repo and run <code>make dev</code> to use the endpoints.</span>
   </div>
 
-  <redoc
-    spec-url="./openapi.json"
-    theme='{"colors":{"primary":{"main":"#4da8ff"},"success":{"main":"#00c07a"}},"typography":{"fontFamily":"Inter, -apple-system, BlinkMacSystemFont, sans-serif","headings":{"fontFamily":"Inter, sans-serif","fontWeight":"600"}}}'
-    hide-download-button="false"
-    expand-responses="200"
-    scroll-y-offset="40"
-    sort-tags-alphabetically="false"
-    json-sample-expand-level="2"
-  ></redoc>
+  <div id="redoc-container"></div>
 
-  <script src="https://cdn.redoc.ly/redoc/latest/bundles/redoc.standalone.js" defer></script>
+  <script src="https://cdn.redoc.ly/redoc/latest/bundles/redoc.standalone.js"></script>
+  <script>
+    Redoc.init('./openapi.json', {
+      scrollYOffset: 40,
+      hideDownloadButton: false,
+      expandResponses: '200',
+      sortTagsAlphabetically: false,
+      jsonSampleExpandLevel: 2,
+      theme: {
+        colors: {
+          primary:  { main: '#4da8ff' },
+          success:  { main: '#00c07a' },
+          warning:  { main: '#ffb951' },
+          error:    { main: '#ff6b6b' },
+          text:     { primary: '#e0e6f0', secondary: '#8fa3bf' },
+          border:   { dark: '#1e2a3a', light: '#1e2a3a' },
+          responses: {
+            success:  { color: '#00c07a',  backgroundColor: '#0a1f15' },
+            redirect: { color: '#ffb951',  backgroundColor: '#1f1a0a' },
+            error:    { color: '#ff6b6b',  backgroundColor: '#1f0a0a' },
+          },
+          http: {
+            get:     '#4da8ff',
+            post:    '#00c07a',
+            put:     '#ffb951',
+            delete:  '#ff6b6b',
+            patch:   '#b57cf0',
+            head:    '#8fa3bf',
+            options: '#8fa3bf',
+          },
+        },
+        typography: {
+          fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, sans-serif',
+          headings:   { fontFamily: 'Inter, sans-serif', fontWeight: '600' },
+          code: {
+            fontFamily:      'JetBrains Mono, Fira Code, ui-monospace, monospace',
+            fontSize:        '13px',
+            color:           '#9ecaff',
+            backgroundColor: '#0d1117',
+            wrap:            true,
+          },
+          links: { color: '#4da8ff', visited: '#9b7ff5', hover: '#7fc3ff' },
+        },
+        sidebar: {
+          backgroundColor: '#0b0b0b',
+          textColor:       '#8fa3bf',
+          activeTextColor: '#4da8ff',
+          groupItems: {
+            activeBackgroundColor: '#121c2b',
+            activeTextColor:       '#e0e6f0',
+          },
+        },
+        rightPanel: {
+          backgroundColor: '#0d1117',
+          textColor:       '#c9d5e3',
+          width:           '40%',
+        },
+        codeBlock: { backgroundColor: '#0d1117' },
+      },
+    }, document.getElementById('redoc-container'));
+  </script>
 </body>
 </html>

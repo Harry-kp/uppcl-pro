@@ -33,6 +33,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   // monotonic counter is plenty for ephemeral toast IDs.
   const seq = useRef(0);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: standard SSR hydration guard, runs once on mount
   useEffect(() => setMounted(true), []);
 
   const push = useCallback((message: string, opts?: { kind?: ToastKind; ttl?: number }) => {

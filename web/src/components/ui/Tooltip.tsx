@@ -38,6 +38,7 @@ export function Tooltip({ content, children, side = "top", delay = 120, classNam
   const tipRef = useRef<HTMLDivElement | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: standard SSR hydration guard, runs once on mount
   useEffect(() => setMounted(true), []);
 
   const show = () => {
@@ -93,10 +94,12 @@ export function Tooltip({ content, children, side = "top", delay = 120, classNam
       triggerRef.current = el;
       const childRef = (child.props as ChildWithHandlers).ref ?? (child as unknown as { ref?: React.Ref<HTMLElement> }).ref;
       if (typeof childRef === "function") (childRef as (el: HTMLElement | null) => void)(el);
+      // eslint-disable-next-line react-hooks/immutability -- intentional: writing to a forwarded ref's .current is safe; childRef itself is not mutated
       else if (childRef && "current" in (childRef as object)) (childRef as React.MutableRefObject<HTMLElement | null>).current = el;
     };
     const existing = child.props as ChildWithHandlers;
     const compose = <E,>(a?: (e: E) => void, b?: () => void) => (e: E) => { a?.(e); b?.(); };
+    /* eslint-disable react-hooks/refs -- intentional: show/hide only access triggerRef.current in event handlers, never during render */
     return (
       <>
         {cloneElement(child, {
@@ -109,6 +112,7 @@ export function Tooltip({ content, children, side = "top", delay = 120, classNam
         {portal}
       </>
     );
+    /* eslint-enable react-hooks/refs */
   }
 
   return (

@@ -16,21 +16,31 @@ export function Donut({ segments, size = 220, stroke = 14, centerLabel, centerVa
   const r = (size - stroke) / 2;
   const c = 2 * Math.PI * r;
   const total = segments.reduce((a, s) => a + s.value, 0) || 1;
-  let cursor = 0;
+
+  // Precompute arc data with cumulative offsets — avoids mutating a render-scope variable
+  const { arcs } = segments.reduce<{
+    arcs: { seg: typeof segments[0]; dashArr: string; offset: number }[];
+    cursor: number;
+  }>(
+    ({ arcs, cursor }, seg) => {
+      const frac = seg.value / total;
+      const dash = c * frac;
+      return {
+        arcs: [...arcs, { seg, dashArr: `${dash} ${c - dash}`, offset: -c * cursor }],
+        cursor: cursor + frac,
+      };
+    },
+    { arcs: [], cursor: 0 }
+  );
 
   return (
     <div className={cn("relative inline-flex items-center justify-center", className)} style={{ width: size, height: size }}>
       <svg width={size} height={size} className="-rotate-90">
         <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--color-surface-container-low)" strokeWidth={stroke} />
-        {segments.map((seg, i) => {
-          const frac = seg.value / total;
-          const dash = c * frac;
-          const dashArr = `${dash} ${c - dash}`;
-          const offset = -c * cursor;
-          cursor += frac;
+        {arcs.map(({ seg, dashArr, offset }, i) => {
           return (
             <circle
-              key={i}
+              key={seg.label}
               cx={size / 2}
               cy={size / 2}
               r={r}

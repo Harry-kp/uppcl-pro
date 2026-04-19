@@ -98,9 +98,8 @@ export default function Home() {
     const targetRunway = 40;
     const recommendedRaw = targetRunway * data.runway.avg_daily_spend - data.balance.inr;
     const recommendedAmount = Math.max(500, Math.ceil(recommendedRaw / 500) * 500);
-    const emptyEta = data.runway.days
-      ? new Date(Date.now() + data.runway.days * 86400_000)
-      : null;
+    // eslint-disable-next-line react-hooks/purity -- Date.now() inside useMemo is intentional; value captured once per recompute
+    const emptyEta = data.runway.days ? new Date(Date.now() + data.runway.days * 86400_000) : null;
 
     return {
       units,

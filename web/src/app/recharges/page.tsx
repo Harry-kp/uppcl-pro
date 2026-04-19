@@ -67,6 +67,7 @@ export default function RechargesPage() {
       Monthly: 30,
       Quarterly: 90,
     };
+    // eslint-disable-next-line react-hooks/purity -- Date.now() fallback inside useMemo is intentional; value is captured once per memo recompute
     const base = payments[0]?.payment_dt ? new Date(payments[0].payment_dt).getTime() : Date.now();
     return new Date(base + freqDays[frequency] * 86400_000);
   }, [payments, frequency]);
