@@ -3,111 +3,329 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>UPPCL Pro — API Reference</title>
-  <meta name="description" content="Interactive API reference for UPPCL Pro — reverse-engineered UPPCL SMART prepaid-meter proxy. Browse all 23 endpoints without cloning the repo."/>
+  <title>UPPCL Pro — Kinetic Vault</title>
+  <meta name="description" content="Self-hosted analytics dashboard for UPPCL SMART prepaid smart meters. Reverse-engineered FastAPI proxy + Next.js 16 dashboard."/>
   <meta name="theme-color" content="#0b0b0b"/>
-
-  <!-- Open Graph — makes shared links look decent on Twitter / Slack / WhatsApp -->
-  <meta property="og:title" content="UPPCL Pro — API Reference"/>
-  <meta property="og:description" content="Reverse-engineered UPPCL SMART prepaid-meter proxy. 23 endpoints, OpenAPI 3.1."/>
+  <meta property="og:title" content="UPPCL Pro — Kinetic Vault"/>
+  <meta property="og:description" content="Self-hosted analytics dashboard for UPPCL SMART prepaid smart meters."/>
   <meta property="og:type" content="website"/>
   <meta property="og:url" content="https://harry-kp.github.io/uppcl-pro/"/>
-
-  <link rel="preconnect" href="https://cdn.redoc.ly"/>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%234da8ff'%3E%3Cpath d='M13 2L3 14h7l-1 8 10-12h-7l1-8z'/%3E%3C/svg%3E"/>
-
   <style>
-    html, body { margin: 0; padding: 0; background: #0b0b0b; font-family: -apple-system, BlinkMacSystemFont, "Inter", sans-serif; }
-    /* Thin banner at the top so visitors know this is read-only docs */
-    #banner {
-      position: sticky; top: 0; z-index: 50;
-      background: linear-gradient(90deg, #0b0b0b 0%, #121c2b 100%);
-      color: #d8e6ff;
-      padding: 10px 20px;
-      font-size: 12px;
-      border-bottom: 1px solid rgba(255,255,255,.06);
-      display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --void:        #0b0b0b;
+      --surface:     #111318;
+      --surface-hi:  #1a1f2a;
+      --border:      rgba(255,255,255,.07);
+      --primary:     #4da8ff;
+      --primary-dim: #1a4a7a;
+      --success:     #00c07a;
+      --text:        #e0e6f0;
+      --text-dim:    #8fa3bf;
+      --mono:        'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
     }
-    #banner b { color: #9ecaff; font-weight: 600; }
-    #banner a { color: #ffb951; text-decoration: none; }
-    #banner a:hover { text-decoration: underline; }
-    #banner .dot { opacity: .4; }
-    redoc { display: block; }
+
+    html { scroll-behavior: smooth; }
+    body {
+      background: var(--void);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Inter', sans-serif;
+      font-size: 15px;
+      line-height: 1.6;
+    }
+
+    a { color: var(--primary); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* ── Nav ── */
+    nav {
+      position: sticky; top: 0; z-index: 50;
+      background: var(--void);
+      border-bottom: 1px solid var(--border);
+      padding: 0 24px;
+      height: 48px;
+      display: flex; align-items: center; gap: 0; justify-content: space-between;
+    }
+    .nav-brand { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 14px; color: var(--text); }
+    .nav-brand svg { flex-shrink: 0; }
+    .nav-links { display: flex; align-items: center; gap: 4px; }
+    .nav-links a {
+      padding: 6px 12px; border-radius: 6px;
+      font-size: 13px; color: var(--text-dim);
+      transition: background .15s, color .15s;
+    }
+    .nav-links a:hover { background: var(--surface-hi); color: var(--text); text-decoration: none; }
+    .nav-links .btn-api {
+      background: var(--primary-dim); color: var(--primary);
+      font-weight: 600;
+    }
+    .nav-links .btn-api:hover { background: #1f5a9e; }
+
+    /* ── Layout ── */
+    .container { max-width: 960px; margin: 0 auto; padding: 0 24px; }
+
+    /* ── Hero ── */
+    .hero {
+      padding: 80px 0 64px;
+      text-align: center;
+    }
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: var(--surface-hi); border: 1px solid var(--border);
+      border-radius: 100px; padding: 4px 12px;
+      font-size: 11px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase;
+      color: var(--success); margin-bottom: 24px;
+    }
+    .hero h1 {
+      font-size: clamp(32px, 6vw, 52px); font-weight: 700;
+      letter-spacing: -.02em; line-height: 1.1;
+      margin-bottom: 16px;
+    }
+    .hero h1 span { color: var(--primary); }
+    .hero p {
+      font-size: 17px; color: var(--text-dim);
+      max-width: 560px; margin: 0 auto 32px;
+    }
+    .hero-ctas { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+    .btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 10px 20px; border-radius: 8px;
+      font-size: 14px; font-weight: 600; cursor: pointer;
+      transition: filter .15s, background .15s;
+      text-decoration: none !important;
+    }
+    .btn-primary { background: var(--primary); color: #000; }
+    .btn-primary:hover { filter: brightness(1.1); }
+    .btn-secondary {
+      background: var(--surface-hi); color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .btn-secondary:hover { background: #252d3d; }
+
+    /* ── Screenshot ── */
+    .screenshot-wrap {
+      margin: 48px auto 0;
+      max-width: 860px;
+      border-radius: 12px; overflow: hidden;
+      border: 1px solid var(--border);
+      box-shadow: 0 24px 80px rgba(0,0,0,.6);
+    }
+    .screenshot-wrap img { width: 100%; display: block; }
+
+    /* ── Section ── */
+    section { padding: 64px 0; border-top: 1px solid var(--border); }
+    section h2 {
+      font-size: 24px; font-weight: 700; letter-spacing: -.01em;
+      margin-bottom: 8px;
+    }
+    section .sub { color: var(--text-dim); margin-bottom: 40px; font-size: 14px; }
+
+    /* ── Features grid ── */
+    .features { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
+    .feature {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 10px; padding: 20px;
+    }
+    .feature-icon { font-size: 20px; margin-bottom: 8px; }
+    .feature h3 { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+    .feature p { font-size: 13px; color: var(--text-dim); line-height: 1.5; }
+
+    /* ── Quickstart ── */
+    .qs-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+    @media (max-width: 640px) { .qs-grid { grid-template-columns: 1fr; } }
+    pre {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 10px; padding: 20px;
+      font-family: var(--mono); font-size: 13px; line-height: 1.7;
+      overflow-x: auto; color: #c9d5e3;
+    }
+    pre .comment { color: #4a6080; }
+    pre .cmd { color: var(--primary); }
+    pre .ok { color: var(--success); }
+
+    /* ── Compatibility table ── */
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th { text-align: left; padding: 8px 12px; color: var(--text-dim); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .08em; border-bottom: 1px solid var(--border); }
+    td { padding: 10px 12px; border-bottom: 1px solid rgba(255,255,255,.04); }
+    tr:last-child td { border-bottom: none; }
+
+    /* ── API card ── */
+    .api-card {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 24px; flex-wrap: wrap;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; padding: 28px 32px;
+    }
+    .api-card h3 { font-size: 18px; font-weight: 600; margin-bottom: 6px; }
+    .api-card p { font-size: 14px; color: var(--text-dim); max-width: 520px; }
+
+    /* ── Footer ── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 32px 0; text-align: center;
+      font-size: 12px; color: var(--text-dim);
+    }
+    footer a { color: var(--text-dim); }
+    footer a:hover { color: var(--text); }
   </style>
 </head>
 <body>
-  <div id="banner">
-    <b>⚡ UPPCL Pro</b>
-    <span class="dot">·</span>
-    <span>Reverse-engineered API reference for UPPCL SMART prepaid meters</span>
-    <span class="dot">·</span>
-    <a href="https://github.com/Harry-kp/uppcl-pro" target="_blank" rel="noopener">GitHub ↗</a>
-    <span class="dot">·</span>
-    <span>This is the <b>schema only</b> — clone the repo and run <code>make dev</code> to use the endpoints.</span>
+
+  <nav>
+    <div class="nav-brand">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="#4da8ff"><path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z"/></svg>
+      UPPCL Pro
+    </div>
+    <div class="nav-links">
+      <a href="#features">Features</a>
+      <a href="#quickstart">Quickstart</a>
+      <a href="https://github.com/Harry-kp/uppcl-pro" target="_blank" rel="noopener">GitHub</a>
+      <a href="./api.html" class="btn-api">API Reference →</a>
+    </div>
+  </nav>
+
+  <div class="container">
+
+    <!-- Hero -->
+    <div class="hero">
+      <div class="hero-badge">
+        <span style="width:6px;height:6px;border-radius:50%;background:var(--success);display:inline-block"></span>
+        Tested end-to-end on PVVNL
+      </div>
+      <h1>Your prepaid meter,<br><span>finally making sense.</span></h1>
+      <p>
+        Self-hosted analytics dashboard for <strong>UPPCL SMART</strong> prepaid electricity meters.
+        Reverse-engineered FastAPI proxy + Next.js 16 dashboard. Runs on your laptop or a Raspberry Pi.
+      </p>
+      <div class="hero-ctas">
+        <a href="https://github.com/Harry-kp/uppcl-pro" class="btn btn-primary" target="_blank" rel="noopener">
+          View on GitHub
+        </a>
+        <a href="./api.html" class="btn btn-secondary">
+          Browse API Reference
+        </a>
+      </div>
+
+      <div class="screenshot-wrap">
+        <picture>
+          <source media="(prefers-color-scheme: light)" srcset="screenshots/home-light.png">
+          <img src="screenshots/home-dark.png" alt="UPPCL Pro dashboard — home view">
+        </picture>
+      </div>
+    </div>
+
+    <!-- Features -->
+    <section id="features">
+      <h2>What it does</h2>
+      <p class="sub">The official UPPCL SMART portal stops at "today's balance." This project goes further.</p>
+      <div class="features">
+        <div class="feature">
+          <div class="feature-icon">⚡</div>
+          <h3>Live balance + runway</h3>
+          <p>Auto-fallback chain ensures a trustworthy balance number. Fitness-ring gauge shows days remaining at current burn.</p>
+        </div>
+        <div class="feature">
+          <div class="feature-icon">📊</div>
+          <h3>Anomaly detection</h3>
+          <p>Flags days where consumption is >1.5σ above the 30-day average, with a panel explaining the math.</p>
+        </div>
+        <div class="feature">
+          <div class="feature-icon">💰</div>
+          <h3>Cost breakdown</h3>
+          <p>Effective ₹/unit trend, stacked charge composition, tariff slab usage, and subsidy YTD — all computed from the raw billing data.</p>
+        </div>
+        <div class="feature">
+          <div class="feature-icon">🔋</div>
+          <h3>Recharge sweet-spot</h3>
+          <p>Interactive sliders recommend amount × frequency for a target runway, based on your actual historical burn rate.</p>
+        </div>
+        <div class="feature">
+          <div class="feature-icon">🛡️</div>
+          <h3>Meter health</h3>
+          <p>Reading reliability (Actual vs Estimated), 365-day data-gap calendar, peak-vs-sanctioned load gauge, power-factor trend.</p>
+        </div>
+        <div class="feature">
+          <div class="feature-icon">📞</div>
+          <h3>1912 complaints</h3>
+          <p>Live status of every complaint from your phone, with full JE/AE/XEN officer chain and one-click "Report outage" panel.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Quickstart -->
+    <section id="quickstart">
+      <h2>Quickstart</h2>
+      <p class="sub">Python 3.10+ and Node 20+ (or Bun 1.1+) required.</p>
+      <div class="qs-grid">
+        <pre><span class="comment"># clone and set up</span>
+<span class="cmd">git clone</span> https://github.com/Harry-kp/uppcl-pro.git
+<span class="cmd">cd</span> uppcl-pro
+<span class="cmd">make setup</span>       <span class="comment"># Python + Node deps</span>
+<span class="cmd">make dev</span>         <span class="comment"># proxy :8000 + dashboard :3000</span></pre>
+        <pre><span class="comment"># first-time login</span>
+<span class="cmd">curl</span> -X POST localhost:8000/auth/login \
+  -H <span class="ok">'content-type: application/json'</span> \
+  -d <span class="ok">'{"username":"&lt;phone&gt;","password":"&lt;pw&gt;"}'</span>
+
+<span class="comment"># then open</span>
+<span class="cmd">open</span> http://localhost:3000</pre>
+      </div>
+      <p style="margin-top:16px;font-size:13px;color:var(--text-dim)">
+        Using Claude Code?
+        Type <code style="background:var(--surface);padding:2px 6px;border-radius:4px;font-family:var(--mono)">/setup</code>
+        — skills are bundled in <a href="https://github.com/Harry-kp/uppcl-pro/tree/main/.claude/skills">.claude/skills/</a>.
+      </p>
+    </section>
+
+    <!-- Compatibility -->
+    <section>
+      <h2>DISCOM compatibility</h2>
+      <p class="sub">Every user-specific identifier is discovered at runtime — nothing is hardcoded per DISCOM.</p>
+      <table>
+        <thead><tr><th>DISCOM</th><th>Region</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr><td><strong>PVVNL</strong></td><td>West UP (Noida, Agra, Ghaziabad…)</td><td>✅ tested end-to-end</td></tr>
+          <tr><td>MVVNL</td><td>Central UP</td><td>🟡 same API, unverified</td></tr>
+          <tr><td>PuVVNL</td><td>East UP</td><td>🟡 same API, unverified</td></tr>
+          <tr><td>DVVNL</td><td>South UP</td><td>🟡 same API, unverified</td></tr>
+          <tr><td>KESCo</td><td>Kanpur</td><td>🟡 same API, unverified</td></tr>
+        </tbody>
+      </table>
+      <p style="margin-top:12px;font-size:13px;color:var(--text-dim)">
+        On a non-PVVNL DISCOM? <a href="https://github.com/Harry-kp/uppcl-pro/issues">File a verification issue</a> if it works — I'll flip the table to ✅.
+      </p>
+    </section>
+
+    <!-- API -->
+    <section>
+      <h2>API Reference</h2>
+      <p class="sub">23 reverse-engineered endpoints, OpenAPI 3.1. Browse without cloning.</p>
+      <div class="api-card">
+        <div>
+          <h3>ReDoc — full schema browser</h3>
+          <p>All proxy routes, request/response shapes, field descriptions, and example payloads. Identical to the <code>/redoc</code> you get when running the proxy locally.</p>
+        </div>
+        <a href="./api.html" class="btn btn-primary">Open API Reference →</a>
+      </div>
+    </section>
+
   </div>
 
-  <div id="redoc-container"></div>
+  <footer>
+    <div class="container">
+      <p>
+        <strong>UPPCL Pro</strong> · Kinetic Vault · v1.0 ·
+        <a href="https://github.com/Harry-kp/uppcl-pro">GitHub</a> ·
+        <a href="https://github.com/Harry-kp/uppcl-pro/blob/main/LICENSE">MIT</a> ·
+        <a href="https://github.com/Harry-kp/uppcl-pro/blob/main/SECURITY.md">Security</a>
+      </p>
+      <p style="margin-top:6px;font-size:11px;">
+        Not affiliated with UPPCL, any DISCOM, or Reliance Jio. All trademarks belong to their respective owners.
+      </p>
+    </div>
+  </footer>
 
-  <script src="https://cdn.redoc.ly/redoc/latest/bundles/redoc.standalone.js"></script>
-  <script>
-    Redoc.init('./openapi.json', {
-      scrollYOffset: 40,
-      hideDownloadButton: false,
-      expandResponses: '200',
-      sortTagsAlphabetically: false,
-      jsonSampleExpandLevel: 2,
-      theme: {
-        colors: {
-          primary:  { main: '#4da8ff' },
-          success:  { main: '#00c07a' },
-          warning:  { main: '#ffb951' },
-          error:    { main: '#ff6b6b' },
-          text:     { primary: '#e0e6f0', secondary: '#8fa3bf' },
-          border:   { dark: '#1e2a3a', light: '#1e2a3a' },
-          responses: {
-            success:  { color: '#00c07a',  backgroundColor: '#0a1f15' },
-            redirect: { color: '#ffb951',  backgroundColor: '#1f1a0a' },
-            error:    { color: '#ff6b6b',  backgroundColor: '#1f0a0a' },
-          },
-          http: {
-            get:     '#4da8ff',
-            post:    '#00c07a',
-            put:     '#ffb951',
-            delete:  '#ff6b6b',
-            patch:   '#b57cf0',
-            head:    '#8fa3bf',
-            options: '#8fa3bf',
-          },
-        },
-        typography: {
-          fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, sans-serif',
-          headings:   { fontFamily: 'Inter, sans-serif', fontWeight: '600' },
-          code: {
-            fontFamily:      'JetBrains Mono, Fira Code, ui-monospace, monospace',
-            fontSize:        '13px',
-            color:           '#9ecaff',
-            backgroundColor: '#0d1117',
-            wrap:            true,
-          },
-          links: { color: '#4da8ff', visited: '#9b7ff5', hover: '#7fc3ff' },
-        },
-        sidebar: {
-          backgroundColor: '#0b0b0b',
-          textColor:       '#8fa3bf',
-          activeTextColor: '#4da8ff',
-          groupItems: {
-            activeBackgroundColor: '#121c2b',
-            activeTextColor:       '#e0e6f0',
-          },
-        },
-        rightPanel: {
-          backgroundColor: '#0d1117',
-          textColor:       '#c9d5e3',
-          width:           '40%',
-        },
-        codeBlock: { backgroundColor: '#0d1117' },
-      },
-    }, document.getElementById('redoc-container'));
-  </script>
 </body>
 </html>

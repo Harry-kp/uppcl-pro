@@ -76,7 +76,7 @@ The official [UPPCL SMART web portal](https://uppcl.sem.jio.com/uppclsmart/) (bu
 - **Next.js 16 dashboard** on :3000 with Tailwind v4, SWR, command palette (⌘K), keyboard shortcuts (`g h / u / b / r / m / c / s`).
 - **Dark + light themes** based on MD3 tonal surfaces with chart colours that auto-switch.
 - **Zero user-specific code** — every ID (`connectionId`, `deviceId`, `tenantId`) is discovered at runtime from `/site/search`. Nothing is hardcoded per user.
-- **OpenAPI 3.1 schema** auto-published at [`/docs`](http://localhost:8000/docs) (Swagger UI) and [`/redoc`](http://localhost:8000/redoc) for anyone who prefers raw REST — every route tagged, described, and try-it-able in the browser. Hosted read-only reference at **[harry-kp.github.io/uppcl-pro](https://harry-kp.github.io/uppcl-pro/)** so you can browse the 23 endpoints without cloning.
+- **OpenAPI 3.1 schema** auto-published at `/docs` (Swagger UI) and `/redoc` on a running proxy — every route tagged, described, and try-it-able in the browser. Hosted read-only reference at **[harry-kp.github.io/uppcl-pro/api.html](https://harry-kp.github.io/uppcl-pro/api.html)** so you can browse the 23 endpoints without cloning.
 
 ## Quickstart
 
@@ -99,7 +99,7 @@ Prereqs:
 - **Node 20+** or **Bun 1.1+** (for the dashboard)
 - A UPPCL SMART account (username = phone or account number)
 
-You can also run only the proxy (if you just want the JSON API via Swagger / curl) — skip the `web/` step entirely. Once the proxy is up, browse to [http://localhost:8000/docs](http://localhost:8000/docs) for the interactive Swagger UI.
+You can also run only the proxy (if you just want the JSON API via Swagger / curl) — skip the `web/` step entirely. Once the proxy is up, browse to `http://localhost:8000/docs` for the interactive Swagger UI.
 
 ### 🤖 Guided setup via Claude Code
 
@@ -176,8 +176,8 @@ scripts/                      Automation (screenshots, deploy)
 
 All proxy routes return plain JSON.
 
-- **🌐 Hosted read-only reference**: **[harry-kp.github.io/uppcl-pro](https://harry-kp.github.io/uppcl-pro/)** — ReDoc, always current with `main`, zero install. Ideal if you just want to see what's reverse-engineered without cloning the repo.
-- **🧪 Interactive (local)**: start the proxy (`make dev-proxy`) and open **[http://localhost:8000/docs](http://localhost:8000/docs)** — Swagger UI with try-it-out.
+- **🌐 Hosted read-only reference**: **[harry-kp.github.io/uppcl-pro/api.html](https://harry-kp.github.io/uppcl-pro/api.html)** — ReDoc, always current with `main`, zero install. Identical to the `/redoc` you get running the proxy locally.
+- **🧪 Interactive (local)**: start the proxy (`make dev-proxy`) and open `http://localhost:8000/docs` — Swagger UI with try-it-out.
 - **📄 Raw schema**: [`docs/openapi.json`](docs/openapi.json) in the repo, or `/openapi.json` on a running proxy.
 
 | Route | What it does |
