@@ -1,0 +1,14 @@
+# docker-compose variant of the Caddyfile.
+# Serves static files from /srv (mounted from web/out) and forwards /api/* to
+# the `proxy` container. Listens on :1912 inside the container to match the
+# bare-metal Caddyfile — docker-compose maps it out to the host.
+:1912 {
+    handle_path /api/* {
+        reverse_proxy proxy:8000
+    }
+
+    root * /srv
+    encode zstd gzip
+    try_files {path} {path}/ {path}.html /index.html
+    file_server
+}

@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>UPPCL Pro — API Reference</title>
+  <meta name="description" content="Interactive API reference for UPPCL Pro — reverse-engineered UPPCL SMART prepaid-meter proxy. Browse all 23 endpoints without cloning the repo."/>
+  <meta name="theme-color" content="#0b0b0b"/>
+
+  <!-- Open Graph — makes shared links look decent on Twitter / Slack / WhatsApp -->
+  <meta property="og:title" content="UPPCL Pro — API Reference"/>
+  <meta property="og:description" content="Reverse-engineered UPPCL SMART prepaid-meter proxy. 23 endpoints, OpenAPI 3.1."/>
+  <meta property="og:type" content="website"/>
+  <meta property="og:url" content="https://harry-kp.github.io/uppcl-pro/"/>
+
+  <link rel="preconnect" href="https://cdn.redoc.ly"/>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%234da8ff'%3E%3Cpath d='M13 2L3 14h7l-1 8 10-12h-7l1-8z'/%3E%3C/svg%3E"/>
+
+  <style>
+    html, body { margin: 0; padding: 0; background: #0b0b0b; font-family: -apple-system, BlinkMacSystemFont, "Inter", sans-serif; }
+    /* Thin banner at the top so visitors know this is read-only docs */
+    #banner {
+      position: sticky; top: 0; z-index: 50;
+      background: linear-gradient(90deg, #0b0b0b 0%, #121c2b 100%);
+      color: #d8e6ff;
+      padding: 10px 20px;
+      font-size: 12px;
+      border-bottom: 1px solid rgba(255,255,255,.06);
+      display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
+    }
+    #banner b { color: #9ecaff; font-weight: 600; }
+    #banner a { color: #ffb951; text-decoration: none; }
+    #banner a:hover { text-decoration: underline; }
+    #banner .dot { opacity: .4; }
+    redoc { display: block; }
+  </style>
+</head>
+<body>
+  <div id="banner">
+    <b>⚡ UPPCL Pro</b>
+    <span class="dot">·</span>
+    <span>Reverse-engineered API reference for UPPCL SMART prepaid meters</span>
+    <span class="dot">·</span>
+    <a href="https://github.com/Harry-kp/uppcl-pro" target="_blank" rel="noopener">GitHub ↗</a>
+    <span class="dot">·</span>
+    <span>This is the <b>schema only</b> — clone the repo and run <code>make dev</code> to use the endpoints.</span>
+  </div>
+
+  <redoc
+    spec-url="./openapi.json"
+    theme='{"colors":{"primary":{"main":"#4da8ff"},"success":{"main":"#00c07a"}},"typography":{"fontFamily":"Inter, -apple-system, BlinkMacSystemFont, sans-serif","headings":{"fontFamily":"Inter, sans-serif","fontWeight":"600"}}}'
+    hide-download-button="false"
+    expand-responses="200"
+    scroll-y-offset="40"
+    sort-tags-alphabetically="false"
+    json-sample-expand-level="2"
+  ></redoc>
+
+  <script src="https://cdn.redoc.ly/redoc/latest/bundles/redoc.standalone.js" defer></script>
+</body>
+</html>

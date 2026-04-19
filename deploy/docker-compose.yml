@@ -1,0 +1,45 @@
+# docker-compose alternative to the native systemd setup.
+# Uses ~400 MB disk for images; the systemd path is lighter on a Pi Zero 2.
+#
+#   cd deploy && docker compose up -d
+#   docker compose logs -f
+
+services:
+  proxy:
+    image: python:3.11-slim
+    working_dir: /app
+    volumes:
+      - ..:/app:ro
+      - proxy-session:/app-session
+    environment:
+      UPPCL_SESSION_FILE: /app-session/uppcl_session.json
+      PYTHONUNBUFFERED: "1"
+    command: >
+      sh -c "pip install --no-cache-dir -r requirements.txt
+      && uvicorn uppcl_api:app --host 0.0.0.0 --port 8000"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    expose:
+      - "8000"
+
+  web:
+    image: caddy:2-alpine
+    depends_on:
+      - proxy
+    ports:
+      - "1912:1912"
+    volumes:
+      - ../web/out:/srv:ro
+      - ./caddy/Caddyfile.docker:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    restart: unless-stopped
+
+volumes:
+  proxy-session:
+  caddy-data:
+  caddy-config:

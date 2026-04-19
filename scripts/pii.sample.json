@@ -1,0 +1,37 @@
+{
+  "_comment":         "Template for scripts/pii.json (gitignored). Copy + fill in with your own values before running `make screenshots` or `make check-pii`. Regex fields use JS-source syntax (double-backslashes).",
+
+  "connectionId":     "0000000000",
+  "deviceId":         "CA0000000",
+  "meterInstall":     "000000000000",
+  "phone":            "9000000000",
+  "pincode":          "110001",
+  "tenantCode":       "00000000-0000-0000-0000-000000000000",
+  "userId":           "0000000000000000000000aa",
+  "siteId":           "0000000000000000000000bb",
+  "consumerName":     "YOUR NAME ON THE BILL",
+  "authorTag":        "your-github-handle",
+  "employer":         "your-employer",
+
+  "addressFragmentRegex": "HOUSE[\\s-]?NO\\s*\\d+\\s*[A-Z\\s]+\\s*PINCODE\\s*CITY\\s*STATE",
+  "addressCity":      "YOURCITY",
+  "addressAreaRegex": "YourArea[\\s-]?Region",
+  "subDivision":      "EDSD-YourArea",
+  "substationRegex":  "YourArea\\s*Phase-?I",
+
+  "complaintNumbers": ["PV00000000001"],
+  "complaintDataIds": ["00000001"],
+
+  "invoiceId":        "000000000000",
+  "txnIds":           ["CHD00000000000"],
+
+  "officers": [
+    { "pattern": "OFFICER NAME ONE",   "replacement": "Officer A" },
+    { "pattern": "OFFICER NAME TWO",   "replacement": "Officer B" }
+  ],
+
+  "officerPhonePatterns": [
+    { "pattern": "00919\\d{10}",       "replacement": "00919000000000" },
+    { "pattern": "91\\d{10}",          "replacement": "9100000000" }
+  ]
+}

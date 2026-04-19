@@ -1,0 +1,956 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "UPPCL SMART Proxy",
+    "description": "\nLocal plaintext proxy for UPPCL SMART's encrypted prepaid meter API, plus\nread-only access to the UPPCL 1912 complaint portal (appsavy.com).\n\nThe upstream API uses RSA-OAEP + AES-256-GCM envelope encryption, ALTCHA\nproof-of-work captcha, 60-day JWTs, and dynamic tenant UUIDs. This proxy\nhides all of that \u2014 talk to it with plain JSON.\n\n### Workflow\n\n1. **POST `/auth/login`** once with your UPPCL username + password. The\n   resulting JWT is cached on disk (`uppcl_session.json`) and reused for\n   60 days.\n2. Call any data endpoint (`/dashboard`, `/balance`, `/consumption`, \u2026) \u2014\n   the proxy handles encryption, tenant resolution, and re-authentication.\n3. **POST `/debug/raw`** to experiment with undocumented upstream routes\n   without touching the encryption code.\n\n### Live docs\n\n- **Swagger UI** \u2192 [/docs](/docs) (interactive, try-it-out)\n- **ReDoc**      \u2192 [/redoc](/redoc) (narrative, printable)\n- **OpenAPI**    \u2192 [/openapi.json](/openapi.json) (raw schema)\n\nAll upstream responses are JSON as returned by UPPCL \u2014 no field renaming.\n",
+    "contact": {
+      "name": "UPPCL Pro on GitHub",
+      "url": "https://github.com/Harry-kp/uppcl-pro"
+    },
+    "license": {
+      "name": "MIT",
+      "url": "https://opensource.org/licenses/MIT"
+    },
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8000",
+      "description": "Local dev (`make dev`)"
+    },
+    {
+      "url": "http://uppcl.lan:1912/api",
+      "description": "Raspberry Pi deploy (if configured)"
+    }
+  ],
+  "paths": {
+    "/health": {
+      "get": {
+        "tags": [
+          "System"
+        ],
+        "summary": "Proxy + session health",
+        "description": "Lightweight liveness + auth-state probe. Does **not** contact UPPCL \u2014\nreports purely on the cached session.\n\n**Returns**\n\n| field | meaning |\n|---|---|\n| `ok` | Proxy process is up |\n| `authenticated` | `true` while the cached JWT is unexpired |\n| `tenant` | Parent DISCOM tenant UUID currently in use |\n| `jwt_expires_ms` | Epoch ms when the cached JWT expires |\n| `jwt_expires_in_days` | Convenience: days until expiry (nullable) |\n| `oaep_hash_in_use` | `sha256` normally; flips to `sha1` on server rejection |\n\n**Use when** \u2014 you want to decide whether to prompt the user for login,\nor power a status chip in a dashboard header.",
+        "operationId": "health_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/config": {
+      "get": {
+        "tags": [
+          "System"
+        ],
+        "summary": "Effective runtime configuration",
+        "description": "Dump the non-secret config the proxy booted with.\n\nUseful for confirming which upstream base URL / API key is in effect\n(e.g. when debugging env-var overrides via `UPPCL_BASE_URL`,\n`UPPCL_API_KEY`, `UPPCL_TENANT`, `UPPCL_SESSION_FILE`).\n\nThe API key is truncated to its first 8 chars \u2014 enough to distinguish\nbetween the UPPCL-wide constant and an override, not enough to replay.",
+        "operationId": "current_config_config_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Log in \u2014 returns 60-day JWT cached on disk",
+        "description": "Exchange UPPCL username + password for a 60-day JWT. The token is\npersisted to `uppcl_session.json` so subsequent calls don't need to\nre-authenticate.\n\n**Request body**\n\n```json\n{ \"username\": \"9999999999\", \"password\": \"\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\" }\n```\n\n`username` is whatever you use on the UPPCL SMART app (phone number\n*or* connection/account number \u2014 UPPCL accepts either).\n\n**What happens under the hood**\n\n1. Solve an ALTCHA proof-of-work captcha (pure CPU, ~10 ms).\n2. Fetch UPPCL's public key (24h cached).\n3. Encrypt `{username, password, roleType: \"user\"}` with AES-256-GCM,\n   wrap the AES key with RSA-OAEP-SHA256 (auto-falls-back to SHA-1\n   if the upstream rejects SHA-256).\n4. On 200, capture `token` + `expires` + `tenantCode` from the response\n   and write them to disk.\n\n**Returns**\n\n```json\n{ \"ok\": true, \"expires_at_ms\": 1744000000000, \"tenant\": \"pvvnl\" }\n```\n\n**Common errors**\n\n- `401` \u2014 credentials rejected by UPPCL.\n- `502` \u2014 network error talking to `uppcl.sem.jio.com`.\n- `500` \u2014 both OAEP variants rejected (upstream pubkey rotated; try\n  re-fetching via a proxy restart).",
+        "operationId": "login_auth_login_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginReq"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/logout": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Drop cached JWT",
+        "description": "Clear the locally-cached JWT. Next data call will return 401 until\nyou `/auth/login` again.\n\n\u26a0 **Soft logout only.** This does **not** invalidate the token on\nUPPCL's side \u2014 anyone who still holds the `uppcl_session.json` can\nkeep using it until the natural `expires` timestamp. If you suspect\na leak, change your UPPCL password to force a server-side revoke.",
+        "operationId": "logout_auth_logout_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/sites": {
+      "get": {
+        "tags": [
+          "Account"
+        ],
+        "summary": "All connection sites on this login",
+        "description": "Every `site` (connection) attached to this UPPCL login \u2014 plus the\nper-site identifiers every other data endpoint depends on.\n\n**Fields that matter** (per site):\n\n- `connectionId` \u2014 10-digit consumer ID (used in /bills, /payments)\n- `deviceId` \u2014 smart-meter serial (used in /consumption, /dadata)\n- `tenantId` \u2014 the DISCOM sub-tenant code, e.g. `pvvnl`, `mvvnl`\n- `address`, `tenantCode`, `isPrimary`, `billType`, `msi`\n\nThe first site in the response becomes the proxy's \"primary\" for\nsingle-connection convenience endpoints (`/balance`, `/dashboard`).\nMulti-connection accounts will see every site here; the dashboard\nsurfaces a picker.",
+        "operationId": "sites_sites_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/me": {
+      "get": {
+        "tags": [
+          "Account"
+        ],
+        "summary": "User profile",
+        "description": "The user's own profile record: `name`, `email`, `phone`, `tenantCode`,\nnotification/marketing consent flags, biometric-login toggle,\nregistration timestamp, etc.\n\nDistinct from `/sites`, which is *per-connection*. One login typically\nreturns one `/me` and one-or-many `/sites`.",
+        "operationId": "me_me_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/balance": {
+      "get": {
+        "tags": [
+          "Balance"
+        ],
+        "summary": "Live prepaid balance (with fallbacks)",
+        "description": "Live prepaid balance. Tries three sources, returning the FIRST one that\nactually reflects what's spendable on the meter right now:\n\n  1. /site/prepaidBalance?fetchCache=false  \u2014 live meter query (authoritative).\n     Matches the web portal's home screen. May return empty if the\n     server-side session record is stale \u2014 re-login fixes it.\n  2. latest /bill/search row                \u2014 yesterday's end-of-day meter\n     balance (`dailyBill.closing_bal`). At most 24 h behind live.\n  3. /site/outstandingBalance               \u2014 billing-system credit as of\n     the LAST MONTHLY INVOICE. Lags reality by up to a month \u2014 only useful\n     as a last resort.\n\nThe response includes a plain-English `note` explaining what the number\nrepresents, so you can decide whether to show it.",
+        "operationId": "balance_balance_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/balance/outstanding": {
+      "get": {
+        "tags": [
+          "Balance"
+        ],
+        "summary": "Outstanding balance as of last invoice",
+        "description": "Raw `/site/outstandingBalance` passthrough. This is the billing\nsystem's view, **not** the live meter.\n\n- `outstandingAmount < 0` \u2192 credit on file (you're in the black).\n- `outstandingAmount > 0` \u2192 arrears (you owe UPPCL).\n\nSnapshotted at the last monthly invoice cut \u2014 can lag reality by\nup to a month. For a number you can actually trust, use `/balance`.",
+        "operationId": "balance_outstanding_balance_outstanding_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/bills/history": {
+      "get": {
+        "tags": [
+          "Bills"
+        ],
+        "summary": "Monthly invoices (past N months)",
+        "description": "Monthly bill invoices (one row per billing cycle). Think \"statement\nhistory\" \u2014 good for a timeline or PDF-download UI.\n\n**Fields per row**\n\n`invoice_id`, `bill_dt`, `bill_amt`, `due_dt`, `payment_dt`,\n`payment_status`, `bill_period_from`, `bill_period_to`, `units_billed`.\n\n**Query params**\n\n- `limit` (default `12`) \u2014 how many to fetch (max tested: 60).\n- `skip` \u2014 pagination offset.",
+        "operationId": "bills_history_bills_history_get",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 12,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "skip",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 0,
+              "title": "Skip"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/preferences": {
+      "get": {
+        "tags": [
+          "Account"
+        ],
+        "summary": "User notification/display preferences",
+        "description": "User preference record: notification channels (SMS / email / push),\nlanguage, biometric-login toggle, default payment method, etc.\n\nMostly useful for surfacing \"open the UPPCL app to change this\"\nbreadcrumbs in your own UI \u2014 the proxy doesn't currently expose a\nmutation endpoint.",
+        "operationId": "preferences_preferences_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/session": {
+      "get": {
+        "tags": [
+          "Account"
+        ],
+        "summary": "Server-side session record",
+        "description": "What UPPCL's servers think about your current session \u2014 separate\nfrom the JWT claims. Includes issued/expires timestamps, last login\nIP, login-method (password vs OTP), and the `sessionId` you'd need\nif you ever want to call `/auth/logout-all-devices`.",
+        "operationId": "session_session_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/dadata": {
+      "get": {
+        "tags": [
+          "Consumption"
+        ],
+        "summary": "Direct-access meter data (often empty)",
+        "description": "\"Direct-access data\" \u2014 the upstream name for raw meter reads outside\nthe aggregated `/eventsummary` rollups.\n\n\u26a0 Frequently returns an empty `data: []` depending on the meter\nfirmware and tenant configuration. Documented here for completeness;\ndon't build UI on top of it without a fallback.",
+        "operationId": "dadata_dadata_get",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 10,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "skip",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 0,
+              "title": "Skip"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/budget": {
+      "get": {
+        "tags": [
+          "Consumption"
+        ],
+        "summary": "Connection-budget alert records",
+        "description": "Connection budgets are UPPCL's name for consumption alerts (e.g.\n\"ping me when my daily spend exceeds \u20b9X\"). Returns the current set\nof budget rows, with trigger thresholds and last-alerted timestamps.\n\nEmpty array if the user has never configured a budget in the app.",
+        "operationId": "budget_budget_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/debug/raw": {
+      "post": {
+        "tags": [
+          "Debug"
+        ],
+        "summary": "Raw authenticated call to any UPPCL route",
+        "description": "Reverse-engineering escape hatch. Forward an arbitrary body to any\nUPPCL SMART route \u2014 the proxy takes care of encryption, ALTCHA,\nJWT header, tenant header, OAEP-hash fallback, and the 401 retry.\n\n**Request body**\n\n```json\n{\n  \"path\": \"/eventsummary/search\",\n  \"body\": { \"deviceId\": \"...\", \"tenantId\": \"pvvnl\", \"groupBy\": \"year\", \"year\": 2025 }\n}\n```\n\n**Upstream routes known to work** \u2014 see the inventory at the top of\n[`CLAUDE.md`](https://github.com/Harry-kp/uppcl-pro.git/blob/main/CLAUDE.md).\nServer 409 errors usually name the mandatory field you're missing \u2014\ntrust the error, not the docs.\n\n**Known gotchas** (field-name quirks discovered the hard way):\n- `/payment/v2/search` wants `consumer_id` (snake_case), despite\n  saying \"`connectionID` missing\" in the 409.\n- `/eventsummary/aggregate` wants ISO-8601 **with** `+05:30` offset.\n  Any other date format returns a literal `[object Object]`.",
+        "operationId": "debug_raw_debug_raw_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RawPostReq"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/complaints/my": {
+      "get": {
+        "tags": [
+          "Complaints"
+        ],
+        "summary": "All complaints with full detail, newest first",
+        "description": "Hydrated complaint history for a phone. For each complaint, the proxy\nfans out a parallel `/complaints/detail` call and merges the result,\nthen sorts newest-first.\n\n**Returns**\n\n```json\n{\n  \"phone\": \"9999999999\",\n  \"complaints\": [\n    {\n      \"data_id\": \"50000000\",\n      \"complaint_no\": \"PVXXXXXXXXXXX\",\n      \"type\": \"NO SUPPLY\", \"sub_type\": \"SUPPLY RELATED\",\n      \"status\": \"CLOSED\", \"is_open\": false,\n      \"registered_at\": \"2026-04-18T10:56:00\",\n      \"resolved_at\":   \"2026-04-18T20:48:00\",\n      \"remarks\": \"...\", \"closing_remarks\": \"...\",\n      \"officers\": [\n        { \"role\": \"JE\",  \"name\": \"...\", \"phone\": \"0091...\" },\n        { \"role\": \"AE\",  \"name\": \"...\", \"phone\": \"0091...\" },\n        { \"role\": \"XEN\", \"name\": \"...\", \"phone\": \"0091...\" }\n      ],\n      ...\n    }\n  ]\n}\n```\n\n**Underlying upstream** \u2014 `appsavy.com` (\"UPPCL 1912\" CRM), anonymous\nsession cookies only, no login required. 5 request headers encrypted\nwith AES-CBC-128 under a constant key.\n\n**Query params**\n\n- `phone` \u2014 10-digit mobile (required). Only complaints registered\n  *under that number* are returned.",
+        "operationId": "complaints_my_complaints_my_get",
+        "parameters": [
+          {
+            "name": "phone",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Phone"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/complaints/list": {
+      "get": {
+        "tags": [
+          "Complaints"
+        ],
+        "summary": "Compact complaint list for a phone",
+        "description": "Lightweight list view \u2014 one upstream call, no detail fan-out. Use\nthis when you just want a count + statuses (e.g. a sidebar badge).\n\n**Returns**\n\n```json\n{\n  \"phone\": \"9999999999\",\n  \"complaints\": [\n    { \"data_id\": \"50000000\", \"complaint_no\": \"PV...\",\n      \"type\": \"NO SUPPLY\", \"sub_type\": \"SUPPLY RELATED\",\n      \"status\": \"CLOSED\", \"is_open\": false }\n  ]\n}\n```\n\nPrefer `/complaints/my` if you need officer chains, timestamps, or\nclosing remarks \u2014 those live in the detail payload.",
+        "operationId": "complaint_list_complaints_list_get",
+        "parameters": [
+          {
+            "name": "phone",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Phone"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/complaints/detail": {
+      "get": {
+        "tags": [
+          "Complaints"
+        ],
+        "summary": "Full detail for one complaint by DATA_ID",
+        "description": "Every field Appsavy stores for one complaint \u2014 39 `AC_ID`s worth\n(status, sub-status, officer chain with phones, escalation\ntimestamps, remarks, closing remarks, SLA breach flags, \u2026).\n\n`data_id` is the Appsavy-internal numeric ID surfaced by\n`/complaints/list` and `/complaints/my` \u2014 **not** the public-facing\n`PV\u2026` complaint number.",
+        "operationId": "complaint_detail_complaints_detail_get",
+        "parameters": [
+          {
+            "name": "data_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Data Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/complaints/raw": {
+      "post": {
+        "tags": [
+          "Debug"
+        ],
+        "summary": "Raw GetRelationalDataA probe",
+        "description": "Fire a raw `GetRelationalDataA` SOAP call against appsavy.com with\nyour own `(Control_Id, AC_ID)` list. Returns the raw SOAP XML plus\nthe parsed rowsets.\n\n**Request body**\n\n```json\n{\n  \"parent_value\": \"9999999999\",\n  \"children\": [ [31, 30065], [5, 30069] ]\n}\n```\n\nUse when you suspect a new `AC_ID` in the SPA bundle that isn't\ncovered by `/complaints/list` or `/complaints/detail` yet. A quick\nway to find them: grep `web.archive.org/web/*/appsavy.com/` mirrors\nfor `\"AC_ID\"` JSON keys.",
+        "operationId": "complaint_raw_complaints_raw_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RawAppsavyReq"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/bills": {
+      "get": {
+        "tags": [
+          "Bills"
+        ],
+        "summary": "Daily bill rows for the last N days",
+        "description": "**Daily** bill rows \u2014 one per day, with `dailyBill.daily_chg` (\u20b9 burned\nthat day), `closing_bal` (end-of-day meter balance), `units_billed_daily`,\nand the full charge breakdown (energy / fixed / duty / FPPA / subsidy /\nrebate / late-fee).\n\nPerfect source for: runway estimation, \u20b9/unit effective-rate charts,\ncharge composition stack, streak tracking.\n\n**Query params**\n\n- `days` (default `90`) \u2014 window ending today. Upstream caps around 90.\n- `skip`, `limit` \u2014 pagination.",
+        "operationId": "bills_bills_get",
+        "parameters": [
+          {
+            "name": "days",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 90,
+              "title": "Days"
+            }
+          },
+          {
+            "name": "skip",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 0,
+              "title": "Skip"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 90,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/payments": {
+      "get": {
+        "tags": [
+          "Bills"
+        ],
+        "summary": "Payment / recharge history",
+        "description": "Every recharge / payment made against this connection.\n\n**Fields per row**\n\n`payment_dt`, `amt`, `txn_id`, `method` (Online - Web / UPI / Card / \u2026),\n`status` (Success / Failed / Pending), `msi`, `connectionId`.\n\n**Upstream quirk**: `/payment/v2/search` wants `consumer_id`\n(snake_case) in the request body, not `connectionId`. The proxy\nhandles that transparently \u2014 listed here only because the upstream's\n409 error is famously misleading.\n\n**Query params**\n\n- `limit` (default `50`), `skip` \u2014 pagination.",
+        "operationId": "payments_payments_get",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "skip",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 0,
+              "title": "Skip"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/consumption": {
+      "get": {
+        "tags": [
+          "Consumption"
+        ],
+        "summary": "Daily kWh import/export for the last N days",
+        "description": "Per-day kWh **import** (grid \u2192 house) and **export** (house \u2192 grid,\nrelevant for solar exporters) for the last N days.\n\nEach row: `usage_date`, `energyImportKWH.value`, `energyExportKWH.value`,\nplus optional `maximumDemandKW`, `minimumDemandKW`, `avgPowerFactor`.\n\n**Query params**\n\n- `days` (default `30`) \u2014 upstream accepts up to ~90. Larger windows\n  return `[object Object]`.\n\n**Date-format gotcha**: upstream requires ISO-8601 with the `+05:30`\nIST offset. The proxy handles formatting \u2014 pass plain day counts.",
+        "operationId": "consumption_consumption_get",
+        "parameters": [
+          {
+            "name": "days",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 30,
+              "title": "Days"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/history/yearly": {
+      "get": {
+        "tags": [
+          "Consumption"
+        ],
+        "summary": "Monthly rollups for a calendar year",
+        "description": "Monthly consumption rollups for a calendar year. Includes\n`powerFactor` \u2014 rare for UPPCL endpoints \u2014 so this is the go-to\nfor a year-over-year power-quality chart.\n\n**Query params**\n\n- `year` (default: current) \u2014 e.g. `2025`. Upstream returns 12 rows;\n  months before this account's activation come back as zeros.\n\n**Why not `groupBy: \"month\"`?** \u2014 because the upstream `/eventsummary/search`\nonly accepts `groupBy: \"year\"`. Day/month group-bys error opaquely.",
+        "operationId": "history_yearly_history_yearly_get",
+        "parameters": [
+          {
+            "name": "year",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 0,
+              "title": "Year"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/dashboard": {
+      "get": {
+        "tags": [
+          "Dashboard"
+        ],
+        "summary": "Composite: balance + bills + consumption + derived metrics",
+        "description": "One-shot composite endpoint. Fetches `/site/search`, `/site/prepaidBalance`,\n`/bill/search` (90d), `/payment/v2/search`, and `/eventsummary/aggregate`\n(30d) in sequence, derives ~a dozen metrics, and returns it all.\n\nDesigned so a mobile-first home screen can render in a single round\ntrip rather than 5 \u2014 and so the derived metrics (runway, \u20b9/unit,\nrecharge lifespans) are computed server-side where the full history\nis available.\n\n**Response shape**\n\n```json\n{\n  \"site\": { ... primary-site record ... },\n  \"balance\": { \"inr\", \"updated_at\", \"meter_status\", \"arrears_inr\", \"last_recharge\" },\n  \"runway\": { \"days\", \"avg_daily_spend\", \"basis_days\" },\n  \"consumption_30d\": { \"kwh\", \"avg_daily_kwh\", \"effective_rate\", \"daily\": [...] },\n  \"subsidy_ytd_inr\": 1234.56,\n  \"recharge_lifespans\": [ { \"amount\", \"lasted_days\", \"txn\" }, ... ],\n  \"recent_bills\":    [ ...last 10 daily bills  ],\n  \"recent_payments\": [ ...last 10 recharges    ]\n}\n```\n\n**Derived metrics \u2014 how they're computed**\n\n- `runway.days` = `balance.inr` / `runway.avg_daily_spend`\n  (average of the last ~90 days' `daily_chg` excluding zeros).\n- `consumption_30d.effective_rate` = `daily_en_chg / units_billed_daily`\n  from the most recent daily bill \u2014 the true blended \u20b9/unit you're\n  paying including subsidies and rebates.\n- `recharge_lifespans[i].lasted_days` = days between consecutive\n  recharges \u2014 cheap proxy for \"how long did my last \u20b9X last?\".\n\nIf upstream `/prepaidBalance` returns empty, the composite falls\nback to the most recent daily bill's `closing_bal` automatically.",
+        "operationId": "dashboard_dashboard_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "LoginReq": {
+        "properties": {
+          "username": {
+            "type": "string",
+            "title": "Username"
+          },
+          "password": {
+            "type": "string",
+            "title": "Password"
+          }
+        },
+        "type": "object",
+        "required": [
+          "username",
+          "password"
+        ],
+        "title": "LoginReq"
+      },
+      "RawAppsavyReq": {
+        "properties": {
+          "parent_value": {
+            "type": "string",
+            "title": "Parent Value"
+          },
+          "children": {
+            "items": {
+              "prefixItems": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "integer"
+                }
+              ],
+              "type": "array",
+              "maxItems": 2,
+              "minItems": 2
+            },
+            "type": "array",
+            "title": "Children"
+          }
+        },
+        "type": "object",
+        "required": [
+          "parent_value",
+          "children"
+        ],
+        "title": "RawAppsavyReq"
+      },
+      "RawPostReq": {
+        "properties": {
+          "path": {
+            "type": "string",
+            "title": "Path"
+          },
+          "body": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Body"
+          }
+        },
+        "type": "object",
+        "required": [
+          "path",
+          "body"
+        ],
+        "title": "RawPostReq"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "System",
+      "description": "Health, configuration, meta."
+    },
+    {
+      "name": "Auth",
+      "description": "Username + password \u2192 60-day JWT, logout."
+    },
+    {
+      "name": "Account",
+      "description": "Sites, user profile, preferences, session."
+    },
+    {
+      "name": "Balance",
+      "description": "Live prepaid balance + billing-system outstanding."
+    },
+    {
+      "name": "Bills",
+      "description": "Daily bill rows, monthly invoices, payments."
+    },
+    {
+      "name": "Consumption",
+      "description": "kWh import/export, yearly rollups, meter direct-access."
+    },
+    {
+      "name": "Dashboard",
+      "description": "One-shot composite endpoint \u2014 everything a UI needs."
+    },
+    {
+      "name": "Complaints",
+      "description": "Read-only access to the UPPCL 1912 portal (appsavy.com)."
+    },
+    {
+      "name": "Debug",
+      "description": "Escape hatches for probing undocumented routes."
+    }
+  ]
+}

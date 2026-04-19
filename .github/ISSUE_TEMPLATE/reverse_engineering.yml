@@ -1,0 +1,38 @@
+name: Reverse engineering — new upstream route
+description: You've found a new UPPCL / Appsavy / Jio endpoint worth wiring
+labels: ["reverse-engineering"]
+body:
+  - type: textarea
+    id: route
+    attributes:
+      label: Upstream route
+      description: URL, method, form ID, and which portal.
+      placeholder: |
+        POST https://appsavy.com/coreapps/api/AppsavyServices/ExecuteDBQueryA
+        FormId=4235 · UPPCL 1912 complaint portal
+    validations:
+      required: true
+
+  - type: textarea
+    id: har
+    attributes:
+      label: HAR or cURL
+      description: Attach a HAR file (dropped into the repo, gitignored) or paste a scrubbed cURL. Redact your own PII (connection IDs, phone numbers, JWTs).
+    validations:
+      required: true
+
+  - type: textarea
+    id: what
+    attributes:
+      label: What does it do?
+      description: One-line summary + why it's useful for power users.
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I have redacted all PII from my capture.
+          required: true
+        - label: This is a read-only endpoint, or I'm explicitly flagging it as write (needs dry-run gating).
+          required: true

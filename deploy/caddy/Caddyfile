@@ -1,0 +1,44 @@
+# Caddy config for UPPCL Pro on Raspberry Pi.
+#
+#   /api/*  → reverse-proxied to the FastAPI proxy on 127.0.0.1:8000 (path stripped)
+#   /*      → served as static files from the dashboard's `out/` export
+#
+# Port 1912 is UPPCL's own 24/7 complaint helpline number. Chosen because
+# it's outside the usual web-dev collision zone (80, 443, 3000, 8000,
+# 8080, 8443, 8888) — easy to remember, unlikely to fight Pi-hole,
+# Portainer, Homebridge, Jellyfin, etc. Override per-host by editing
+# this file or pointing Caddy at your domain for auto-HTTPS.
+:1912 {
+    # Route order matters here. In Caddy v2, bare `try_files` (outside
+    # a handle block) has a rewrite-phase priority that fires *before*
+    # `handle_path` matches — so `/api/health` gets rewritten to
+    # `/index.html` and never reaches the reverse_proxy. Wrapping the
+    # static handlers in `handle { }` makes them an explicit fallback
+    # that only runs when `handle_path /api/*` doesn't match.
+    handle_path /api/* {
+        reverse_proxy 127.0.0.1:8000 {
+            header_up X-Real-IP {remote}
+        }
+    }
+
+    # Static dashboard — explicit fallback
+    handle {
+        root * /home/pi/uppcl-pro/web/out
+        encode zstd gzip
+        try_files {path} {path}/ {path}.html /index.html
+        file_server
+    }
+
+    # Uncomment if you want basic auth in front of everything:
+    # basicauth {
+    #     <user> <bcrypt-hash from `caddy hash-password`>
+    # }
+
+    log {
+        output file /var/log/caddy/uppcl-pro.log {
+            roll_size 10mb
+            roll_keep 3
+        }
+        format console
+    }
+}

@@ -1,0 +1,27 @@
+[Unit]
+Description=UPPCL Pro proxy (FastAPI)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=%i
+WorkingDirectory=/home/%i/uppcl-pro
+Environment=PYTHONUNBUFFERED=1
+# Load .env if present; fine if it's missing (the proxy has sensible defaults).
+EnvironmentFile=-/home/%i/uppcl-pro/.env
+ExecStart=/home/%i/uppcl-pro/venv/bin/uvicorn uppcl_api:app \
+    --host 127.0.0.1 --port 8000 \
+    --workers 1 \
+    --log-level info
+Restart=on-failure
+RestartSec=3
+# Small hardening
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/home/%i/uppcl-pro
+
+[Install]
+WantedBy=multi-user.target

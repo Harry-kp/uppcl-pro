@@ -1,0 +1,6 @@
+# Dev-only Python deps. Runtime needs only requirements.txt — the Pi
+# never installs this file. Used by `make setup` and CI.
+-r requirements.txt
+
+ruff>=0.4
+playwright>=1.46  # for scripts/capture_screenshots.py

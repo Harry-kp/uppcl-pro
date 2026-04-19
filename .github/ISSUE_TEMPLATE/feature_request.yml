@@ -1,0 +1,38 @@
+name: Feature request
+description: A new chart, analytics metric, or integration
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What would you like?
+      description: Describe the feature + the problem it solves for you.
+      placeholder: |
+        A tile that shows my carbon footprint in kg CO2e / month, using the
+        grid emission factor for UP. Would help me argue for a solar retrofit.
+    validations:
+      required: true
+
+  - type: textarea
+    id: signals
+    attributes:
+      label: Which data sources would this use?
+      description: Which proxy endpoints or upstream APIs are relevant? Do we need to reverse-engineer anything new?
+      placeholder: |
+        /consumption for kWh, then multiply by 0.82 kg CO2e/kWh (current UP grid factor).
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: What else did you think about?
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I have searched existing issues for duplicate requests.
+          required: true
+        - label: This doesn't ask the proxy to automate any destructive / paid action without an explicit dry-run.
+          required: true

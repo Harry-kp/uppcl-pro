@@ -1,0 +1,6 @@
+httpx>=0.27
+fastapi>=0.110
+uvicorn>=0.29
+cryptography>=42
+pydantic>=2.5
+python-dotenv>=1.0

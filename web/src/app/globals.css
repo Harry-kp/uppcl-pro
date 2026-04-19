@@ -1,0 +1,150 @@
+@import "tailwindcss";
+
+/*
+ * Kinetic Vault — theme tokens
+ * Dark-first (default). Light overrides live in `html.light { ... }` below.
+ * All chart hex colors are also themed via --color-chart-* so visualisations
+ * adapt automatically.
+ */
+@theme {
+  /* Surfaces — tonal layering (no 1px borders for sectioning) */
+  --color-void: #000000;
+  --color-surface-dim: #131313;
+  --color-surface: #131313;
+  --color-surface-container-lowest: #0e0e0e;
+  --color-surface-container-low: #1b1b1b;
+  --color-surface-container: #1f1f1f;
+  --color-surface-container-high: #2a2a2a;
+  --color-surface-container-highest: #393939;
+  --color-surface-bright: #393939;
+
+  /* Primary = electric blue (good / conservation) */
+  --color-primary: #9ecaff;
+  --color-primary-container: #4da8ff;
+  --color-on-primary-fixed: #001d36;
+  --color-primary-fixed-dim: #9ecaff;
+
+  /* Secondary = amber (warning / attention) */
+  --color-secondary: #ffb951;
+  --color-secondary-container: #c2841a;
+  --color-on-secondary-fixed: #291800;
+
+  /* Tertiary = red (errors only) */
+  --color-tertiary: #ffb3af;
+  --color-error: #ffb4ab;
+
+  /* On-surface (never pure white in dark mode) */
+  --color-on-surface: #e2e2e2;
+  --color-on-surface-variant: #c0c7d3;
+  --color-outline: #8a919d;
+  --color-outline-variant: #43474e;
+
+  /* Chart palette — consumed in SVG / style props. */
+  --color-chart-a: #4da8ff;          /* primary line / bar fill */
+  --color-chart-a-soft: #9ecaff;     /* primary soft / secondary line */
+  --color-chart-b: #ffb951;          /* accent / peak highlight */
+  --color-chart-b-soft: #c2841a;     /* accent deep */
+  --color-chart-muted: #8a919d;      /* reference / mean / axis labels */
+  --color-chart-grid: #1f1f1f;       /* grid rules */
+  --color-chart-a-rgb: 77 168 255;   /* for alpha-modulated usage */
+  --color-chart-b-rgb: 255 185 81;
+
+  /* Fonts */
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", monospace;
+}
+
+html { color-scheme: dark; }
+html.light { color-scheme: light; }
+
+/*
+ * LIGHT THEME — researched MD3 surface hierarchy + WCAG-AA contrast.
+ *
+ *   Background is a very subtly blue-tinted off-white (#F7F9FC) so that
+ *   pure-white elevated cards pop against it. Each tonal step is +4-6%
+ *   darkness so hover states are discernible without banding.
+ *
+ *   Primary is a deep accessible blue (#0055B8, contrast 6.1:1 on white).
+ *   Secondary is a deeper amber (#8B5000, 4.8:1) so it reads on white.
+ *   Chart colours are retuned for light backgrounds.
+ */
+html.light {
+  --color-void: #f7f9fc;
+  --color-surface-dim: #eef2f8;
+  --color-surface: #f7f9fc;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-low: #f3f6fb;
+  --color-surface-container: #eaeef5;
+  --color-surface-container-high: #dfe4ee;
+  --color-surface-container-highest: #d4dae5;
+  --color-surface-bright: #ffffff;
+
+  --color-primary: #0055b8;
+  --color-primary-container: #0055b8;
+  --color-on-primary-fixed: #ffffff;
+  --color-primary-fixed-dim: #0055b8;
+
+  --color-secondary: #8b5000;
+  --color-secondary-container: #ffd8a8;
+  --color-on-secondary-fixed: #2b1700;
+
+  --color-tertiary: #ba1a1a;
+  --color-error: #ba1a1a;
+
+  --color-on-surface: #111418;
+  --color-on-surface-variant: #3e4650;
+  --color-outline: #6b7280;
+  --color-outline-variant: #c7cdd6;
+
+  /* Chart palette — deeper values so lines / bars read against white cards */
+  --color-chart-a: #0055b8;
+  --color-chart-a-soft: #5b94dd;
+  --color-chart-b: #b66900;
+  --color-chart-b-soft: #8b5000;
+  --color-chart-muted: #6b7280;
+  --color-chart-grid: #e3e6ec;
+  --color-chart-a-rgb: 0 85 184;
+  --color-chart-b-rgb: 182 105 0;
+}
+
+body {
+  background: var(--color-void);
+  color: var(--color-on-surface);
+  font-family: var(--font-sans);
+  font-feature-settings: "cv11", "ss01";
+  -webkit-font-smoothing: antialiased;
+}
+
+.font-mono,
+.tabular {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" on, "lnum" on;
+}
+
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--color-surface-container-high); border-radius: 10px; }
+
+/* Theme-aware glow / shadow utilities — reference --color-chart-a-rgb so they
+ * switch blue automatically between dark (#4da8ff) and light (#0055b8). */
+.shadow-ambient {
+  box-shadow: 0 24px 48px -12px rgb(var(--color-chart-a-rgb) / 0.10);
+}
+.glow-primary {
+  box-shadow: 0 0 24px -4px rgb(var(--color-chart-a-rgb) / 0.35);
+}
+.glow-hero::before {
+  content: "";
+  position: absolute;
+  inset: -20% -10%;
+  background: radial-gradient(ellipse at 20% 50%, rgb(var(--color-chart-a-rgb) / 0.08), transparent 60%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+@keyframes count-up { from { opacity: 0.4; transform: translateY(2px); } to { opacity: 1; transform: translateY(0); } }
+.animate-count-up { animation: count-up 600ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+@keyframes shake { 10%, 90% { transform: translateX(-1px); } 20%, 80% { transform: translateX(2px); } 30%, 50%, 70% { transform: translateX(-2px); } 40%, 60% { transform: translateX(2px); } }
+.animate-shake { animation: shake 300ms cubic-bezier(.36,.07,.19,.97) both; }
