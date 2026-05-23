@@ -60,22 +60,46 @@ const SESSION_TTL = 15 * 60 * 1000; // 15 min (conservative)
 async function ensureSession(): Promise<string> {
   if (_cookies && Date.now() - _cookiesAt < SESSION_TTL) return _cookies;
 
-  const r = await fetch(`${BOOTSTRAP}?PROJECTID=${PROJECT_ID}&FORMID=${FORM_ID}`, {
+  console.log("[appsavy] bootstrapping session...");
+  const url = `${BOOTSTRAP}?PROJECTID=${PROJECT_ID}&FORMID=${FORM_ID}`;
+  console.log(`[appsavy] GET ${url}`);
+
+  const r = await fetch(url, {
     headers: {
       accept: "text/html",
-      "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+      "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36",
     },
     redirect: "follow",
     cache: "no-store",
   });
 
+  console.log(`[appsavy] bootstrap response: ${r.status} ${r.statusText}`);
+  console.log(`[appsavy] response URL: ${r.url}`);
+  console.log(`[appsavy] all response headers:`);
+  r.headers.forEach((v, k) => console.log(`  ${k}: ${v.slice(0, 100)}`));
+
+  // Try multiple ways to get Set-Cookie headers
   const setCookies = r.headers.getSetCookie?.() ?? [];
-  if (setCookies.length === 0) {
+  const setCookieHeader = r.headers.get("set-cookie");
+  console.log(`[appsavy] getSetCookie() returned: ${setCookies.length} cookies`);
+  console.log(`[appsavy] get("set-cookie"): ${setCookieHeader?.slice(0, 200) ?? "null"}`);
+
+  // Use whichever method works
+  let cookieStr: string;
+  if (setCookies.length > 0) {
+    cookieStr = setCookies.map((c) => c.split(";")[0]).join("; ");
+  } else if (setCookieHeader) {
+    // Fallback: split on comma that's followed by a cookie name pattern
+    cookieStr = setCookieHeader
+      .split(/,(?=\s*[A-Za-z_.\-]+=)/)
+      .map((c) => c.trim().split(";")[0])
+      .join("; ");
+  } else {
     throw new Error("Appsavy bootstrap returned no cookies");
   }
 
-  // Collect cookie name=value pairs
-  _cookies = setCookies.map((c) => c.split(";")[0]).join("; ");
+  console.log(`[appsavy] cookies: ${cookieStr.slice(0, 200)}`);
+  _cookies = cookieStr;
   _cookiesAt = Date.now();
   return _cookies;
 }
