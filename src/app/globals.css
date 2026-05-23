@@ -148,3 +148,20 @@ body {
 
 @keyframes shake { 10%, 90% { transform: translateX(-1px); } 20%, 80% { transform: translateX(2px); } 30%, 50%, 70% { transform: translateX(-2px); } 40%, 60% { transform: translateX(2px); } }
 .animate-shake { animation: shake 300ms cubic-bezier(.36,.07,.19,.97) both; }
+
+/* Shimmer skeleton — subtle sweep animation instead of plain pulse */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--color-surface-container-low) 25%,
+    var(--color-surface-container) 50%,
+    var(--color-surface-container-low) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+  border-radius: 8px;
+}

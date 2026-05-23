@@ -378,7 +378,14 @@ function SkeletonRows() {
   return (
     <div className="space-y-2">
       {[0, 1, 2].map((i) => (
-        <div key={i} className="h-24 animate-pulse rounded-lg bg-surface-container" />
+        <div key={i} className="rounded-lg bg-surface-container p-4">
+          <div className="flex items-center justify-between">
+            <div className="skeleton h-3 w-32 rounded" />
+            <div className="skeleton h-5 w-16 rounded-full" />
+          </div>
+          <div className="skeleton mt-3 h-3 w-48 rounded" />
+          <div className="skeleton mt-2 h-3 w-24 rounded" />
+        </div>
       ))}
     </div>
   );

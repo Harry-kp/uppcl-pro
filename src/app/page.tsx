@@ -475,17 +475,35 @@ function Row({ k, v, big, mono }: { k: string; v: React.ReactNode; big?: boolean
 function Skeleton() {
   return (
     <div className="mx-auto flex max-w-[1440px] flex-col gap-4">
+      {/* Hero: balance + runway */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_360px]">
-        <div className="h-[260px] animate-pulse rounded-xl bg-surface-container-low" />
-        <div className="h-[260px] animate-pulse rounded-xl bg-surface-container-low" />
+        <div className="rounded-xl bg-surface-container-low p-6">
+          <div className="skeleton h-3 w-28 rounded" />
+          <div className="skeleton mt-4 h-14 w-48 rounded" />
+          <div className="skeleton mt-3 h-3 w-36 rounded" />
+          <div className="skeleton mt-10 h-3 w-24 rounded" />
+          <div className="skeleton mt-3 h-16 w-full rounded" />
+        </div>
+        <div className="flex flex-col items-center justify-center rounded-xl bg-surface-container-low p-6">
+          <div className="skeleton h-32 w-32 rounded-full" />
+          <div className="skeleton mt-4 h-3 w-28 rounded" />
+        </div>
       </div>
-      <div className="h-12 animate-pulse rounded-lg bg-surface-container-low" />
-      <div className="grid grid-cols-4 gap-4">
+      {/* KPI tiles */}
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         {[0, 1, 2, 3].map((i) => (
-          <div key={i} className="h-[120px] animate-pulse rounded-lg bg-surface-container-high" />
+          <div key={i} className="rounded-lg bg-surface-container-high p-4">
+            <div className="skeleton h-3 w-20 rounded" />
+            <div className="skeleton mt-3 h-7 w-24 rounded" />
+            <div className="skeleton mt-3 h-3 w-32 rounded" />
+          </div>
         ))}
       </div>
-      <div className="h-20 animate-pulse rounded-xl bg-surface-container-low" />
+      {/* Recommendation */}
+      <div className="rounded-xl bg-surface-container-low p-5">
+        <div className="skeleton h-3 w-32 rounded" />
+        <div className="skeleton mt-2 h-5 w-64 rounded" />
+      </div>
     </div>
   );
 }
