@@ -24,6 +24,9 @@ import {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
+// NOT a secret — this is a public client ID baked into UPPCL's own JavaScript
+// bundle at uppcl.sem.jio.com. Every user of the official UPPCL SMART website
+// sends this same key. It identifies the app, not the user.
 const UPPCL_API_KEY = "5ab6ef2e-5051-4923-aa65-dc82883af26b";
 const DEFAULT_TENANT = "b3ba0ab0-05bc-11f0-bf77-932b3a8bb3cd";
 const IST_OFFSET = "+05:30";

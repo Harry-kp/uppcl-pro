@@ -14,6 +14,9 @@ const BASE_URL = process.env.UPPCL_BASE_URL ?? "https://uppcl.sem.jio.com";
 const API_BASE = `${BASE_URL}/accounts/api`;
 const PUBKEY_URL = `${BASE_URL}/uppclsmart/assets/cert/prod/server_public.pem`;
 
+// NOT a secret — this is a public client ID baked into UPPCL's own JavaScript
+// bundle at uppcl.sem.jio.com. Every user of the official website sends this
+// same key. Override via UPPCL_API_KEY env var if UPPCL ever rotates it.
 const DEFAULT_API_KEY = "5ab6ef2e-5051-4923-aa65-dc82883af26b";
 const API_KEY = process.env.UPPCL_API_KEY ?? DEFAULT_API_KEY;
 
