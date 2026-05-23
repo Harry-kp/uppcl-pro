@@ -100,7 +100,22 @@ export async function POST(
   if (!headers["content-type"]) headers["content-type"] = "application/json";
 
   console.log(`[uppcl proxy] POST ${joined} → ${url}`);
-  console.log(`[uppcl proxy] headers:`, Object.keys(headers).join(", "));
+  console.log(`[uppcl proxy] headers sent:`, JSON.stringify(headers, null, 2));
+  console.log(`[uppcl proxy] body length: ${body.length}`);
+  console.log(`[uppcl proxy] body preview: ${body.slice(0, 200)}`);
+  // Check the body structure
+  try {
+    const parsed = JSON.parse(body);
+    console.log(`[uppcl proxy] body keys:`, Object.keys(parsed));
+    if (parsed.payload) {
+      console.log(`[uppcl proxy] payload type:`, typeof parsed.payload);
+      console.log(`[uppcl proxy] payload length:`, parsed.payload.length);
+      try {
+        const inner = JSON.parse(parsed.payload);
+        console.log(`[uppcl proxy] inner keys:`, Object.keys(inner));
+      } catch { console.log(`[uppcl proxy] inner is NOT valid JSON`); }
+    }
+  } catch { console.log(`[uppcl proxy] body is NOT valid JSON`); }
 
   const r = await fetch(url, {
     method: "POST",
