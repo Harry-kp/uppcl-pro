@@ -493,11 +493,11 @@ function Skeleton() {
 function ProxyErrorView({ message }: { message: string }) {
   return (
     <div className="mx-auto mt-20 max-w-md rounded-xl bg-surface-container-low p-8 text-center">
-      <div className="font-mono text-[20px] text-secondary">Proxy unreachable</div>
+      <div className="font-mono text-[20px] text-secondary">Data unavailable</div>
       <p className="mt-3 text-[13px] text-on-surface-variant">{message}</p>
       <p className="mt-4 font-mono text-[11px] text-on-surface-variant/70">
-        Is the FastAPI proxy running? <br />
-        <code className="rounded bg-surface-container px-1.5 py-0.5">uvicorn uppcl_api:app --port 8000</code>
+        This usually means the UPPCL upstream API is temporarily down,
+        or your session has expired. Try signing out and back in.
       </p>
     </div>
   );

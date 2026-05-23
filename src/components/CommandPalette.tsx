@@ -96,21 +96,12 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
                 Recharge now
               </PItem>
               <PItem
-                onSelect={act("CSV export started", async () => {
-                  const res = await fetch("http://localhost:8000/bills?days=365&limit=365");
-                  const json = await res.json();
-                  type Row = Record<string, string | null | undefined>;
-                  const rows: Row[] = (json.data ?? []).map((b: { dailyBill: Row }) => b.dailyBill);
-                  const headers = Object.keys(rows[0] ?? {});
-                  const csv = [headers.join(","), ...rows.map((r: Row) => headers.map((h) => (r[h] ?? "")).join(","))].join("\n");
-                  const a = document.createElement("a");
-                  a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
-                  a.download = "uppcl-bills.csv";
-                  a.click();
+                onSelect={act("Opening Ledger for CSV export", () => {
+                  router.push("/ledger");
                 })}
                 icon={<Download className="h-4 w-4" />}
               >
-                Export all bills (CSV)
+                Export bills (CSV) -- via Ledger page
               </PItem>
             </PGroup>
 
@@ -122,16 +113,16 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
                 Open UPPCL SMART web
               </PItem>
               <PItem
-                onSelect={act("Opening proxy docs", () => window.open("http://localhost:8000/docs", "_blank"))}
+                onSelect={act("Opening GitHub", () => window.open("https://github.com/Harry-kp/uppcl-pro", "_blank"))}
                 icon={<ExternalLink className="h-4 w-4" />}
               >
-                Open proxy API docs (Swagger)
+                Open GitHub repo
               </PItem>
             </PGroup>
 
             <PGroup heading="Session">
               <PItem onSelect={act("Logged out", async () => { await logout(); swrMutate(() => true); })} icon={<LogOut className="h-4 w-4" />}>
-                Logout (soft — JWT survives on server)
+                Sign out (clears JWT from browser)
               </PItem>
             </PGroup>
 

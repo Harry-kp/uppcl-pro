@@ -13,6 +13,8 @@ import {
   AlertTriangle,
   ShieldCheck,
   ExternalLink,
+  Moon,
+  Sun,
 } from "lucide-react";
 import { API_BASE, login, ProxyError } from "@/lib/api";
 import { useToast } from "@/components/ui/Toast";
@@ -30,6 +32,19 @@ export function LoginGate({ proxyUnreachable }: { proxyUnreachable?: string }) {
   const [showPw, setShowPw] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [dark, setDark] = useState(() =>
+    typeof window !== "undefined"
+      ? document.documentElement.classList.contains("dark")
+      : true
+  );
+
+  function toggleTheme() {
+    const next = !dark;
+    setDark(next);
+    localStorage.setItem("theme", next ? "dark" : "light");
+    document.documentElement.classList.toggle("dark", next);
+    document.documentElement.classList.toggle("light", !next);
+  }
 
   const canSubmit = username.trim().length > 0 && password.length > 0 && !busy;
 
@@ -66,13 +81,22 @@ export function LoginGate({ proxyUnreachable }: { proxyUnreachable?: string }) {
             <div className="font-mono text-[9px] uppercase tracking-[0.26em] text-on-surface-variant/60">Kinetic Vault</div>
           </div>
         </div>
-        <Link
-          href="https://github.com/Harry-kp/uppcl-pro.git"
-          target="_blank"
-          className="inline-flex items-center gap-1 font-mono text-[11px] text-on-surface-variant/70 transition hover:text-on-surface"
-        >
-          Source <ExternalLink className="h-3 w-3" strokeWidth={2} />
-        </Link>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={toggleTheme}
+            className="rounded-md p-2 text-on-surface-variant/70 transition hover:bg-surface-container-low hover:text-on-surface"
+            aria-label="Toggle theme"
+          >
+            {dark ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
+          </button>
+          <Link
+            href="https://github.com/Harry-kp/uppcl-pro.git"
+            target="_blank"
+            className="inline-flex items-center gap-1 font-mono text-[11px] text-on-surface-variant/70 transition hover:text-on-surface"
+          >
+            Source <ExternalLink className="h-3 w-3" strokeWidth={2} />
+          </Link>
+        </div>
       </header>
 
       {/* Centred split */}
@@ -82,35 +106,54 @@ export function LoginGate({ proxyUnreachable }: { proxyUnreachable?: string }) {
           <div className="hidden flex-col gap-6 lg:flex">
             <div>
               <div className="mb-2 font-mono text-[10px] uppercase tracking-[0.3em] text-primary-fixed-dim">
-                Sign in to your meter
+                Your meter, your data
               </div>
               <h1 className="font-mono text-[34px] leading-[1.1] text-on-surface">
-                One login.<br />
-                Sixty days of&nbsp;runway.
+                We never see<br />
+                your password.
               </h1>
               <p className="mt-4 max-w-[380px] text-[13px] leading-relaxed text-on-surface-variant">
-                Your UPPCL SMART credentials stay on this machine. We exchange
-                them for a 60-day JWT, cache it locally, and never see them
-                again.
+                Your credentials are encrypted <strong className="text-on-surface">inside your browser</strong> before
+                they leave. Our server is a blind relay — it forwards encrypted
+                data it cannot read.
               </p>
             </div>
 
+            {/* Trust banner */}
+            <div className="rounded-lg border border-primary-fixed-dim/20 bg-primary-container/10 px-4 py-3">
+              <div className="flex items-center gap-2 text-[12px] font-semibold text-primary-fixed-dim">
+                <ShieldCheck className="h-4 w-4" strokeWidth={2} />
+                Zero-knowledge — we can&apos;t access your account
+              </div>
+              <p className="mt-1.5 text-[11px] leading-relaxed text-on-surface-variant">
+                Everything is open-source. Verify it yourself.
+              </p>
+              <Link
+                href="https://github.com/Harry-kp/uppcl-pro#zero-knowledge-security"
+                target="_blank"
+                className="mt-2 inline-flex items-center gap-1 text-[11px] font-semibold text-primary-fixed-dim hover:underline"
+              >
+                Read how it works <ExternalLink className="h-3 w-3" />
+              </Link>
+            </div>
+
             <ul className="space-y-3">
-              <Pitch icon={<ShieldCheck className="h-3.5 w-3.5" strokeWidth={2.25} />}>
-                Runs entirely on your laptop or Pi — no cloud, no telemetry.
-              </Pitch>
               <Pitch icon={<LockKeyhole className="h-3.5 w-3.5" strokeWidth={2.25} />}>
-                Password goes straight to <code className="rounded bg-surface-container-low px-1 font-mono text-[11px]">uppcl.sem.jio.com</code> over
-                RSA-OAEP + AES-GCM. Never logged, never stored.
+                Password is encrypted <strong>in your browser</strong> before
+                it leaves. Our server only sees encrypted data passing through.
+              </Pitch>
+              <Pitch icon={<ShieldCheck className="h-3.5 w-3.5" strokeWidth={2.25} />}>
+                No database. No logs. No tracking. The server is a stateless
+                relay — it <strong>cannot</strong> decrypt your data.
               </Pitch>
               <Pitch icon={<Zap className="h-3.5 w-3.5" strokeWidth={2.25} />}>
-                Sign out any time — the <span className="font-mono">Sign out</span> menu clears the
-                cached JWT.
+                Close the tab and your session is gone. Nothing persists
+                on our end — ever.
               </Pitch>
             </ul>
 
             <div className="mt-2 border-t border-white/[0.04] pt-4 font-mono text-[11px] text-on-surface-variant/70">
-              Proxy &nbsp;→&nbsp; <span className="text-on-surface-variant">{API_BASE}</span>
+              100% open-source &nbsp;·&nbsp; Zero-knowledge &nbsp;·&nbsp; MIT licensed
             </div>
           </div>
 
@@ -207,10 +250,24 @@ export function LoginGate({ proxyUnreachable }: { proxyUnreachable?: string }) {
                     )}
                   </button>
 
-                  <p className="pt-2 text-center text-[11px] text-on-surface-variant/70">
-                    By signing in you agree the cached JWT (valid ~60 days)
-                    will live in <code className="rounded bg-surface-container px-1 font-mono">uppcl_session.json</code>.
-                  </p>
+                  {/* Trust callout below button */}
+                  <div className="mt-1 rounded-md border border-white/[0.04] bg-(--color-void) px-3 py-2.5 text-center">
+                    <div className="flex items-center justify-center gap-1.5 text-[11px] font-semibold text-primary-fixed-dim">
+                      <ShieldCheck className="h-3 w-3" strokeWidth={2.25} />
+                      We never see your password
+                    </div>
+                    <p className="mt-1 text-[10px] leading-relaxed text-on-surface-variant/70">
+                      Encrypted in your browser, sent directly to UPPCL. Our server
+                      is a blind relay.{" "}
+                      <Link
+                        href="https://github.com/Harry-kp/uppcl-pro#zero-knowledge-security"
+                        target="_blank"
+                        className="text-primary-fixed-dim underline-offset-2 hover:underline"
+                      >
+                        How it works
+                      </Link>
+                    </p>
+                  </div>
                 </form>
               </>
             )}
@@ -220,7 +277,14 @@ export function LoginGate({ proxyUnreachable }: { proxyUnreachable?: string }) {
 
       {/* Footer */}
       <footer className="mx-auto w-full max-w-[980px] px-6 pb-6 font-mono text-[10px] uppercase tracking-[0.2em] text-on-surface-variant/50">
-        <span>Reverse-engineered UPPCL SMART · Local-first · MIT</span>
+        <span>Open-source &nbsp;·&nbsp; Zero-knowledge &nbsp;·&nbsp; MIT &nbsp;·&nbsp; </span>
+        <Link
+          href="https://github.com/Harry-kp/uppcl-pro"
+          target="_blank"
+          className="text-on-surface-variant/70 hover:text-on-surface"
+        >
+          Verify the code yourself
+        </Link>
       </footer>
     </div>
   );
@@ -273,20 +337,12 @@ function ProxyDownPanel({ message }: { message: string }) {
       <div className="mx-auto mb-4 grid h-12 w-12 place-items-center rounded-full bg-secondary/10 text-secondary">
         <AlertTriangle className="h-5 w-5" strokeWidth={2} />
       </div>
-      <div className="font-mono text-[20px] text-secondary">Proxy unreachable</div>
+      <div className="font-mono text-[20px] text-secondary">Connection error</div>
       <p className="mt-3 text-[13px] leading-relaxed text-on-surface-variant">
-        The dashboard couldn&apos;t reach the FastAPI proxy at <br />
-        <code className="mt-1 inline-block rounded bg-surface-container px-1.5 py-0.5 font-mono text-[12px] text-on-surface">{API_BASE}</code>
+        Could not reach the UPPCL API. This usually means the upstream
+        server is down or your network is blocking the connection.
       </p>
       <p className="mt-4 font-mono text-[11px] text-on-surface-variant/70">{message}</p>
-      <div className="mt-6 rounded-md bg-(--color-void) p-4 text-left font-mono text-[11px] leading-relaxed text-on-surface-variant">
-        <div className="mb-1.5 text-[10px] uppercase tracking-[0.2em] text-on-surface-variant/60">
-          Start the proxy
-        </div>
-        <div className="text-on-surface">
-          $ make dev-proxy
-        </div>
-      </div>
     </div>
   );
 }

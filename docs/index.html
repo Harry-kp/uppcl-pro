@@ -4,7 +4,7 @@
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>UPPCL Pro — Kinetic Vault</title>
-  <meta name="description" content="Self-hosted analytics dashboard for UPPCL SMART prepaid smart meters. Reverse-engineered FastAPI proxy + Next.js 16 dashboard."/>
+  <meta name="description" content="Zero-knowledge analytics dashboard for UPPCL SMART prepaid smart meters. Your credentials never touch our server."/>
   <meta name="theme-color" content="#0b0b0b"/>
   <meta property="og:title" content="UPPCL Pro — Kinetic Vault"/>
   <meta property="og:description" content="Self-hosted analytics dashboard for UPPCL SMART prepaid smart meters."/>
@@ -174,8 +174,7 @@
       <a href="#screenshots">Screenshots</a>
       <a href="#quickstart">Quickstart</a>
       <a href="https://github.com/Harry-kp/uppcl-pro" target="_blank" rel="noopener">GitHub</a>
-      <a href="./swagger.html" class="btn-api">Swagger →</a>
-      <a href="./api.html" class="btn-api">ReDoc →</a>
+      <a href="#security" class="btn-api">Zero-Knowledge</a>
     </div>
   </nav>
 
@@ -189,13 +188,13 @@
       </div>
       <h1>Your prepaid meter,<br><span>finally making sense.</span></h1>
       <p>
-        Self-hosted analytics dashboard for <strong>UPPCL SMART</strong> prepaid electricity meters.
-        Reverse-engineered FastAPI proxy + Next.js 16 dashboard. Laptop or Raspberry Pi.
+        Zero-knowledge analytics for <strong>UPPCL SMART</strong> prepaid meters.
+        Your credentials are encrypted in your browser — our server never sees them.
       </p>
       <div class="hero-ctas">
         <a href="https://github.com/Harry-kp/uppcl-pro" class="btn btn-primary" target="_blank" rel="noopener">View on GitHub</a>
         <a href="#screenshots" class="btn btn-secondary">See screenshots</a>
-        <a href="./swagger.html" class="btn btn-secondary">Browse API</a>
+        <a href="#security" class="btn btn-secondary">How it's secure</a>
       </div>
       <div class="hero-shot">
         <picture>
@@ -318,20 +317,20 @@
     <!-- Quickstart -->
     <section id="quickstart">
       <h2>Quickstart</h2>
-      <p class="sub">Python 3.10+ and Node 20+ (or Bun 1.1+) required.</p>
+      <p class="sub">Node 20+ (or Bun 1.1+) required. No Python.</p>
       <div class="qs-grid">
-        <pre><span class="c"># clone and set up</span>
+        <pre><span class="c"># self-host</span>
 <span class="k">git clone</span> https://github.com/Harry-kp/uppcl-pro.git
 <span class="k">cd</span> uppcl-pro
-<span class="k">make setup</span>       <span class="c"># Python + Node deps</span>
-<span class="k">make dev</span>         <span class="c"># proxy :8000 + dashboard :3000</span></pre>
-        <pre><span class="c"># first-time login</span>
-<span class="k">curl</span> -X POST localhost:8000/auth/login \
-  -H <span class="s">'content-type: application/json'</span> \
-  -d <span class="s">'{"username":"&lt;phone&gt;","password":"&lt;pw&gt;"}'</span>
+<span class="k">bun install</span>
+<span class="k">bun run dev</span>      <span class="c"># open localhost:3000</span></pre>
+        <pre><span class="c"># or just use the hosted version</span>
+<span class="c"># (same code, deployed on Vercel)</span>
 
-<span class="c"># then open</span>
-<span class="k">open</span> http://localhost:3000</pre>
+<span class="k">open</span> <span class="s">https://uppcl-pro.vercel.app</span>
+
+<span class="c"># sign in with your UPPCL credentials</span>
+<span class="c"># everything is encrypted in your browser</span></pre>
       </div>
       <p style="margin-top:16px;font-size:13px;color:var(--text-dim)">
         Using Claude Code? Type
@@ -359,24 +358,25 @@
       </p>
     </section>
 
-    <!-- API reference -->
-    <section>
-      <h2>API Reference</h2>
-      <p class="sub">23 reverse-engineered endpoints, OpenAPI 3.1. Browse without cloning. "Try it out" requires the proxy running locally.</p>
-      <div style="display:flex;flex-direction:column;gap:12px">
-        <div class="api-card">
-          <div>
-            <h3>Swagger UI</h3>
-            <p>Interactive explorer — expand endpoints, inspect schemas, try calls against a local proxy. Identical to <code>/docs</code> on a running proxy.</p>
-          </div>
-          <a href="./swagger.html" class="btn btn-primary">Open Swagger UI →</a>
+    <!-- Security -->
+    <section id="security">
+      <h2>Zero-knowledge architecture</h2>
+      <p class="sub">Your credentials never touch our server. Here's exactly what happens.</p>
+      <div class="features">
+        <div class="feature">
+          <div class="feature-icon">🔐</div>
+          <h3>Browser-side encryption</h3>
+          <p>Your password is encrypted with RSA-OAEP + AES-256-GCM using Web Crypto API <strong>inside your browser</strong> before it ever leaves. The server only sees encrypted blobs passing through.</p>
         </div>
-        <div class="api-card">
-          <div>
-            <h3>ReDoc</h3>
-            <p>Clean three-panel reference — all routes, field descriptions, and example payloads. Identical to <code>/redoc</code> on a running proxy.</p>
-          </div>
-          <a href="./api.html" class="btn btn-secondary">Open ReDoc →</a>
+        <div class="feature">
+          <div class="feature-icon">🧠</div>
+          <h3>No server storage</h3>
+          <p>The JWT from UPPCL is stored in <code>sessionStorage</code> — it lives only in your browser tab. Close the tab and it's gone. We never log, persist, or cache any user data on the server.</p>
+        </div>
+        <div class="feature">
+          <div class="feature-icon">🪟</div>
+          <h3>Fully open-source</h3>
+          <p>Every line of code is on GitHub. The server is a stateless CORS-bypass pipe — <a href="https://github.com/Harry-kp/uppcl-pro/blob/main/src/app/api/uppcl/%5B...path%5D/route.ts">read the 90-line route handler</a> yourself.</p>
         </div>
       </div>
     </section>
