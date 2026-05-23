@@ -210,19 +210,12 @@ const APPSAVY_IV = new TextEncoder().encode("8080808080808080");
  * Web Crypto doesn't natively support CBC padding, so we do PKCS7 manually.
  */
 export async function appsavyEncrypt(plain: string): Promise<string> {
+  // Web Crypto AES-CBC adds PKCS7 padding automatically — do NOT pad manually
   const data = new TextEncoder().encode(plain);
-
-  // PKCS7 padding to 16-byte block boundary
-  const padLen = 16 - (data.length % 16);
-  const padded = new Uint8Array(data.length + padLen);
-  padded.set(data);
-  padded.fill(padLen, data.length);
-
   const key = await crypto.subtle.importKey("raw", APPSAVY_KEY, "AES-CBC", false, [
     "encrypt",
   ]);
-  const ct = await crypto.subtle.encrypt({ name: "AES-CBC", iv: APPSAVY_IV }, key, padded);
-
+  const ct = await crypto.subtle.encrypt({ name: "AES-CBC", iv: APPSAVY_IV }, key, data);
   return b64Encode(ct);
 }
 

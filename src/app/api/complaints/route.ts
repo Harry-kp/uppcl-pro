@@ -30,14 +30,10 @@ const AES_KEY = new TextEncoder().encode("8080808080808080");
 const AES_IV = new TextEncoder().encode("8080808080808080");
 
 async function aesB64(plain: string): Promise<string> {
+  // Web Crypto AES-CBC adds PKCS7 padding automatically — do NOT pad manually
   const data = new TextEncoder().encode(plain);
-  const padLen = 16 - (data.length % 16);
-  const padded = new Uint8Array(data.length + padLen);
-  padded.set(data);
-  padded.fill(padLen, data.length);
-
   const key = await crypto.subtle.importKey("raw", AES_KEY, "AES-CBC", false, ["encrypt"]);
-  const ct = await crypto.subtle.encrypt({ name: "AES-CBC", iv: AES_IV }, key, padded);
+  const ct = await crypto.subtle.encrypt({ name: "AES-CBC", iv: AES_IV }, key, data);
   return btoa(String.fromCharCode(...new Uint8Array(ct)));
 }
 
