@@ -173,7 +173,9 @@ function parseRowsets(raw: string): Array<{ ac_id: string; rows: XmlRow[] }> {
     let rm: RegExpExecArray | null;
     while ((rm = rowsetRe.exec(inner)) !== null) {
       const row: XmlRow = {};
-      const fieldRe = /<(\w+)>([\s\S]*?)<\/\1>/g;
+      // Fields have attributes: <DATA_ID TYPE="TEXT" CAPTION="...">value</DATA_ID>
+      // Match tag name, skip attributes, capture content
+      const fieldRe = /<(\w+)\b[^>]*>([\s\S]*?)<\/\1>/g;
       let fm: RegExpExecArray | null;
       while ((fm = fieldRe.exec(rm[1])) !== null) {
         row[fm[1]] = fm[2].trim();
