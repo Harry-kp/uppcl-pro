@@ -82,35 +82,54 @@ export function LoginGate({ proxyUnreachable }: { proxyUnreachable?: string }) {
           <div className="hidden flex-col gap-6 lg:flex">
             <div>
               <div className="mb-2 font-mono text-[10px] uppercase tracking-[0.3em] text-primary-fixed-dim">
-                Sign in to your meter
+                Your meter, your data
               </div>
               <h1 className="font-mono text-[34px] leading-[1.1] text-on-surface">
-                One login.<br />
-                Sixty days of&nbsp;runway.
+                We never see<br />
+                your password.
               </h1>
               <p className="mt-4 max-w-[380px] text-[13px] leading-relaxed text-on-surface-variant">
-                Your UPPCL SMART credentials stay on this machine. We exchange
-                them for a 60-day JWT, cache it locally, and never see them
-                again.
+                Your credentials are encrypted <strong className="text-on-surface">inside your browser</strong> before
+                they leave. Our server is a blind relay — it forwards encrypted
+                data it cannot read.
               </p>
             </div>
 
+            {/* Trust banner */}
+            <div className="rounded-lg border border-primary-fixed-dim/20 bg-primary-container/10 px-4 py-3">
+              <div className="flex items-center gap-2 text-[12px] font-semibold text-primary-fixed-dim">
+                <ShieldCheck className="h-4 w-4" strokeWidth={2} />
+                Zero-knowledge — we can&apos;t access your account
+              </div>
+              <p className="mt-1.5 text-[11px] leading-relaxed text-on-surface-variant">
+                Everything is open-source. Verify it yourself.
+              </p>
+              <Link
+                href="https://github.com/Harry-kp/uppcl-pro#zero-knowledge-security"
+                target="_blank"
+                className="mt-2 inline-flex items-center gap-1 text-[11px] font-semibold text-primary-fixed-dim hover:underline"
+              >
+                Read how it works <ExternalLink className="h-3 w-3" />
+              </Link>
+            </div>
+
             <ul className="space-y-3">
-              <Pitch icon={<ShieldCheck className="h-3.5 w-3.5" strokeWidth={2.25} />}>
-                Zero-knowledge architecture — your credentials never touch our server.
-              </Pitch>
               <Pitch icon={<LockKeyhole className="h-3.5 w-3.5" strokeWidth={2.25} />}>
-                Password is encrypted <strong>in your browser</strong> with RSA-OAEP + AES-GCM
-                before it leaves. Our server only sees encrypted blobs passing through.
+                Password is encrypted <strong>in your browser</strong> before
+                it leaves. Our server only sees encrypted data passing through.
+              </Pitch>
+              <Pitch icon={<ShieldCheck className="h-3.5 w-3.5" strokeWidth={2.25} />}>
+                No database. No logs. No tracking. The server is a stateless
+                relay — it <strong>cannot</strong> decrypt your data.
               </Pitch>
               <Pitch icon={<Zap className="h-3.5 w-3.5" strokeWidth={2.25} />}>
-                JWT lives in <code className="rounded bg-surface-container-low px-1 font-mono text-[11px]">sessionStorage</code> — close the tab and it&apos;s gone.
-                Sign out clears it immediately.
+                Close the tab and your session is gone. Nothing persists
+                on our end — ever.
               </Pitch>
             </ul>
 
             <div className="mt-2 border-t border-white/[0.04] pt-4 font-mono text-[11px] text-on-surface-variant/70">
-              Zero-knowledge &nbsp;·&nbsp; All encryption happens in your browser
+              100% open-source &nbsp;·&nbsp; Zero-knowledge &nbsp;·&nbsp; MIT licensed
             </div>
           </div>
 
@@ -207,12 +226,24 @@ export function LoginGate({ proxyUnreachable }: { proxyUnreachable?: string }) {
                     )}
                   </button>
 
-                  <p className="pt-2 text-center text-[11px] text-on-surface-variant/70">
-                    Your credentials are encrypted in this browser and sent
-                    directly to UPPCL. The JWT (valid ~60 days) lives in{" "}
-                    <code className="rounded bg-surface-container px-1 font-mono">sessionStorage</code>{" "}
-                    — it never touches our server.
-                  </p>
+                  {/* Trust callout below button */}
+                  <div className="mt-1 rounded-md border border-white/[0.04] bg-(--color-void) px-3 py-2.5 text-center">
+                    <div className="flex items-center justify-center gap-1.5 text-[11px] font-semibold text-primary-fixed-dim">
+                      <ShieldCheck className="h-3 w-3" strokeWidth={2.25} />
+                      We never see your password
+                    </div>
+                    <p className="mt-1 text-[10px] leading-relaxed text-on-surface-variant/70">
+                      Encrypted in your browser, sent directly to UPPCL. Our server
+                      is a blind relay.{" "}
+                      <Link
+                        href="https://github.com/Harry-kp/uppcl-pro#zero-knowledge-security"
+                        target="_blank"
+                        className="text-primary-fixed-dim underline-offset-2 hover:underline"
+                      >
+                        How it works
+                      </Link>
+                    </p>
+                  </div>
                 </form>
               </>
             )}
@@ -222,7 +253,14 @@ export function LoginGate({ proxyUnreachable }: { proxyUnreachable?: string }) {
 
       {/* Footer */}
       <footer className="mx-auto w-full max-w-[980px] px-6 pb-6 font-mono text-[10px] uppercase tracking-[0.2em] text-on-surface-variant/50">
-        <span>Reverse-engineered UPPCL SMART · Local-first · MIT</span>
+        <span>Open-source &nbsp;·&nbsp; Zero-knowledge &nbsp;·&nbsp; MIT &nbsp;·&nbsp; </span>
+        <Link
+          href="https://github.com/Harry-kp/uppcl-pro"
+          target="_blank"
+          className="text-on-surface-variant/70 hover:text-on-surface"
+        >
+          Verify the code yourself
+        </Link>
       </footer>
     </div>
   );
