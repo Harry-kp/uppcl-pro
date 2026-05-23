@@ -16,7 +16,7 @@ import {
   Moon,
   Sun,
 } from "lucide-react";
-import { API_BASE, login, ProxyError } from "@/lib/api";
+import { login, ProxyError } from "@/lib/api";
 import { useToast } from "@/components/ui/Toast";
 
 /**

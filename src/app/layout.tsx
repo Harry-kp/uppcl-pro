@@ -53,7 +53,9 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: "/icon.svg",
+    apple: "/icon.svg",
   },
+  manifest: "/manifest.json",
   metadataBase: new URL("https://uppcl-pro.vercel.app"),
 };
 
