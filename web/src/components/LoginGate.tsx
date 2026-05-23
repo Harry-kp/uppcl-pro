@@ -97,20 +97,20 @@ export function LoginGate({ proxyUnreachable }: { proxyUnreachable?: string }) {
 
             <ul className="space-y-3">
               <Pitch icon={<ShieldCheck className="h-3.5 w-3.5" strokeWidth={2.25} />}>
-                Runs entirely on your laptop or Pi — no cloud, no telemetry.
+                Zero-knowledge architecture — your credentials never touch our server.
               </Pitch>
               <Pitch icon={<LockKeyhole className="h-3.5 w-3.5" strokeWidth={2.25} />}>
-                Password goes straight to <code className="rounded bg-surface-container-low px-1 font-mono text-[11px]">uppcl.sem.jio.com</code> over
-                RSA-OAEP + AES-GCM. Never logged, never stored.
+                Password is encrypted <strong>in your browser</strong> with RSA-OAEP + AES-GCM
+                before it leaves. Our server only sees encrypted blobs passing through.
               </Pitch>
               <Pitch icon={<Zap className="h-3.5 w-3.5" strokeWidth={2.25} />}>
-                Sign out any time — the <span className="font-mono">Sign out</span> menu clears the
-                cached JWT.
+                JWT lives in <code className="rounded bg-surface-container-low px-1 font-mono text-[11px]">sessionStorage</code> — close the tab and it&apos;s gone.
+                Sign out clears it immediately.
               </Pitch>
             </ul>
 
             <div className="mt-2 border-t border-white/[0.04] pt-4 font-mono text-[11px] text-on-surface-variant/70">
-              Proxy &nbsp;→&nbsp; <span className="text-on-surface-variant">{API_BASE}</span>
+              Zero-knowledge &nbsp;·&nbsp; All encryption happens in your browser
             </div>
           </div>
 
@@ -208,8 +208,10 @@ export function LoginGate({ proxyUnreachable }: { proxyUnreachable?: string }) {
                   </button>
 
                   <p className="pt-2 text-center text-[11px] text-on-surface-variant/70">
-                    By signing in you agree the cached JWT (valid ~60 days)
-                    will live in <code className="rounded bg-surface-container px-1 font-mono">uppcl_session.json</code>.
+                    Your credentials are encrypted in this browser and sent
+                    directly to UPPCL. The JWT (valid ~60 days) lives in{" "}
+                    <code className="rounded bg-surface-container px-1 font-mono">sessionStorage</code>{" "}
+                    — it never touches our server.
                   </p>
                 </form>
               </>
@@ -273,20 +275,12 @@ function ProxyDownPanel({ message }: { message: string }) {
       <div className="mx-auto mb-4 grid h-12 w-12 place-items-center rounded-full bg-secondary/10 text-secondary">
         <AlertTriangle className="h-5 w-5" strokeWidth={2} />
       </div>
-      <div className="font-mono text-[20px] text-secondary">Proxy unreachable</div>
+      <div className="font-mono text-[20px] text-secondary">Connection error</div>
       <p className="mt-3 text-[13px] leading-relaxed text-on-surface-variant">
-        The dashboard couldn&apos;t reach the FastAPI proxy at <br />
-        <code className="mt-1 inline-block rounded bg-surface-container px-1.5 py-0.5 font-mono text-[12px] text-on-surface">{API_BASE}</code>
+        Could not reach the UPPCL API. This usually means the upstream
+        server is down or your network is blocking the connection.
       </p>
       <p className="mt-4 font-mono text-[11px] text-on-surface-variant/70">{message}</p>
-      <div className="mt-6 rounded-md bg-(--color-void) p-4 text-left font-mono text-[11px] leading-relaxed text-on-surface-variant">
-        <div className="mb-1.5 text-[10px] uppercase tracking-[0.2em] text-on-surface-variant/60">
-          Start the proxy
-        </div>
-        <div className="text-on-surface">
-          $ make dev-proxy
-        </div>
-      </div>
     </div>
   );
 }

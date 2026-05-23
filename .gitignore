@@ -2,31 +2,18 @@
 .env
 .env.local
 .env.*.local
-uppcl_session.json
 
 # Real PII used by screenshot redaction + PII scan. Sample is committed.
 scripts/pii.json
 
-# One-off user-to-user handoff note (staged copies, personal instructions)
+# One-off user-to-user handoff note
 HANDOFF.md
 
 # ─── Browser captures (likely contain JWTs / PII) ────────────────────────
 *.har
 
-# ─── Design references (kept out of git — see CLAUDE.md) ─────────────────
+# ─── Design references ───────────────────────────────────────────────────
 stitch_with_google_ai_design/
-
-# ─── Python ──────────────────────────────────────────────────────────────
-__pycache__/
-*.pyc
-*.pyo
-*.egg-info/
-venv/
-.venv/
-env/
-.mypy_cache/
-.ruff_cache/
-.pytest_cache/
 
 # ─── Node / Next.js ──────────────────────────────────────────────────────
 web/node_modules/
@@ -39,7 +26,7 @@ web/.vercel/
 dist/
 build/
 
-# ─── Claude Code local files (runtime / user-specific) ──────────────────
+# ─── Claude Code local files ─────────────────────────────────────────────
 .claude/settings.local.json
 .claude/scheduled_tasks.lock
 

@@ -20,27 +20,29 @@ body:
     id: env
     attributes:
       label: Environment
-      description: OS, Python version, Node/Bun version, dashboard route, and whether you're running on desktop or Raspberry Pi.
+      description: OS, Node/Bun version, browser, and the dashboard route where the issue occurs.
       placeholder: |
-        - macOS 14.4 / Ubuntu 22.04 / RPi OS Bookworm (aarch64)
-        - Python 3.11.8
+        - macOS 14.4 / Ubuntu 22.04 / Windows 11
         - Bun 1.1.28 / Node 20.11.0
+        - Browser: Chrome 125 / Firefox 126 / Safari 17.5
         - Route: /ledger
-        - Deploy: local dev / Pi / Docker
     validations:
       required: true
 
   - type: textarea
-    id: proxy-log
-    attributes:
-      label: Proxy log (uvicorn output)
-      description: Last ~20 lines from the proxy terminal, if relevant. Scrub any JWT or session IDs.
-      render: text
-
-  - type: textarea
     id: browser-console
     attributes:
-      label: Browser console (if UI bug)
+      label: Browser console
+      description: Open DevTools → Console tab. Copy any errors or warnings. Scrub any JWTs or personal data.
+      render: text
+    validations:
+      required: false
+
+  - type: textarea
+    id: network-tab
+    attributes:
+      label: Network tab / HAR (if relevant)
+      description: If the bug involves a failed API call, include the request URL, status code, and response body (redacted). A HAR export is even better.
       render: text
 
   - type: checkboxes

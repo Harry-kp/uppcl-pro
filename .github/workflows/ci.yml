@@ -6,23 +6,8 @@ on:
   pull_request:
 
 jobs:
-  python:
-    name: Python · lint + syntax
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-          cache: "pip"
-      - run: pip install -r requirements.txt ruff
-      - name: ruff check
-        run: ruff check uppcl_api.py appsavy.py
-      - name: compile-only sanity
-        run: python -m py_compile uppcl_api.py appsavy.py
-
   web:
-    name: Web · lint + build
+    name: Web · lint + typecheck + build
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -36,6 +21,7 @@ jobs:
         run: bun install --frozen-lockfile
       - name: Lint
         run: bun run lint
-      - name: Build (static export)
-        # STATIC=1 flips next.config to output: 'export' — matches Pi deployment.
-        run: STATIC=1 bun run build
+      - name: Typecheck
+        run: bunx tsc --noEmit
+      - name: Build
+        run: bun run build

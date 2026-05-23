@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useHealth, useSites, logout } from "@/lib/api";
 import { useToast } from "@/components/ui/Toast";
 import { mutate as swrMutate } from "swr";
-import { ExternalLink, LogOut, Sparkles, Sun, Moon, Laptop, Info } from "lucide-react";
+import { ExternalLink, LogOut, Sun, Moon, Laptop, Info, Code2 } from "lucide-react";
 import { Tooltip } from "@/components/ui/Tooltip";
 
 export default function SettingsPage() {
@@ -145,13 +145,7 @@ export default function SettingsPage() {
           <div className="text-[10px] uppercase tracking-[0.24em] text-on-surface-variant">
             External
           </div>
-          <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
-            <LinkCard
-              href="http://localhost:8000/docs"
-              title="Proxy API docs"
-              body="Swagger UI for the local FastAPI proxy — try any endpoint interactively."
-              icon={<Sparkles className="h-4 w-4" />}
-            />
+          <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
             <LinkCard
               href="https://uppcl.sem.jio.com/uppclsmart/"
               title="UPPCL SMART web"
@@ -159,10 +153,10 @@ export default function SettingsPage() {
               icon={<ExternalLink className="h-4 w-4" />}
             />
             <LinkCard
-              href="http://localhost:8000/health"
-              title="Proxy health"
-              body="Raw JSON health check — session expiry, OAEP variant, tenant."
-              icon={<ExternalLink className="h-4 w-4" />}
+              href="https://github.com/Harry-kp/uppcl-pro"
+              title="GitHub"
+              body="Source code, issues, and contributing guidelines."
+              icon={<Code2 className="h-4 w-4" />}
             />
           </div>
         </section>
