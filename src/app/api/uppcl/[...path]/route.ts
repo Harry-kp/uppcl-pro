@@ -99,6 +99,9 @@ export async function POST(
   const headers = upstreamHeaders(req);
   if (!headers["content-type"]) headers["content-type"] = "application/json";
 
+  console.log(`[uppcl proxy] POST ${joined} → ${url}`);
+  console.log(`[uppcl proxy] headers:`, Object.keys(headers).join(", "));
+
   const r = await fetch(url, {
     method: "POST",
     headers,
@@ -106,6 +109,10 @@ export async function POST(
     cache: "no-store",
   });
   const respBody = await r.text();
+
+  if (r.status !== 200) {
+    console.log(`[uppcl proxy] ← ${r.status}: ${respBody.slice(0, 300)}`);
+  }
 
   return new NextResponse(respBody, {
     status: r.status,

@@ -181,14 +181,20 @@ export async function login(username: string, password: string): Promise<void> {
       continue; // try next OAEP variant
     }
 
-    // Not a crypto error — surface it
+    // Not a crypto error — surface the upstream message
     let parsed: unknown;
     try { parsed = JSON.parse(text); } catch { parsed = text; }
+    const upstreamMsg =
+      typeof parsed === "object" && parsed !== null
+        ? (parsed as Record<string, unknown>).message ?? (parsed as Record<string, unknown>).error
+        : null;
     throw new ProxyError(
       r.status,
       r.status === 401
         ? "Invalid username or password"
-        : `Login failed (HTTP ${r.status})`,
+        : upstreamMsg
+          ? `${upstreamMsg}`
+          : `Login failed (HTTP ${r.status})`,
       parsed
     );
   }
