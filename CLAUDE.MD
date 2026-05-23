@@ -1,145 +1,108 @@
 # UPPCL Pro — AI assistant context
 
-Pure Next.js app (TypeScript) that reverse-engineers UPPCL's
-prepaid-meter API. The Next.js API
-routes are thin CORS-bypass pipes. UPPCL dropped encryption — all endpoints accept plaintext JSON now. **No Python anywhere in the stack.**
+Next.js app (TypeScript) that reverse-engineers UPPCL's prepaid-meter API.
+UPPCL dropped encryption — all endpoints accept plaintext JSON.
+The Next.js API routes are stateless CORS-bypass pipes.
 
 ## Architecture
 
 ```
 Browser (React + SWR)
-  ├─ src/lib/crypto.ts    — ALTCHA captcha + Appsavy AES-CBC helpers
-  ├─ src/lib/session.ts   — JWT stored in sessionStorage (60-day expiry)
-  └─ src/lib/api.ts       — SWR-based data fetching client
+  ├─ src/lib/crypto.ts      ALTCHA captcha solver + Appsavy AES-CBC helpers
+  ├─ src/lib/session.ts     JWT in sessionStorage
+  ├─ src/lib/api.ts         SWR hooks + data fetching
+  └─ src/lib/i18n files     next-intl (en + hi)
         │
         ▼
-Next.js API routes (server-side, TypeScript)
-  ├─ src/app/api/uppcl/[...path]/route.ts   — CORS proxy to UPPCL backend
-  └─ src/app/api/complaints/route.ts         — Appsavy complaints proxy
+Next.js API routes (stateless CORS proxy)
+  ├─ src/app/api/uppcl/[...path]/route.ts    forwards requests to UPPCL
+  └─ src/app/api/complaints/route.ts         Appsavy complaints proxy
         │
         ▼
-UPPCL backend (uppcl.sem.jio.com)
+UPPCL backend (uppcl.sem.jio.com) + Appsavy (appsavy.com)
 ```
 
-Everything is TypeScript. The browser does the crypto; the API routes just
-forward requests to avoid CORS blocks.
+Credentials pass through the server as plaintext JSON over HTTPS.
+The server never stores, logs, or persists anything. No database.
 
 ## Key files
 
 | Path | Purpose |
 |------|---------|
 | `src/lib/crypto.ts` | ALTCHA proof-of-work solver + Appsavy AES-128-CBC header encryption |
-| `src/lib/session.ts` | Read/write JWT in `sessionStorage`; expiry check |
-| `src/lib/api.ts` | SWR hooks + raw fetch helpers for all UPPCL endpoints |
-| `src/app/api/uppcl/[...path]/route.ts` | Catch-all CORS proxy — forwards plaintext JSON to UPPCL, returns responses |
-| `src/app/api/complaints/route.ts` | Appsavy complaint-tracking proxy |
-
-## Upstream field-name quirks worth remembering
-
-- `/payment/v2/search` wants `consumer_id` (snake_case). The server's 409
-  error says "Mandatory field missing : connectionID" which is a lie —
-  connectionId/connectionID in any case never satisfies it.
-- `/bill/search` wants `from`/`to` (not `fromDate`/`toDate`) + `tenantId`
-  + `connectionId`.
-- `/eventsummary/aggregate` wants `deviceId` + `tenantId` and ISO-8601
-  dates with the explicit IST offset (`2026-04-19T00:00:00+05:30`).
-  Any other date format returns the useless "[object Object]" message.
-- `/eventsummary/search` with `groupBy: "year"` + `year` returns monthly
-  rollups including `powerFactor`. day/month group-bys error opaquely.
-- `/site/prepaidBalance` returns `{"code":200}` with no `data` for some
-  accounts regardless of body shape — a backend quirk. The balance logic
-  falls back to the latest bill's closing_bal.
-
-## RSA-OAEP hash fallback
-
-UPPCL's public key is fetched from
-`/uppclsmart/assets/cert/prod/server_public.pem` (24h cache). The crypto
-layer tries SHA-256 OAEP first; if the server rejects it (rare key
-rotation window), it falls back to SHA-1 OAEP. If both fail, the public
-key cache needs clearing — restart the dev server.
-
-## Route inventory (discovered from grepping main.js bundle)
-
-Working end-to-end:
-- `/auth/v2/login`, `/auth/logout`, `/auth/session-check`
-- `/site/search`, `/site/outstandingBalance`, `/site/prepaidBalance` (often empty)
-- `/user/search`, `/userpreference/search`
-- `/bill/search`, `/bill/billHistory`
-- `/payment/v2/search`
-- `/eventsummary/aggregate`, `/eventsummary/search` (groupBy:year only)
-- `/connectionbudget/search`, `/dadata/v2/search`
-
-### Known-broken endpoints
-
-- `/eventsummary/consumptionAggregation` — always "[object Object]"
-- `/announcements/landing/search` — always "Payload is required"
-- `/bill/billDetails` — needs a `bpno` not in any other response
-- `/insight/getDocumentCount`, `.../getDocumentDetails`
-  — needs a `subTenantCode` field; server won't accept it from any
-  case/spelling we tried
-- `/site/solarTrend` — needs a `vendor` field (not relevant w/o solar)
-- `/tenantMasterData/search` — needs "Invited from/to flag" (account sharing)
-
-### Date format quirks
-
-- `/eventsummary/aggregate` and `/eventsummary/search` require ISO-8601
-  with explicit IST offset: `2026-04-19T00:00:00+05:30`. Omitting the
-  offset or using `Z` returns `[object Object]`.
-- `/bill/search` uses `from`/`to` as plain date strings (`YYYY-MM-DD`).
-- `/payment/v2/search` accepts no date filter — it returns everything.
-
-### Unprobed routes (visible in SPA bundle)
-
-- `/auth/in-app-login`, `/auth/partner-user-login`
-- `/bill/download`, `/payment/v2/download`, `/site/daily-charges/download`,
-  `/site/monthly-charges/download` (file downloads)
-- `/payment/initiate-payment`, `/payment/make-payment`, `/payment/pay-later`,
-  `/payment/UPI`, `/payment/card`, `/payment/quick-pay`, `/payment/v2/create`
-  (real-money flows — do not probe casually)
-- `/site/changeEmail`, `/site/changePhone`, `/site/unlinkSite`, `/site/delete/`,
-  `/site/update/`, `/site/v2/sitePreferences/`
-- `/user/v2/register*`, `/user/v2/forgot*`, `/user/v2/update*`, `/user/changePassword`
-- `/tenantMasterData/send-invite`, `/tenantMasterData/accept-invitation`,
-  `/tenantMasterData/revoke-access` (account sharing)
+| `src/lib/session.ts` | JWT in `sessionStorage`; expiry check; site cache |
+| `src/lib/api.ts` | SWR hooks, login flow, balance fallback chain, dashboard composite |
+| `src/app/api/uppcl/[...path]/route.ts` | CORS proxy — forwards plaintext JSON to UPPCL |
+| `src/app/api/complaints/route.ts` | Appsavy complaint proxy (anonymous sessions, cookie bootstrapping) |
+| `src/components/I18nProvider.tsx` | next-intl client-side locale switching (en/hi) |
+| `messages/en.json`, `messages/hi.json` | Translation strings |
 
 ## How to run
 
 ```bash
-cd web && bun install
-cd web && bun run dev    # http://localhost:3000
+bun install && bun run dev    # http://localhost:3000
 ```
 
-Login happens in the browser UI — enter UPPCL credentials in the LoginGate
-component. JWT is stored in `sessionStorage`.
+Login via the web UI. JWT stored in `sessionStorage`.
 
-## Pi deployment gotchas (learned the hard way)
+## Upstream field-name quirks
 
-Full write-up in `docs/PI_DEPLOY.md`.
+- `/payment/v2/search` wants `consumer_id` (snake_case). The 409 error
+  says "connectionID missing" — that's a lie.
+- `/bill/search` wants `from`/`to` + `tenantId` + `connectionId`.
+- `/eventsummary/aggregate` wants ISO-8601 dates with IST offset
+  (`2026-04-19T00:00:00+05:30`). Any other format → "[object Object]".
+- `/eventsummary/search` only works with `groupBy: "year"`.
+- `/site/prepaidBalance` returns empty `{code:200}` for some accounts.
+  The balance logic falls back to latest bill's `closing_bal`.
 
-- **Port**: Caddy binds `:1912` (UPPCL's helpline number). Avoid `:80` —
-  Pi-hole's `pihole-FTL` (v6+) owns it. `:8080` is also a bad default.
-- **Caddyfile `handle { }` is mandatory**: bare `try_files` at the top
-  level of a site block runs *before* `handle_path /api/*` on Caddy
-  v2.6.x. Without the `handle { }` wrapper around the static handlers,
-  every `/api/...` request gets rewritten to `/index.html`.
-- **Home-dir perms**: Raspberry Pi OS defaults home dirs to `700`. The
-  `caddy` user can't traverse into the web output dir unless you
-  `chmod o+x ~` + `chmod -R o+rX uppcl-pro`.
-- **Pi-hole v6 != v5 for local DNS**: v6 stores records in
-  `pihole.toml::dns.hosts`. `custom.list` is silently ignored.
-- **Avoid `.local` for friendly hostnames**: mDNS-reserved (RFC 6762);
-  macOS/iOS intercept before Pi-hole gets the DNS query. Use `.lan` /
-  `.home.arpa` / `.box`.
-- **macOS NXDOMAIN cache**: `sudo dscacheutil -flushcache` +
-  `sudo killall -HUP mDNSResponder` after adding DNS records.
-- **`crypto.randomUUID` on plain HTTP**: Web Crypto APIs are gated to
-  secure contexts. Toast IDs use a `useRef` counter; if a new dependency
-  calls `randomUUID`, polyfill it or front the stack with HTTPS.
+## UPPCL login flow
+
+1. Fetch ALTCHA challenge from `/altcha/createAltCaptcha`
+2. Solve SHA-256 proof-of-work (~10ms)
+3. Send plaintext `{username, password, roleType: "user"}` with captchatoken header
+4. Receive 60-day JWT + tenantCode
+
+No encryption needed. UPPCL dropped RSA-OAEP + AES-GCM — login and all
+data endpoints accept plaintext JSON now.
+
+## Appsavy (1912 complaints) flow
+
+1. Bootstrap anonymous session via `/coreapps/UI/Anonymous` (manual redirect following to collect cookies)
+2. AES-128-CBC encrypted headers with constant key `"8080808080808080"`
+3. SOAP-style XML request to `GetRelationalDataA`
+4. Web Crypto adds PKCS7 padding automatically — do NOT pad manually (caused double-padding bug)
+
+## Route inventory
+
+Working:
+- `/auth/v2/login`, `/auth/logout`, `/auth/session-check`
+- `/site/search`, `/site/outstandingBalance`, `/site/prepaidBalance`
+- `/user/search`, `/userpreference/search`
+- `/bill/search`, `/bill/billHistory`
+- `/payment/v2/search`
+- `/eventsummary/aggregate`, `/eventsummary/search`
+- `/connectionbudget/search`, `/dadata/v2/search`
+
+Known-broken:
+- `/eventsummary/consumptionAggregation` → "[object Object]"
+- `/announcements/landing/search` → "Payload is required"
+- `/bill/billDetails` → needs `bpno` not in any response
+- `/insight/getDocument*` → needs `subTenantCode`
+
+## Public constants (not secrets)
+
+- API key: `5ab6ef2e-5051-4923-aa65-dc82883af26b` (baked into UPPCL's SPA)
+- Default tenant: `b3ba0ab0-05bc-11f0-bf77-932b3a8bb3cd`
+- Appsavy AES key/IV: `"8080808080808080"` (constant in their SPA)
+
+## i18n
+
+Uses `next-intl` with client-side locale switching. Messages in `messages/en.json`
+and `messages/hi.json`. Provider in `src/components/I18nProvider.tsx`. Currently
+only the login page is translated. Add new keys to both JSON files.
 
 ## Design origin
 
-The "Kinetic Vault" look was seeded from
-[Stitch by Google AI](https://stitch.withgoogle.com/) — 8 generated pages
-defining the MD3 tonal-surface palette + motion vocabulary. The original
-HTML + screenshots are not checked in; reference them via the Stitch share
-link if the palette ever needs a re-audit.
+The "Kinetic Vault" look was seeded from Stitch by Google AI — MD3
+tonal-surface palette + motion vocabulary.
