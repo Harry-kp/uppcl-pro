@@ -123,121 +123,56 @@ async function uppcl_post(path: string, body: Record<string, unknown>): Promise<
 // ─── Auth ─────────────────────────────────────────────────────────────────────
 
 export async function login(username: string, password: string): Promise<void> {
-  const oaepPrefs: Array<"SHA-256" | "SHA-1"> = ["SHA-256", "SHA-1"];
+  // 1. Fetch ALTCHA challenge
+  const altchaR = await fetch(`/api/uppcl/altcha/createAltCaptcha`, {
+    headers: { apikey: UPPCL_API_KEY, tenantid: tenantHeader(DEFAULT_TENANT) },
+    cache: "no-store",
+  });
+  if (!altchaR.ok) throw new ProxyError(altchaR.status, "Failed to fetch ALTCHA challenge");
+  const challenge: AltchaChallenge = await altchaR.json();
 
-  for (const oaepHash of oaepPrefs) {
-    console.log(`[login] ── attempt with OAEP-${oaepHash} ──`);
+  // 2. Solve proof-of-work
+  const captchaToken = await solveAltcha(challenge);
 
-    // 1. Fetch ALTCHA challenge
-    console.log("[login] 1. fetching ALTCHA challenge...");
-    const altchaR = await fetch(`/api/uppcl/altcha/createAltCaptcha`, {
-      headers: { apikey: UPPCL_API_KEY, tenantid: tenantHeader(DEFAULT_TENANT) },
-      cache: "no-store",
-    });
-    if (!altchaR.ok) {
-      console.error(`[login] ALTCHA fetch failed: HTTP ${altchaR.status}`, await altchaR.text());
-      throw new ProxyError(altchaR.status, "Failed to fetch ALTCHA challenge");
-    }
-    const challenge: AltchaChallenge = await altchaR.json();
-    console.log("[login] ALTCHA challenge received:", {
-      algorithm: challenge.algorithm,
-      salt: challenge.salt?.slice(0, 10) + "...",
-      maxnumber: challenge.maxnumber,
-    });
-
-    // 2. Solve proof-of-work
-    console.log("[login] 2. solving ALTCHA...");
-    const captchaToken = await solveAltcha(challenge);
-    console.log("[login] ALTCHA solved, token length:", captchaToken.length);
-
-    // 3. Fetch public key + encrypt credentials
-    console.log(`[login] 3. fetching pubkey (OAEP-${oaepHash})...`);
-    const pubKey = await fetchPublicKey(oaepHash);
-    console.log("[login] pubkey imported OK");
-
-    console.log("[login] 4. encrypting credentials...");
-    const envelope = await encryptPayload(
-      { username, password, roleType: "user" },
-      pubKey
-    );
-    const bodyStr = JSON.stringify(envelope);
-    console.log("[login] encrypted envelope:", {
-      bodyLength: bodyStr.length,
-      hasPayload: "payload" in envelope,
-      innerPayloadLength: envelope.payload.length,
-      // Parse the inner JSON to check its structure
-      innerKeys: (() => { try { return Object.keys(JSON.parse(envelope.payload)); } catch { return "PARSE_FAILED"; } })(),
-    });
-
-    // 5. Send to UPPCL via our proxy
-    console.log("[login] 5. sending to UPPCL...");
-    const headers = {
+  // 3. Send plaintext login (UPPCL login endpoint does not use encryption)
+  const r = await fetch("/api/uppcl/auth/v2/login", {
+    method: "POST",
+    headers: {
       "content-type": "application/json",
       apikey: UPPCL_API_KEY,
       tenantid: tenantHeader(DEFAULT_TENANT),
       captchatoken: captchaToken,
-    };
-    console.log("[login] request headers:", Object.keys(headers));
+    },
+    body: JSON.stringify({ username, password, roleType: "user" }),
+    cache: "no-store",
+  });
 
-    const r = await fetch("/api/uppcl/auth/v2/login", {
-      method: "POST",
-      headers,
-      body: bodyStr,
-      cache: "no-store",
+  if (r.status === 200) {
+    const json = await r.json();
+    const data = json.data;
+    saveSession({
+      jwt: data.token,
+      jwtExpiresMs: data.expires,
+      tenant: data.user?.tenantCode ?? DEFAULT_TENANT,
+      oaepHash: "SHA-256",
     });
-
-    console.log(`[login] response: ${r.status} ${r.statusText}`);
-
-    if (r.status === 200) {
-      const json = await r.json();
-      console.log("[login] SUCCESS — JWT received");
-      const data = json.data;
-      const newTenant = data.user?.tenantCode ?? DEFAULT_TENANT;
-
-      saveSession({
-        jwt: data.token,
-        jwtExpiresMs: data.expires,
-        tenant: newTenant,
-        oaepHash,
-      });
-
-      if (oaepHash === "SHA-1") await reimportKeyWithHash("SHA-1");
-      return;
-    }
-
-    const text = await r.text();
-    console.log(`[login] error body: ${text.slice(0, 500)}`);
-
-    const lower = text.toLowerCase();
-    const isCryptoShaped =
-      ["decrypt", "padding", "oaep", "crypto", "decipher"].some((k) => lower.includes(k));
-    const isMissingParams =
-      r.status === 409 && lower.includes("missing");
-
-    if (isCryptoShaped || isMissingParams) {
-      console.log(`[login] treating as crypto error, will retry with next OAEP variant`);
-      continue;
-    }
-
-    // Not a crypto error — surface the upstream message
-    let parsed: unknown;
-    try { parsed = JSON.parse(text); } catch { parsed = text; }
-    const upstreamMsg =
-      typeof parsed === "object" && parsed !== null
-        ? (parsed as Record<string, unknown>).message ?? (parsed as Record<string, unknown>).error
-        : null;
-    throw new ProxyError(
-      r.status,
-      r.status === 401
-        ? "Invalid username or password"
-        : upstreamMsg
-          ? `${upstreamMsg}`
-          : `Login failed (HTTP ${r.status})`,
-      parsed
-    );
+    return;
   }
 
-  throw new ProxyError(500, "Login failed — all OAEP variants rejected by server");
+  const text = await r.text();
+  let parsed: unknown;
+  try { parsed = JSON.parse(text); } catch { parsed = text; }
+  const msg =
+    typeof parsed === "object" && parsed !== null
+      ? (parsed as Record<string, unknown>).message ?? (parsed as Record<string, unknown>).error
+      : null;
+  throw new ProxyError(
+    r.status,
+    r.status === 401
+      ? "Invalid username or password"
+      : msg ? `${msg}` : `Login failed (HTTP ${r.status})`,
+    parsed
+  );
 }
 
 export async function logout(): Promise<void> {

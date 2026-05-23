@@ -42,17 +42,20 @@ export async function solveAltcha(c: AltchaChallenge): Promise<string> {
   const maxnum = c.maxnumber ?? 100_000;
   const target = c.challenge.toLowerCase();
   const encoder = new TextEncoder();
+  const startMs = Date.now();
 
   for (let n = 0; n <= maxnum; n++) {
     const data = encoder.encode(`${c.salt}${n}`);
     const hash = await crypto.subtle.digest("SHA-256", data);
     if (hexEncode(hash) === target) {
+      const took = Date.now() - startMs;
       const solution = {
         algorithm: c.algorithm,
         challenge: c.challenge,
         number: n,
         salt: c.salt,
         signature: c.signature,
+        took,
       };
       return btoa(JSON.stringify(solution));
     }
