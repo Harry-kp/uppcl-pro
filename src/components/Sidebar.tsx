@@ -76,8 +76,8 @@ export function Sidebar(_props: { onOpenPalette: () => void }) {
         content={
           <div className="space-y-1">
             <div className="font-mono text-on-surface">
-              Proxy · <span className={proxyOk ? "text-primary-fixed-dim" : "text-secondary"}>
-                {proxyOk ? "reachable" : "unreachable"}
+              Connection · <span className={proxyOk ? "text-primary-fixed-dim" : "text-secondary"}>
+                {proxyOk ? "connected" : "offline"}
               </span>
             </div>
             <div className="font-mono text-on-surface">
@@ -108,7 +108,7 @@ export function Sidebar(_props: { onOpenPalette: () => void }) {
               "text-[11px] font-medium",
               proxyOk ? "text-on-surface" : "text-secondary"
             )}>
-              {proxyOk ? "Live grid" : "Grid offline"}
+              {proxyOk ? "Connected" : "Offline"}
             </span>
             <span className="truncate font-mono text-[9px] uppercase tracking-[0.14em] text-on-surface-variant/80">
               {authed

@@ -122,7 +122,7 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
 
             <PGroup heading="Session">
               <PItem onSelect={act("Logged out", async () => { await logout(); swrMutate(() => true); })} icon={<LogOut className="h-4 w-4" />}>
-                Sign out (clears JWT from browser)
+                Sign out
               </PItem>
             </PGroup>
 

@@ -73,8 +73,8 @@ export default function SettingsPage() {
             <Tooltip
               content={
                 <div className="space-y-1">
-                  <div>Upstream <code>/auth/logout</code> is a <span className="text-secondary">soft</span> delete —</div>
-                  <div>the JWT itself stays valid until its <code>expires</code> timestamp.</div>
+                  <div>Signing out clears your local session.</div>
+                  <div>To fully revoke access, change your UPPCL password.</div>
                   <div>To force-invalidate, change your UPPCL password.</div>
                 </div>
               }

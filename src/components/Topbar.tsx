@@ -124,20 +124,20 @@ export function Topbar({
                 <NotifRow
                   tone="warn"
                   title="Not logged in"
-                  body="The proxy has no cached JWT. Run POST /auth/login."
+                  body="Not signed in. Sign in to see your data."
                 />
               )}
               {h && h.jwt_expires_in_days !== null && h.jwt_expires_in_days < 5 && (
                 <NotifRow
                   tone="warn"
-                  title="JWT expiring soon"
-                  body={`Re-login before ${h.jwt_expires_in_days?.toFixed(0)}d`}
+                  title="Session expiring soon"
+                  body={`Sign out and back in within ${h.jwt_expires_in_days?.toFixed(0)} days to stay connected`}
                 />
               )}
               <NotifRow
                 tone="info"
                 title="System nominal"
-                body={`Proxy ${proxyOk ? "reachable" : "unreachable"}`}
+                body={`System ${proxyOk ? "connected" : "offline"}`}
               />
             </div>
           )}
