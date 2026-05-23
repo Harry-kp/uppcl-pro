@@ -7,7 +7,7 @@
  * UPPCL dropped RSA-OAEP + AES-GCM encryption — all endpoints accept
  * plaintext JSON now. Only ALTCHA proof-of-work is still needed for login.
  */
-import useSWR from "swr";
+import useSWR, { mutate as globalMutate } from "swr";
 import { solveAltcha, type AltchaChallenge } from "./crypto";
 import {
   getSession,
@@ -15,7 +15,7 @@ import {
   clearSession,
   isAuthenticated,
   getJwt,
-  getOaepHash,
+
   getSite,
   setSite,
   jwtExpiresInDays,
@@ -51,10 +51,27 @@ export class ProxyError extends Error {
   status: number;
   upstream?: unknown;
   constructor(status: number, message: string, upstream?: unknown) {
-    super(message);
+    super(humanizeError(status, message));
     this.status = status;
     this.upstream = upstream;
   }
+}
+
+/** Map developer-facing upstream errors to messages a normal user can act on. */
+function humanizeError(status: number, raw: string): string {
+  const lower = raw.toLowerCase();
+  if (status === 401 || status === 403) return "Session expired. Please sign in again.";
+  if (lower.includes("tenant id is missing")) return "Could not load your data. Try signing out and back in.";
+  if (lower.includes("missing login params")) return "Login failed. Please check your credentials.";
+  if (lower.includes("wrong captcha")) return "Verification failed. Please try again.";
+  if (lower.includes("invalid credentials") || lower.includes("invalid username")) return "Invalid username or password.";
+  if (lower.includes("network") || lower.includes("fetch failed")) return "Network error — check your internet connection.";
+  if (lower.includes("timeout")) return "Request timed out. UPPCL servers may be slow — try again.";
+  if (status === 502 || status === 503 || status === 504) return "UPPCL servers are temporarily unavailable. Try again in a few minutes.";
+  if (status === 409) return "Request rejected by UPPCL. Try signing out and back in.";
+  if (status === 429) return "Too many requests. Wait a moment and try again.";
+  if (status >= 500) return "Something went wrong on UPPCL's end. Try again later.";
+  return raw;
 }
 
 // ─── Core: POST to UPPCL via our CORS-proxy route ────────────────────────────
@@ -85,6 +102,8 @@ async function uppcl_post(path: string, body: Record<string, unknown>): Promise<
 
   if (r.status === 401 || r.status === 403) {
     clearSession();
+    // Immediately tell Shell to show the login gate (don't wait for 60s poll)
+    globalMutate("/health");
     throw new ProxyError(401, "Session expired — sign in again");
   }
 
@@ -131,7 +150,7 @@ export async function login(username: string, password: string): Promise<void> {
       jwt: data.token,
       jwtExpiresMs: data.expires,
       tenant: data.user?.tenantCode ?? DEFAULT_TENANT,
-      oaepHash: "SHA-256",
+
     });
     return;
   }
@@ -201,7 +220,7 @@ async function fetcher<T>(key: string): Promise<T> {
       tenant: getSession()?.tenant ?? DEFAULT_TENANT,
       jwt_expires_ms: getSession()?.jwtExpiresMs ?? 0,
       jwt_expires_in_days: jwtExpiresInDays(),
-      oaep_hash_in_use: getOaepHash(),
+
     } as T;
   }
 
@@ -436,7 +455,7 @@ export interface Health {
   tenant: string;
   jwt_expires_ms: number;
   jwt_expires_in_days: number | null;
-  oaep_hash_in_use: string;
+
 }
 
 export interface Site {

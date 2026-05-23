@@ -14,7 +14,6 @@ export interface Session {
   jwt: string;
   jwtExpiresMs: number;
   tenant: string;
-  oaepHash: "SHA-256" | "SHA-1";
   site?: SiteRecord;
 }
 
@@ -66,10 +65,6 @@ export function isAuthenticated(): boolean {
 
 export function getJwt(): string | null {
   return getSession()?.jwt ?? null;
-}
-
-export function getOaepHash(): "SHA-256" | "SHA-1" {
-  return getSession()?.oaepHash ?? "SHA-256";
 }
 
 export function getSite(): SiteRecord | null {

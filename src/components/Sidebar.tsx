@@ -86,7 +86,6 @@ export function Sidebar(_props: { onOpenPalette: () => void }) {
                 : <span className="text-secondary">not logged in</span>
               }
             </div>
-            <div className="text-on-surface-variant">OAEP: {h?.oaep_hash_in_use ?? "—"}</div>
             <div className="text-on-surface-variant">Tenant: <span className="font-mono">{h?.tenant?.slice(0, 8) ?? "—"}…</span></div>
           </div>
         }

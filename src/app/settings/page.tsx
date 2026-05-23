@@ -61,7 +61,7 @@ export default function SettingsPage() {
             } />
             <Row k="expires in"      v={h ? `${h.jwt_expires_in_days?.toFixed(1) ?? "—"} days` : "—"} />
             <Row k="tenant uuid"     v={h?.tenant ?? "—"} small />
-            <Row k="oaep variant"    v={h?.oaep_hash_in_use ?? "—"} />
+
           </div>
           <div className="mt-4 flex items-center gap-2">
             <button

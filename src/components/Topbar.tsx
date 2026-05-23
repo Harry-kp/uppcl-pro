@@ -137,7 +137,7 @@ export function Topbar({
               <NotifRow
                 tone="info"
                 title="System nominal"
-                body={`Proxy ${proxyOk ? "reachable" : "unreachable"} · OAEP ${h?.oaep_hash_in_use ?? "—"}`}
+                body={`Proxy ${proxyOk ? "reachable" : "unreachable"}`}
               />
             </div>
           )}

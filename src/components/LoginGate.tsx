@@ -32,11 +32,13 @@ export function LoginGate({ proxyUnreachable }: { proxyUnreachable?: string }) {
   const [showPw, setShowPw] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
-  const [dark, setDark] = useState(() =>
-    typeof window !== "undefined"
-      ? document.documentElement.classList.contains("dark")
-      : true
-  );
+  const [dark, setDark] = useState(() => {
+    if (typeof window === "undefined") return true;
+    const stored = localStorage.getItem("theme");
+    if (stored) return stored === "dark";
+    // No preference saved — follow system
+    return window.matchMedia("(prefers-color-scheme: dark)").matches;
+  });
 
   function toggleTheme() {
     const next = !dark;
