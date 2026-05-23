@@ -21,13 +21,13 @@ Report the state of each so the user can see what's already done vs. what needs 
 If **node_modules is missing**:
 
 ```bash
-cd web && bun install
+bun install
 ```
 
 If `bun` is not available, fall back to:
 
 ```bash
-cd web && npm install
+npm install
 ```
 
 If node_modules already exist: tell the user the stack is already installed and jump to the next skill (`/first-login`).
@@ -36,13 +36,13 @@ If node_modules already exist: tell the user the stack is already installed and 
 
 End the turn by telling the user exactly one next step:
 
-> *"Setup complete. Run `/first-login` to authenticate with UPPCL, or `cd web && bun run dev` to start the dev server right now."*
+> *"Setup complete. Run `/first-login` to authenticate with UPPCL, or `bun run dev` to start the dev server right now."*
 
 Do not start the server automatically — the user may want to review config first.
 
 ## Common install failures
 
-- `bun install` fails behind a corporate proxy: fall back to `cd web && npm install`.
+- `bun install` fails behind a corporate proxy: fall back to `npm install`.
 - Node version too old (< 20): suggest upgrading via `nvm install 20` or `brew install node@20`.
 
 Surface the root cause — don't retry silently.

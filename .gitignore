@@ -16,15 +16,18 @@ HANDOFF.md
 stitch_with_google_ai_design/
 
 # ─── Node / Next.js ──────────────────────────────────────────────────────
-web/node_modules/
-web/.next/
-web/out/
-web/*.tsbuildinfo
-web/.vercel/
+node_modules/
+.next/
+out/
+*.tsbuildinfo
+.vercel/
+.pnp
+.pnp.*
 
 # ─── Build artefacts ─────────────────────────────────────────────────────
 dist/
 build/
+coverage/
 
 # ─── Claude Code local files ─────────────────────────────────────────────
 .claude/settings.local.json
@@ -37,3 +40,4 @@ Thumbs.db
 .vscode/
 *.swp
 *.swo
+*.pem

@@ -39,7 +39,7 @@ Your credentials are encrypted in your browser -- our server never sees them.
 
 **The server is a stateless CORS-bypass pipe.** It forwards encrypted bytes between your browser and UPPCL's API. It cannot decrypt them. It does not log them. It does not store them. Close your browser tab and the JWT is gone.
 
-Don't trust us -- [read the 90-line route handler](web/src/app/api/uppcl/%5B...path%5D/route.ts) yourself.
+Don't trust us -- [read the 90-line route handler](src/app/api/uppcl/%5B...path%5D/route.ts) yourself.
 
 ---
 
@@ -69,7 +69,7 @@ Everything is encrypted in your browser. The server never sees your credentials.
 
 ```bash
 git clone https://github.com/Harry-kp/uppcl-pro.git
-cd uppcl-pro/web
+cd uppcl-pro
 bun install        # or: npm install
 bun run dev        # opens on http://localhost:3000
 ```
@@ -79,7 +79,6 @@ Sign in via the web UI with the same credentials you use on the [UPPCL SMART app
 ### Production (self-hosted)
 
 ```bash
-cd web
 bun run build
 bun run start      # serves on http://localhost:3000
 ```
@@ -114,7 +113,7 @@ Browser (your machine)                    Server (Vercel / self-hosted)
 ### Key files
 
 ```
-web/src/
+src/
   lib/
     crypto.ts          Browser-side ALTCHA + RSA-OAEP + AES-GCM (Web Crypto API)
     session.ts         JWT in sessionStorage (never on server)
@@ -165,7 +164,7 @@ The upstream UPPCL SMART API (hosted by Jio at `uppcl.sem.jio.com`) uses:
 - **60-day JWTs** with tenant-scoped access
 - Dynamic tenant UUID discovery from login response
 
-All of this is handled transparently by `web/src/lib/crypto.ts` running in your browser via the Web Crypto API.
+All of this is handled transparently by `src/lib/crypto.ts` running in your browser via the Web Crypto API.
 
 The 1912 complaint portal (`appsavy.com`) uses anonymous sessions with AES-128-CBC encrypted headers (constant key `"8080808080808080"` -- yes, really).
 
@@ -189,7 +188,7 @@ To report a vulnerability, email the maintainer privately (do not open a public 
 ## Contributing
 
 ```bash
-cd web && bun install && bun run dev
+bun install && bun run dev
 ```
 
 See [`CONTRIBUTING.md`](CONTRIBUTING.md) for guidelines. PRs welcome -- especially for:

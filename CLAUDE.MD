@@ -8,14 +8,14 @@ routes are thin CORS-bypass pipes. **No Python anywhere in the stack.**
 
 ```
 Browser (React + SWR)
-  ├─ web/src/lib/crypto.ts    — ALTCHA captcha + RSA-OAEP + AES-GCM encrypt/decrypt
-  ├─ web/src/lib/session.ts   — JWT stored in sessionStorage (60-day expiry)
-  └─ web/src/lib/api.ts       — SWR-based data fetching client
+  ├─ src/lib/crypto.ts    — ALTCHA captcha + RSA-OAEP + AES-GCM encrypt/decrypt
+  ├─ src/lib/session.ts   — JWT stored in sessionStorage (60-day expiry)
+  └─ src/lib/api.ts       — SWR-based data fetching client
         │
         ▼
 Next.js API routes (server-side, TypeScript)
-  ├─ web/src/app/api/uppcl/[...path]/route.ts   — CORS proxy to UPPCL backend
-  └─ web/src/app/api/complaints/route.ts         — Appsavy complaints proxy
+  ├─ src/app/api/uppcl/[...path]/route.ts   — CORS proxy to UPPCL backend
+  └─ src/app/api/complaints/route.ts         — Appsavy complaints proxy
         │
         ▼
 UPPCL backend (uppcl.sem.jio.com)
@@ -28,11 +28,11 @@ forward requests to avoid CORS blocks.
 
 | Path | Purpose |
 |------|---------|
-| `web/src/lib/crypto.ts` | ALTCHA challenge solver, RSA-OAEP encryption (with SHA-256→SHA-1 fallback), AES-GCM envelope |
-| `web/src/lib/session.ts` | Read/write JWT in `sessionStorage`; expiry check |
-| `web/src/lib/api.ts` | SWR hooks + raw fetch helpers for all UPPCL endpoints |
-| `web/src/app/api/uppcl/[...path]/route.ts` | Catch-all CORS proxy — pipes encrypted bodies to UPPCL, returns encrypted responses |
-| `web/src/app/api/complaints/route.ts` | Appsavy complaint-tracking proxy |
+| `src/lib/crypto.ts` | ALTCHA challenge solver, RSA-OAEP encryption (with SHA-256→SHA-1 fallback), AES-GCM envelope |
+| `src/lib/session.ts` | Read/write JWT in `sessionStorage`; expiry check |
+| `src/lib/api.ts` | SWR hooks + raw fetch helpers for all UPPCL endpoints |
+| `src/app/api/uppcl/[...path]/route.ts` | Catch-all CORS proxy — pipes encrypted bodies to UPPCL, returns encrypted responses |
+| `src/app/api/complaints/route.ts` | Appsavy complaint-tracking proxy |
 
 ## Upstream field-name quirks worth remembering
 

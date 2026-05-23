@@ -11,7 +11,6 @@
 <!-- Exact steps for a reviewer to verify. -->
 
 ```bash
-cd web
 bun install
 bun run dev
 # navigate to http://localhost:3000/<page>

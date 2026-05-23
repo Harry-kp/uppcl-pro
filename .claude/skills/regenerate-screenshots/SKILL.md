@@ -13,7 +13,7 @@ Goal: capture 14 fresh PNGs under `docs/screenshots/` with the user's own PII fu
 
 Check:
 
-1. `curl -fs http://127.0.0.1:3000` — dev server must be up (or start it: `cd web && bun run dev`).
+1. `curl -fs http://127.0.0.1:3000` — dev server must be up (or start it: `bun run dev`).
 2. `test -f scripts/pii.json` — redaction config present?
 3. `npx playwright --version 2>&1` — Playwright for Node installed?
 
@@ -52,7 +52,7 @@ Happens once per machine; ~170 MB download. Warn the user about the size before 
 
 The screenshot capture script needs rewriting for the pure-Node stack. Until then, capture manually with Playwright:
 
-1. Ensure the Next.js dev server is running on :3000 (`cd web && bun run dev`).
+1. Ensure the Next.js dev server is running on :3000 (`bun run dev`).
 2. Use `npx playwright` to launch a Chromium instance against `http://localhost:3000`.
 3. Navigate to each route (`/`, `/analytics`, `/ledger`, `/recharges`, `/grid-nodes`, `/complaints`, `/settings`).
 4. For each route, capture both dark and light themes.

@@ -17,7 +17,7 @@ Goal: confirm the Next.js dev server starts, the user can log in via the browser
 If nothing responds on :3000:
 
 ```bash
-cd web && bun run dev > /tmp/uppcl-dev.log 2>&1 &
+bun run dev > /tmp/uppcl-dev.log 2>&1 &
 ```
 
 Then poll until it responds:
