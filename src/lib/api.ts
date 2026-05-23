@@ -174,11 +174,18 @@ export async function login(username: string, password: string): Promise<void> {
       return;
     }
 
-    // Check if it's a crypto error (try next hash)
+    // Check if it's a crypto error (try next hash).
+    // UPPCL sometimes returns 409 "missing login params" when decryption fails
+    // (garbage decrypted data → fields not found), so treat 409 as retryable too.
     const text = await r.text();
     const lower = text.toLowerCase();
-    if (["decrypt", "padding", "oaep", "crypto", "decipher"].some((k) => lower.includes(k))) {
-      continue; // try next OAEP variant
+    const isCryptoShaped =
+      ["decrypt", "padding", "oaep", "crypto", "decipher"].some((k) => lower.includes(k));
+    const isMissingParams =
+      r.status === 409 && lower.includes("missing");
+    if (isCryptoShaped || isMissingParams) {
+      console.log(`[login] OAEP-${oaepHash} rejected (${r.status}), trying next variant`);
+      continue;
     }
 
     // Not a crypto error — surface the upstream message

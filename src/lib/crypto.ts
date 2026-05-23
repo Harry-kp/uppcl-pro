@@ -64,6 +64,7 @@ export async function solveAltcha(c: AltchaChallenge): Promise<string> {
 
 let _cachedKey: CryptoKey | null = null;
 let _cachedPem: string | null = null;
+let _cachedHash: string | null = null;
 let _cachedAt = 0;
 const KEY_TTL_MS = 24 * 60 * 60 * 1000; // 24h
 
@@ -85,7 +86,8 @@ function pemToArrayBuffer(pem: string): ArrayBuffer {
 export async function fetchPublicKey(
   oaepHash: "SHA-256" | "SHA-1" = "SHA-256"
 ): Promise<CryptoKey> {
-  if (_cachedKey && Date.now() - _cachedAt < KEY_TTL_MS) return _cachedKey;
+  // Return cached key only if same hash — OAEP hash is baked into the CryptoKey at import time
+  if (_cachedKey && _cachedHash === oaepHash && Date.now() - _cachedAt < KEY_TTL_MS) return _cachedKey;
 
   const r = await fetch("/api/uppcl/pubkey");
   if (!r.ok) throw new Error(`Failed to fetch public key: HTTP ${r.status}`);
@@ -105,6 +107,7 @@ export async function fetchPublicKey(
 
   _cachedKey = key;
   _cachedPem = pem;
+  _cachedHash = oaepHash;
   _cachedAt = Date.now();
   return key;
 }
