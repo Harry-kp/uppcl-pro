@@ -13,6 +13,8 @@ import {
   AlertTriangle,
   ShieldCheck,
   ExternalLink,
+  Moon,
+  Sun,
 } from "lucide-react";
 import { API_BASE, login, ProxyError } from "@/lib/api";
 import { useToast } from "@/components/ui/Toast";
@@ -30,6 +32,19 @@ export function LoginGate({ proxyUnreachable }: { proxyUnreachable?: string }) {
   const [showPw, setShowPw] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [dark, setDark] = useState(() =>
+    typeof window !== "undefined"
+      ? document.documentElement.classList.contains("dark")
+      : true
+  );
+
+  function toggleTheme() {
+    const next = !dark;
+    setDark(next);
+    localStorage.setItem("theme", next ? "dark" : "light");
+    document.documentElement.classList.toggle("dark", next);
+    document.documentElement.classList.toggle("light", !next);
+  }
 
   const canSubmit = username.trim().length > 0 && password.length > 0 && !busy;
 
@@ -66,13 +81,22 @@ export function LoginGate({ proxyUnreachable }: { proxyUnreachable?: string }) {
             <div className="font-mono text-[9px] uppercase tracking-[0.26em] text-on-surface-variant/60">Kinetic Vault</div>
           </div>
         </div>
-        <Link
-          href="https://github.com/Harry-kp/uppcl-pro.git"
-          target="_blank"
-          className="inline-flex items-center gap-1 font-mono text-[11px] text-on-surface-variant/70 transition hover:text-on-surface"
-        >
-          Source <ExternalLink className="h-3 w-3" strokeWidth={2} />
-        </Link>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={toggleTheme}
+            className="rounded-md p-2 text-on-surface-variant/70 transition hover:bg-surface-container-low hover:text-on-surface"
+            aria-label="Toggle theme"
+          >
+            {dark ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
+          </button>
+          <Link
+            href="https://github.com/Harry-kp/uppcl-pro.git"
+            target="_blank"
+            className="inline-flex items-center gap-1 font-mono text-[11px] text-on-surface-variant/70 transition hover:text-on-surface"
+          >
+            Source <ExternalLink className="h-3 w-3" strokeWidth={2} />
+          </Link>
+        </div>
       </header>
 
       {/* Centred split */}
