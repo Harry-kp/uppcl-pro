@@ -1,0 +1,46 @@
+{
+  "login": {
+    "tagline": "Your meter, your data",
+    "headline_1": "Your credentials",
+    "headline_2": "are never stored.",
+    "description": "Your credentials pass through our server over HTTPS to reach UPPCL, but are never stored or logged. The entire codebase is open-source.",
+    "trust_banner": "Open-source & no storage — your credentials are never saved",
+    "trust_sub": "Everything is open-source. Self-host for full privacy.",
+    "trust_link": "Read how it works",
+    "pitch_1": "Credentials travel over <b>HTTPS</b> through our server to UPPCL. They are never stored, never logged, never persisted.",
+    "pitch_2": "No database. No tracking. No analytics. The entire codebase is <b>open-source</b> — verify every line yourself.",
+    "pitch_3": "Close the tab and your session is gone. Self-host for full privacy — the server runs on a single <code>bun run dev</code>.",
+    "footer_line": "100% open-source · No storage · MIT licensed",
+    "welcome": "Welcome back",
+    "sign_in": "Sign in",
+    "sign_in_desc": "Use the same credentials you use on the official",
+    "username": "Username",
+    "username_hint": "Phone or connection number",
+    "username_placeholder": "10-digit phone or account number",
+    "password": "Password",
+    "signing_in": "Signing in…",
+    "creds_banner_title": "Your credentials are never stored or logged",
+    "creds_banner_desc": "Sent over HTTPS to UPPCL. Our server is a relay with no database and no logs.",
+    "how_it_works": "How it works",
+    "source": "Source",
+    "connection_error": "Connection error",
+    "connection_error_desc": "Could not reach the UPPCL API. This usually means the upstream server is down or your network is blocking the connection."
+  },
+  "nav": {
+    "home": "Home",
+    "usage": "Usage",
+    "bills": "Bills",
+    "recharges": "Recharges",
+    "meter": "Meter",
+    "complaints": "Complaints",
+    "settings": "Settings"
+  },
+  "common": {
+    "sign_out": "Sign out",
+    "signed_in": "Signed in",
+    "not_authenticated": "Not authenticated",
+    "back_to_dashboard": "Back to dashboard",
+    "page_not_found": "Page not found",
+    "page_not_found_desc": "The page you're looking for doesn't exist."
+  }
+}

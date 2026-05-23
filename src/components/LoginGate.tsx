@@ -18,6 +18,8 @@ import {
 } from "lucide-react";
 import { login, ProxyError } from "@/lib/api";
 import { useToast } from "@/components/ui/Toast";
+import { useTranslations } from "next-intl";
+import { useLocale } from "@/components/I18nProvider";
 
 /**
  * Full-bleed auth gate. Rendered by <Shell> when the proxy reports
@@ -27,6 +29,8 @@ import { useToast } from "@/components/ui/Toast";
  */
 export function LoginGate({ proxyUnreachable }: { proxyUnreachable?: string }) {
   const { push } = useToast();
+  const t = useTranslations("login");
+  const { locale, setLocale } = useLocale();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
@@ -83,7 +87,14 @@ export function LoginGate({ proxyUnreachable }: { proxyUnreachable?: string }) {
             <div className="font-mono text-[9px] uppercase tracking-[0.26em] text-on-surface-variant/60">Kinetic Vault</div>
           </div>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setLocale(locale === "en" ? "hi" : "en")}
+            className="rounded-md px-2 py-1 font-mono text-[11px] font-semibold text-on-surface-variant/70 transition hover:bg-surface-container-low hover:text-on-surface"
+            aria-label="Toggle language"
+          >
+            {locale === "en" ? "हिंदी" : "EN"}
+          </button>
           <button
             onClick={toggleTheme}
             className="rounded-md p-2 text-on-surface-variant/70 transition hover:bg-surface-container-low hover:text-on-surface"
@@ -96,7 +107,7 @@ export function LoginGate({ proxyUnreachable }: { proxyUnreachable?: string }) {
             target="_blank"
             className="inline-flex items-center gap-1 font-mono text-[11px] text-on-surface-variant/70 transition hover:text-on-surface"
           >
-            Source <ExternalLink className="h-3 w-3" strokeWidth={2} />
+            {t("source")} <ExternalLink className="h-3 w-3" strokeWidth={2} />
           </Link>
         </div>
       </header>
@@ -105,19 +116,17 @@ export function LoginGate({ proxyUnreachable }: { proxyUnreachable?: string }) {
       <div className="grid flex-1 place-items-center px-6 pb-12">
         <div className="grid w-full max-w-[980px] items-center gap-8 lg:grid-cols-[1fr_1.1fr]">
           {/* ── Pitch side ───────────────────────────────────────────── */}
-          <div className="hidden flex-col gap-6 lg:flex">
+           <div className="hidden flex-col gap-6 lg:flex">
             <div>
               <div className="mb-2 font-mono text-[10px] uppercase tracking-[0.3em] text-primary-fixed-dim">
-                Your meter, your data
+                {t("tagline")}
               </div>
               <h1 className="font-mono text-[34px] leading-[1.1] text-on-surface">
-                Your credentials<br />
-                are never stored.
+                {t("headline_1")}<br />
+                {t("headline_2")}
               </h1>
               <p className="mt-4 max-w-[380px] text-[13px] leading-relaxed text-on-surface-variant">
-                Your credentials pass through our server over <strong className="text-on-surface">HTTPS</strong> to
-                reach UPPCL. They are never stored, never logged. The entire codebase
-                is open-source — read every line yourself.
+                {t("description")}
               </p>
             </div>
 
@@ -125,37 +134,34 @@ export function LoginGate({ proxyUnreachable }: { proxyUnreachable?: string }) {
             <div className="rounded-lg border border-primary-fixed-dim/20 bg-primary-container/10 px-4 py-3">
               <div className="flex items-center gap-2 text-[12px] font-semibold text-primary-fixed-dim">
                 <ShieldCheck className="h-4 w-4" strokeWidth={2} />
-                Open-source &amp; no storage — your credentials are never saved
+                {t("trust_banner")}
               </div>
               <p className="mt-1.5 text-[11px] leading-relaxed text-on-surface-variant">
-                Everything is open-source. Self-host for full privacy.
+                {t("trust_sub")}
               </p>
               <Link
                 href="https://github.com/Harry-kp/uppcl-pro#security--privacy"
                 target="_blank"
                 className="mt-2 inline-flex items-center gap-1 text-[11px] font-semibold text-primary-fixed-dim hover:underline"
               >
-                Read how it works <ExternalLink className="h-3 w-3" />
+                {t("trust_link")} <ExternalLink className="h-3 w-3" />
               </Link>
             </div>
 
             <ul className="space-y-3">
               <Pitch icon={<LockKeyhole className="h-3.5 w-3.5" strokeWidth={2.25} />}>
-                Credentials travel over <strong>HTTPS</strong> through our server
-                to UPPCL. They are never stored, never logged, never persisted.
+                {t.rich("pitch_1", { b: (chunks) => <strong>{chunks}</strong> })}
               </Pitch>
               <Pitch icon={<ShieldCheck className="h-3.5 w-3.5" strokeWidth={2.25} />}>
-                No database. No tracking. No analytics. The entire codebase is{" "}
-                <strong>open-source</strong> — verify every line yourself.
+                {t.rich("pitch_2", { b: (chunks) => <strong>{chunks}</strong> })}
               </Pitch>
               <Pitch icon={<Zap className="h-3.5 w-3.5" strokeWidth={2.25} />}>
-                Close the tab and your session is gone. Self-host for full
-                privacy — the server runs on a single <code>bun run dev</code>.
+                {t.rich("pitch_3", { code: (chunks) => <code className="rounded bg-surface-container-low px-1 font-mono text-[11px]">{chunks}</code> })}
               </Pitch>
             </ul>
 
             <div className="mt-2 border-t border-white/[0.04] pt-4 font-mono text-[11px] text-on-surface-variant/70">
-              100% open-source &nbsp;·&nbsp; No storage &nbsp;·&nbsp; MIT licensed
+              {t("footer_line")}
             </div>
           </div>
 
@@ -167,11 +173,11 @@ export function LoginGate({ proxyUnreachable }: { proxyUnreachable?: string }) {
               <>
                 <div className="mb-6">
                   <div className="font-mono text-[11px] uppercase tracking-[0.22em] text-on-surface-variant">
-                    Welcome back
+                    {t("welcome")}
                   </div>
-                  <div className="mt-1 font-mono text-[22px] text-on-surface">Sign in</div>
+                  <div className="mt-1 font-mono text-[22px] text-on-surface">{t("sign_in")}</div>
                   <p className="mt-2 text-[12px] leading-relaxed text-on-surface-variant">
-                    Use the same credentials you use on the official{" "}
+                    {t("sign_in_desc")}{" "}
                     <Link
                       href="https://uppcl.sem.jio.com/uppclsmart/"
                       target="_blank"
@@ -184,8 +190,8 @@ export function LoginGate({ proxyUnreachable }: { proxyUnreachable?: string }) {
 
                 <form onSubmit={onSubmit} className="space-y-4" autoComplete="on">
                   <Field
-                    label="Username"
-                    hint="Phone or connection number"
+                    label={t("username")}
+                    hint={t("username_hint")}
                     icon={<User className="h-3.5 w-3.5" />}
                   >
                     <input
@@ -196,13 +202,13 @@ export function LoginGate({ proxyUnreachable }: { proxyUnreachable?: string }) {
                       autoFocus
                       value={username}
                       onChange={(e) => setUsername(e.target.value)}
-                      placeholder="10-digit phone or account number"
+                      placeholder={t("username_placeholder")}
                       className="w-full bg-transparent font-mono text-[14px] text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none"
                     />
                   </Field>
 
                   <Field
-                    label="Password"
+                    label={t("password")}
                     icon={<LockKeyhole className="h-3.5 w-3.5" />}
                     trailing={
                       <button
@@ -242,11 +248,11 @@ export function LoginGate({ proxyUnreachable }: { proxyUnreachable?: string }) {
                     {busy ? (
                       <>
                         <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        Signing in…
+                        {t("signing_in")}
                       </>
                     ) : (
                       <>
-                        Sign in
+                        {t("sign_in")}
                         <span className="font-mono text-[10px] tracking-[0.2em] opacity-70">↵</span>
                       </>
                     )}
@@ -256,17 +262,16 @@ export function LoginGate({ proxyUnreachable }: { proxyUnreachable?: string }) {
                   <div className="mt-1 rounded-md border border-white/[0.04] bg-(--color-void) px-3 py-2.5 text-center">
                     <div className="flex items-center justify-center gap-1.5 text-[11px] font-semibold text-primary-fixed-dim">
                       <ShieldCheck className="h-3 w-3" strokeWidth={2.25} />
-                      Your credentials are never stored or logged
+                      {t("creds_banner_title")}
                     </div>
                     <p className="mt-1 text-[10px] leading-relaxed text-on-surface-variant/70">
-                      Sent over HTTPS through our server to UPPCL. No database, no
-                      logs.{" "}
+                      {t("creds_banner_desc")}{" "}
                       <Link
                         href="https://github.com/Harry-kp/uppcl-pro#security--privacy"
                         target="_blank"
                         className="text-primary-fixed-dim underline-offset-2 hover:underline"
                       >
-                        How it works
+                        {t("how_it_works")}
                       </Link>
                     </p>
                   </div>
@@ -279,13 +284,13 @@ export function LoginGate({ proxyUnreachable }: { proxyUnreachable?: string }) {
 
       {/* Footer */}
       <footer className="mx-auto w-full max-w-[980px] px-6 pb-6 font-mono text-[10px] uppercase tracking-[0.2em] text-on-surface-variant/50">
-        <span>Open-source &nbsp;·&nbsp; No storage &nbsp;·&nbsp; MIT &nbsp;·&nbsp; </span>
+        <span>{t("footer_line")} &nbsp;·&nbsp; </span>
         <Link
           href="https://github.com/Harry-kp/uppcl-pro"
           target="_blank"
           className="text-on-surface-variant/70 hover:text-on-surface"
         >
-          Verify the code yourself
+          GitHub
         </Link>
       </footer>
     </div>

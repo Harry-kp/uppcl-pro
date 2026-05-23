@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import { Shell } from "@/components/Shell";
+import { I18nProvider } from "@/components/I18nProvider";
 import "./globals.css";
 
 const inter = Inter({
@@ -63,7 +64,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={`${inter.variable} ${jetbrains.variable} dark`}>
       <body className="antialiased">
-        <Shell>{children}</Shell>
+        <I18nProvider>
+          <Shell>{children}</Shell>
+        </I18nProvider>
       </body>
     </html>
   );
