@@ -62,15 +62,14 @@ export class ProxyError extends Error {
   }
 }
 
-// ─── Core: encrypted POST to UPPCL via our CORS-proxy route ──────────────────
+// ─── Core: POST to UPPCL via our CORS-proxy route ────────────────────────────
+// UPPCL dropped encryption — all endpoints accept plaintext JSON now.
 
 async function uppcl_post(path: string, body: Record<string, unknown>): Promise<unknown> {
   const jwt = getJwt();
   if (!jwt) throw new ProxyError(401, "No active session — sign in first");
 
   const session = getSession()!;
-  const pubKey = await fetchPublicKey(session.oaepHash);
-  const envelope = await encryptPayload(body, pubKey);
 
   const r = await fetch(`/api/uppcl/${path}`, {
     method: "POST",
@@ -81,34 +80,12 @@ async function uppcl_post(path: string, body: Record<string, unknown>): Promise<
       token: jwt,
       authorization: `Bearer ${jwt}`,
     },
-    body: JSON.stringify(envelope),
+    body: JSON.stringify(body),
     cache: "no-store",
   });
 
   if (r.status === 200) {
     return r.json();
-  }
-
-  // Check for crypto error (OAEP hash mismatch) — try SHA-1 fallback
-  if (r.status === 400 || r.status === 500) {
-    const text = await r.text();
-    const lower = text.toLowerCase();
-    if (
-      session.oaepHash === "SHA-256" &&
-      ["decrypt", "padding", "oaep", "crypto", "decipher"].some((k) => lower.includes(k))
-    ) {
-      // Retry with SHA-1
-      session.oaepHash = "SHA-1";
-      saveSession(session);
-      await reimportKeyWithHash("SHA-1");
-      return uppcl_post(path, body); // recursive retry (once)
-    }
-    let parsed: unknown;
-    try { parsed = JSON.parse(text); } catch { parsed = text; }
-    const msg = typeof parsed === "object" && parsed && "message" in parsed
-      ? (parsed as { message: string }).message
-      : text.slice(0, 200);
-    throw new ProxyError(r.status, msg, parsed);
   }
 
   if (r.status === 401 || r.status === 403) {
@@ -117,7 +94,12 @@ async function uppcl_post(path: string, body: Record<string, unknown>): Promise<
   }
 
   const text = await r.text();
-  throw new ProxyError(r.status, text.slice(0, 200));
+  let parsed: unknown;
+  try { parsed = JSON.parse(text); } catch { parsed = text; }
+  const msg = typeof parsed === "object" && parsed && "message" in parsed
+    ? (parsed as { message: string }).message
+    : text.slice(0, 200);
+  throw new ProxyError(r.status, msg, parsed);
 }
 
 // ─── Auth ─────────────────────────────────────────────────────────────────────

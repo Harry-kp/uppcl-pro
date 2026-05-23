@@ -94,21 +94,7 @@ export async function POST(
   const joined = path.join("/");
   const url = `${API_BASE}/${joined}`;
 
-  // Forward the encrypted body — re-serialize the outer JSON with Python-style
-  // spacing (space after colon/comma) to match what httpx sends by default.
-  // UPPCL's backend may rely on this exact formatting.
-  const rawBody = await req.text();
-  let body: string;
-  try {
-    const parsed = JSON.parse(rawBody);
-    // Python's json.dumps default: {"key": "value", "key2": "value2"}
-    body = JSON.stringify(parsed, null, 0)
-      .replace(/":/g, '": ')
-      .replace(/,"/g, ', "');
-    console.log(`[uppcl proxy] reformatted body (first 100): ${body.slice(0, 100)}`);
-  } catch {
-    body = rawBody;
-  }
+  const body = await req.text();
   const headers = upstreamHeaders(req);
   if (!headers["content-type"]) headers["content-type"] = "application/json";
 
