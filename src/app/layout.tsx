@@ -18,9 +18,43 @@ const jetbrains = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "UPPCL Pro",
+  title: {
+    default: "UPPCL Pro — Kinetic Vault",
+    template: "%s | UPPCL Pro",
+  },
   description:
-    "Power-user analytics for UPPCL SMART prepaid meters. Live balance, runway forecast, anomaly detection, Day × Hour heatmap.",
+    "Analytics dashboard for UPPCL SMART prepaid electricity meters. Live balance, runway forecast, anomaly detection, recharge planner, 1912 complaint tracking.",
+  keywords: [
+    "UPPCL", "SMART", "prepaid meter", "electricity", "dashboard",
+    "PVVNL", "MVVNL", "PuVVNL", "DVVNL", "KESCo",
+    "balance", "runway", "consumption", "analytics",
+  ],
+  authors: [{ name: "Harry KP", url: "https://github.com/Harry-kp" }],
+  openGraph: {
+    title: "UPPCL Pro — Kinetic Vault",
+    description: "Analytics dashboard for UPPCL SMART prepaid electricity meters. Live balance, runway forecast, anomaly detection.",
+    url: "https://github.com/Harry-kp/uppcl-pro",
+    siteName: "UPPCL Pro",
+    type: "website",
+    images: [
+      {
+        url: "https://harry-kp.github.io/uppcl-pro/screenshots/home-dark.png",
+        width: 1920,
+        height: 1080,
+        alt: "UPPCL Pro dashboard",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "UPPCL Pro — Kinetic Vault",
+    description: "Analytics dashboard for UPPCL SMART prepaid meters.",
+    images: ["https://harry-kp.github.io/uppcl-pro/screenshots/home-dark.png"],
+  },
+  icons: {
+    icon: "/icon.svg",
+  },
+  metadataBase: new URL("https://uppcl-pro.vercel.app"),
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
