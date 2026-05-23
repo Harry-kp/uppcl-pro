@@ -189,7 +189,7 @@ function ids(site: SiteRecord): { cid: string; did: string; tid: string } {
  */
 async function fetcher<T>(key: string): Promise<T> {
   // Complaints go to our server-side route (anonymous, no user creds)
-  if (key.startsWith("/complaints/")) {
+  if (key.startsWith("/complaints")) {
     const r = await fetch(`/api${key}`, { cache: "no-store" });
     if (!r.ok) {
       const body = await r.json().catch(() => null);
