@@ -45,7 +45,7 @@ Tests are intentionally light because most of the value is in the reverse-engine
 ## What's not
 
 - **Do not submit live complaints as part of testing.** Use the `dry-run` mode (planned) or capture HARs in offline mode.
-- Do not open PRs that weaken the privacy story — the zero-knowledge browser-side encryption is a feature, not a limitation.
+- Do not open PRs that weaken the privacy story — the open-source, no-storage architecture is a feature, not a limitation.
 - Do not add telemetry, analytics, or any external call that isn't strictly necessary for the feature.
 
 ## Reporting bugs

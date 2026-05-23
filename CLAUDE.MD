@@ -1,14 +1,14 @@
 # UPPCL Pro — AI assistant context
 
-Pure Next.js app (TypeScript) that reverse-engineers UPPCL's encrypted
-prepaid-meter API. All encryption happens in the browser; the Next.js API
-routes are thin CORS-bypass pipes. **No Python anywhere in the stack.**
+Pure Next.js app (TypeScript) that reverse-engineers UPPCL's
+prepaid-meter API. The Next.js API
+routes are thin CORS-bypass pipes. UPPCL dropped encryption — all endpoints accept plaintext JSON now. **No Python anywhere in the stack.**
 
 ## Architecture
 
 ```
 Browser (React + SWR)
-  ├─ src/lib/crypto.ts    — ALTCHA captcha + RSA-OAEP + AES-GCM encrypt/decrypt
+  ├─ src/lib/crypto.ts    — ALTCHA captcha + Appsavy AES-CBC helpers
   ├─ src/lib/session.ts   — JWT stored in sessionStorage (60-day expiry)
   └─ src/lib/api.ts       — SWR-based data fetching client
         │
@@ -28,10 +28,10 @@ forward requests to avoid CORS blocks.
 
 | Path | Purpose |
 |------|---------|
-| `src/lib/crypto.ts` | ALTCHA challenge solver, RSA-OAEP encryption (with SHA-256→SHA-1 fallback), AES-GCM envelope |
+| `src/lib/crypto.ts` | ALTCHA proof-of-work solver + Appsavy AES-128-CBC header encryption |
 | `src/lib/session.ts` | Read/write JWT in `sessionStorage`; expiry check |
 | `src/lib/api.ts` | SWR hooks + raw fetch helpers for all UPPCL endpoints |
-| `src/app/api/uppcl/[...path]/route.ts` | Catch-all CORS proxy — pipes encrypted bodies to UPPCL, returns encrypted responses |
+| `src/app/api/uppcl/[...path]/route.ts` | Catch-all CORS proxy — forwards plaintext JSON to UPPCL, returns responses |
 | `src/app/api/complaints/route.ts` | Appsavy complaint-tracking proxy |
 
 ## Upstream field-name quirks worth remembering

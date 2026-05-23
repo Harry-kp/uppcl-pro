@@ -36,7 +36,7 @@ Tell the user:
 
 > *"Open http://localhost:3000 in your browser. You'll see the LoginGate screen. Enter your UPPCL credentials (the phone number or connection number + password you use in the UPPCL SMART app)."*
 
-The browser handles ALTCHA captcha solving, RSA-OAEP encryption, and sends the login request through the Next.js API route. On success, the JWT is stored in `sessionStorage`.
+The browser solves the ALTCHA captcha and sends the login request through the Next.js API route. On success, the JWT is stored in `sessionStorage`.
 
 ### Handle errors the user may report
 
@@ -52,7 +52,7 @@ After the user confirms they logged in:
 1. Ask them if the home dashboard shows populated data (balance, consumption charts).
 2. Ask them to navigate to a second page (e.g., `/analytics` or `/ledger`) and confirm data renders.
 
-If data loads on at least two pages, the full pipeline is working: browser crypto, API route proxy, UPPCL backend, decryption, and SWR rendering.
+If data loads on at least two pages, the full pipeline is working: browser → API route proxy → UPPCL backend → SWR rendering.
 
 ## Done
 
