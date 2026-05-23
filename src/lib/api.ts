@@ -1,22 +1,14 @@
 /**
  * UPPCL SMART API client — runs entirely in the browser.
  *
- * Encryption (ALTCHA + RSA-OAEP + AES-GCM) happens client-side via Web Crypto.
  * JWT lives in sessionStorage — the server never sees or stores it.
  * The Next.js API route at /api/uppcl/* is a stateless CORS-bypass pipe.
  *
- * This replaces both the Python FastAPI proxy AND the old SWR-based api.ts.
- * The SWR hooks and TypeScript interfaces are unchanged — pages don't need
- * to change at all.
+ * UPPCL dropped RSA-OAEP + AES-GCM encryption — all endpoints accept
+ * plaintext JSON now. Only ALTCHA proof-of-work is still needed for login.
  */
 import useSWR from "swr";
-import {
-  solveAltcha,
-  fetchPublicKey,
-  encryptPayload,
-  reimportKeyWithHash,
-  type AltchaChallenge,
-} from "./crypto";
+import { solveAltcha, type AltchaChallenge } from "./crypto";
 import {
   getSession,
   saveSession,

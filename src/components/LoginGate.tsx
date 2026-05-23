@@ -109,13 +109,13 @@ export function LoginGate({ proxyUnreachable }: { proxyUnreachable?: string }) {
                 Your meter, your data
               </div>
               <h1 className="font-mono text-[34px] leading-[1.1] text-on-surface">
-                We never see<br />
-                your password.
+                Your credentials<br />
+                are never stored.
               </h1>
               <p className="mt-4 max-w-[380px] text-[13px] leading-relaxed text-on-surface-variant">
-                Your credentials are encrypted <strong className="text-on-surface">inside your browser</strong> before
-                they leave. Our server is a blind relay — it forwards encrypted
-                data it cannot read.
+                Your credentials pass through our server over <strong className="text-on-surface">HTTPS</strong> to
+                reach UPPCL. They are never stored, never logged. The entire codebase
+                is open-source — read every line yourself.
               </p>
             </div>
 
@@ -123,13 +123,13 @@ export function LoginGate({ proxyUnreachable }: { proxyUnreachable?: string }) {
             <div className="rounded-lg border border-primary-fixed-dim/20 bg-primary-container/10 px-4 py-3">
               <div className="flex items-center gap-2 text-[12px] font-semibold text-primary-fixed-dim">
                 <ShieldCheck className="h-4 w-4" strokeWidth={2} />
-                Zero-knowledge — we can&apos;t access your account
+                Open-source &amp; no storage — your credentials are never saved
               </div>
               <p className="mt-1.5 text-[11px] leading-relaxed text-on-surface-variant">
-                Everything is open-source. Verify it yourself.
+                Everything is open-source. Self-host for full privacy.
               </p>
               <Link
-                href="https://github.com/Harry-kp/uppcl-pro#zero-knowledge-security"
+                href="https://github.com/Harry-kp/uppcl-pro#security--privacy"
                 target="_blank"
                 className="mt-2 inline-flex items-center gap-1 text-[11px] font-semibold text-primary-fixed-dim hover:underline"
               >
@@ -139,21 +139,21 @@ export function LoginGate({ proxyUnreachable }: { proxyUnreachable?: string }) {
 
             <ul className="space-y-3">
               <Pitch icon={<LockKeyhole className="h-3.5 w-3.5" strokeWidth={2.25} />}>
-                Password is encrypted <strong>in your browser</strong> before
-                it leaves. Our server only sees encrypted data passing through.
+                Credentials travel over <strong>HTTPS</strong> through our server
+                to UPPCL. They are never stored, never logged, never persisted.
               </Pitch>
               <Pitch icon={<ShieldCheck className="h-3.5 w-3.5" strokeWidth={2.25} />}>
-                No database. No logs. No tracking. The server is a stateless
-                relay — it <strong>cannot</strong> decrypt your data.
+                No database. No tracking. No analytics. The entire codebase is{" "}
+                <strong>open-source</strong> — verify every line yourself.
               </Pitch>
               <Pitch icon={<Zap className="h-3.5 w-3.5" strokeWidth={2.25} />}>
-                Close the tab and your session is gone. Nothing persists
-                on our end — ever.
+                Close the tab and your session is gone. Self-host for full
+                privacy — the server runs on a single <code>bun run dev</code>.
               </Pitch>
             </ul>
 
             <div className="mt-2 border-t border-white/[0.04] pt-4 font-mono text-[11px] text-on-surface-variant/70">
-              100% open-source &nbsp;·&nbsp; Zero-knowledge &nbsp;·&nbsp; MIT licensed
+              100% open-source &nbsp;·&nbsp; No storage &nbsp;·&nbsp; MIT licensed
             </div>
           </div>
 
@@ -250,17 +250,17 @@ export function LoginGate({ proxyUnreachable }: { proxyUnreachable?: string }) {
                     )}
                   </button>
 
-                  {/* Trust callout below button */}
+                   {/* Trust callout below button */}
                   <div className="mt-1 rounded-md border border-white/[0.04] bg-(--color-void) px-3 py-2.5 text-center">
                     <div className="flex items-center justify-center gap-1.5 text-[11px] font-semibold text-primary-fixed-dim">
                       <ShieldCheck className="h-3 w-3" strokeWidth={2.25} />
-                      We never see your password
+                      Your credentials are never stored or logged
                     </div>
                     <p className="mt-1 text-[10px] leading-relaxed text-on-surface-variant/70">
-                      Encrypted in your browser, sent directly to UPPCL. Our server
-                      is a blind relay.{" "}
+                      Sent over HTTPS through our server to UPPCL. No database, no
+                      logs.{" "}
                       <Link
-                        href="https://github.com/Harry-kp/uppcl-pro#zero-knowledge-security"
+                        href="https://github.com/Harry-kp/uppcl-pro#security--privacy"
                         target="_blank"
                         className="text-primary-fixed-dim underline-offset-2 hover:underline"
                       >
@@ -277,7 +277,7 @@ export function LoginGate({ proxyUnreachable }: { proxyUnreachable?: string }) {
 
       {/* Footer */}
       <footer className="mx-auto w-full max-w-[980px] px-6 pb-6 font-mono text-[10px] uppercase tracking-[0.2em] text-on-surface-variant/50">
-        <span>Open-source &nbsp;·&nbsp; Zero-knowledge &nbsp;·&nbsp; MIT &nbsp;·&nbsp; </span>
+        <span>Open-source &nbsp;·&nbsp; No storage &nbsp;·&nbsp; MIT &nbsp;·&nbsp; </span>
         <Link
           href="https://github.com/Harry-kp/uppcl-pro"
           target="_blank"

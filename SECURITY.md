@@ -11,26 +11,46 @@ Email the maintainer privately with:
 
 I'll acknowledge within 72 h and work with you on a fix and coordinated disclosure.
 
-## Zero-knowledge architecture
+## Privacy & transparency
 
-UPPCL Pro is a pure Next.js app. The server never sees your UPPCL credentials or JWT in plaintext.
+UPPCL Pro is a pure Next.js app. The server acts as a **stateless CORS proxy** between your browser and UPPCL's API. It has no database, no persistent storage, no analytics, and no tracking.
+
+### Honest threat model
+
+**The server CAN see your credentials in memory during the request.** It does not store or log them, but if the server were compromised, an attacker could theoretically intercept credentials in transit. Self-hosting eliminates this risk entirely.
+
+### What the server sees
+
+| Data | Where it lives | What the server sees | Risk |
+|---|---|---|---|
+| UPPCL username / password | Your browser → server → UPPCL API | **Plaintext JSON in memory** during the HTTP request | Server operator _could_ read them; we don't store or log them |
+| 60-day JWT | `sessionStorage` in your browser | Passes through server memory during login response | Same as above — transient, never stored |
+| Meter + consumption data | UPPCL API → server → your browser | Passes through server memory as upstream response | Transient, never stored |
+| Public API key + tenant UUID | Fetched from UPPCL's SPA | Visible (not secrets) | None |
+| Phone number (complaints) | Your browser → Appsavy API | Passes through server for 1912 lookup | Public portal, no login involved |
 
 ### How credentials flow
 
 1. You enter your UPPCL username and password in the browser.
-2. The browser fetches UPPCL's public RSA key and encrypts credentials using **RSA-OAEP + AES-GCM** via the [Web Crypto API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Crypto_API) — the same encryption UPPCL's own SPA performs.
-3. The encrypted blob is sent through a Next.js API route that acts as a **stateless CORS-bypass pipe**. The server only sees opaque ciphertext; it cannot decrypt it.
-4. UPPCL's upstream API decrypts and validates the credentials, returning a JWT.
+2. Credentials are sent as **plaintext JSON over HTTPS** to our Next.js API route (`/api/uppcl/*`).
+3. The API route forwards the request verbatim to `uppcl.sem.jio.com` and returns the response.
+4. UPPCL validates the credentials and returns a JWT.
 5. The JWT is stored in **`sessionStorage` only** — it lives in the current tab and is destroyed when the tab closes.
 
-### What the server sees
+The server never writes credentials to disk, a database, or a log file. They exist in process memory only for the duration of the HTTP request.
 
-| Data | Server visibility | Notes |
-|---|---|---|
-| UPPCL username / password | **None** — encrypted in-browser before leaving | RSA-OAEP + AES-GCM via Web Crypto API |
-| 60-day JWT | **None** — stays in `sessionStorage` | Never sent to the Next.js server; used only for direct browser → UPPCL API calls via the CORS proxy |
-| Meter + consumption data | **Transient** — passes through the API route as an encrypted/opaque upstream response | No storage, no logging |
-| Public API key + tenant UUID | Visible (not secrets) | Fetched from UPPCL's own SPA; present so Jio rotating them becomes a 1-line fix |
+### Trust model
+
+| Deployment | Trust requirement |
+|---|---|
+| **Self-hosted** (`bun run dev`) | Full privacy — credentials never leave your machine. You trust only yourself. |
+| **Hosted** (uppcl-pro.vercel.app) | You trust that the deployed code matches the open-source repo and that Vercel's infrastructure is not compromised. |
+
+**Why should you trust the hosted version?**
+- The entire codebase is [open-source on GitHub](https://github.com/Harry-kp/uppcl-pro) — read every line yourself
+- The server route handler is [~90 lines](src/app/api/uppcl/%5B...path%5D/route.ts) — a simple proxy with no storage
+- No database, no logging of user data, no analytics, no tracking
+- If you don't trust it, **self-host** — it takes one command
 
 ### Appsavy complaints
 
@@ -38,8 +58,9 @@ The complaint-filing flow (via Appsavy) uses **anonymous sessions** — no UPPCL
 
 ## Known soft edges
 
-- The Next.js API route is a blind CORS proxy — it forwards whatever the browser sends to UPPCL's upstream API. If a browser extension or devtools script crafts a malicious request, the proxy will forward it.
+- The Next.js API route is a CORS proxy — it forwards whatever the browser sends to UPPCL's upstream API. If a browser extension or devtools script crafts a malicious request, the proxy will forward it.
 - The JWT in `sessionStorage` is accessible to any JavaScript running in the same origin. A malicious browser extension or XSS vulnerability could exfiltrate it. **UPPCL's `/auth/logout` is soft — it only deletes the server-side session record. The JWT itself keeps working.** To force-invalidate, change your UPPCL password.
+- On the hosted version, credentials are visible to the server process in memory during the request. A compromised server could intercept them. Self-hosting eliminates this risk.
 
 ## Responsible use
 

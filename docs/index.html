@@ -4,7 +4,7 @@
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>UPPCL Pro — Kinetic Vault</title>
-  <meta name="description" content="Zero-knowledge analytics dashboard for UPPCL SMART prepaid smart meters. Your credentials never touch our server."/>
+  <meta name="description" content="Open-source analytics dashboard for UPPCL SMART prepaid smart meters. Your credentials are never stored or logged."/>
   <meta name="theme-color" content="#0b0b0b"/>
   <meta property="og:title" content="UPPCL Pro — Kinetic Vault"/>
   <meta property="og:description" content="Self-hosted analytics dashboard for UPPCL SMART prepaid smart meters."/>
@@ -174,7 +174,7 @@
       <a href="#screenshots">Screenshots</a>
       <a href="#quickstart">Quickstart</a>
       <a href="https://github.com/Harry-kp/uppcl-pro" target="_blank" rel="noopener">GitHub</a>
-      <a href="#security" class="btn-api">Zero-Knowledge</a>
+      <a href="#security" class="btn-api">Privacy</a>
     </div>
   </nav>
 
@@ -188,8 +188,8 @@
       </div>
       <h1>Your prepaid meter,<br><span>finally making sense.</span></h1>
       <p>
-        Zero-knowledge analytics for <strong>UPPCL SMART</strong> prepaid meters.
-        Your credentials are encrypted in your browser — our server never sees them.
+        Open-source analytics for <strong>UPPCL SMART</strong> prepaid meters.
+        Your credentials are never stored or logged. The entire codebase is open — read every line yourself.
       </p>
       <div class="hero-ctas">
         <a href="https://github.com/Harry-kp/uppcl-pro" class="btn btn-primary" target="_blank" rel="noopener">View on GitHub</a>
@@ -330,7 +330,7 @@
 <span class="k">open</span> <span class="s">https://uppcl-pro.vercel.app</span>
 
 <span class="c"># sign in with your UPPCL credentials</span>
-<span class="c"># everything is encrypted in your browser</span></pre>
+<span class="c"># credentials are never stored or logged</span></pre>
       </div>
       <p style="margin-top:16px;font-size:13px;color:var(--text-dim)">
         Using Claude Code? Type
@@ -360,23 +360,23 @@
 
     <!-- Security -->
     <section id="security">
-      <h2>Zero-knowledge architecture</h2>
-      <p class="sub">Your credentials never touch our server. Here's exactly what happens.</p>
+      <h2>Privacy &amp; transparency</h2>
+      <p class="sub">Your credentials are never stored or logged. Here's exactly what happens.</p>
       <div class="features">
         <div class="feature">
-          <div class="feature-icon">🔐</div>
-          <h3>Browser-side encryption</h3>
-          <p>Your password is encrypted with RSA-OAEP + AES-256-GCM using Web Crypto API <strong>inside your browser</strong> before it ever leaves. The server only sees encrypted blobs passing through.</p>
+          <div class="feature-icon">🔒</div>
+          <h3>HTTPS transit, no storage</h3>
+          <p>Your credentials pass through our server over <strong>HTTPS</strong> to reach UPPCL's API. They exist in server memory only during the request — never written to disk, a database, or a log file.</p>
         </div>
         <div class="feature">
           <div class="feature-icon">🧠</div>
-          <h3>No server storage</h3>
-          <p>The JWT from UPPCL is stored in <code>sessionStorage</code> — it lives only in your browser tab. Close the tab and it's gone. We never log, persist, or cache any user data on the server.</p>
+          <h3>No database, no tracking</h3>
+          <p>The JWT from UPPCL is stored in <code>sessionStorage</code> — it lives only in your browser tab. Close the tab and it's gone. The server has no database, no analytics, no tracking of any kind.</p>
         </div>
         <div class="feature">
-          <div class="feature-icon">🪟</div>
+          <div class="feature-icon">📖</div>
           <h3>Fully open-source</h3>
-          <p>Every line of code is on GitHub. The server is a stateless CORS-bypass pipe — <a href="https://github.com/Harry-kp/uppcl-pro/blob/main/src/app/api/uppcl/%5B...path%5D/route.ts">read the 90-line route handler</a> yourself.</p>
+          <p>Every line of code is on GitHub. The server is a stateless CORS proxy — <a href="https://github.com/Harry-kp/uppcl-pro/blob/main/src/app/api/uppcl/%5B...path%5D/route.ts">read the ~90-line route handler</a> yourself. Self-host with <code>bun run dev</code> for complete privacy.</p>
         </div>
       </div>
     </section>

@@ -1,14 +1,8 @@
 /**
  * Appsavy (UPPCL 1912) complaint portal proxy.
  *
- * This is the ONE server-side route that does actual work (not just forwarding),
- * because Appsavy uses anonymous sessions with server-set cookies that browsers
- * can't manage cross-origin.
- *
- * No user credentials are involved — Appsavy is fully anonymous. The only
- * user-provided input is a phone number (query param).
- *
- * Ported from appsavy.py.
+ * Anonymous sessions — no user credentials involved.
+ * The only crypto is AES-128-CBC with a constant key for 5 request headers.
  */
 import { NextRequest, NextResponse } from "next/server";
 
@@ -25,12 +19,12 @@ const LIST_CHILD_CONTROL = "38068";
 const LIST_CHILD_AC_ID = "30065";
 const LIST_PARENT_CONTROL = "38062";
 
-// AES-128-CBC with constant key/iv (same as Python)
+// AES-128-CBC with constant key/iv
 const AES_KEY = new TextEncoder().encode("8080808080808080");
 const AES_IV = new TextEncoder().encode("8080808080808080");
 
 async function aesB64(plain: string): Promise<string> {
-  // Web Crypto AES-CBC adds PKCS7 padding automatically — do NOT pad manually
+  // Web Crypto AES-CBC adds PKCS7 padding automatically
   const data = new TextEncoder().encode(plain);
   const key = await crypto.subtle.importKey("raw", AES_KEY, "AES-CBC", false, ["encrypt"]);
   const ct = await crypto.subtle.encrypt({ name: "AES-CBC", iv: AES_IV }, key, data);
@@ -51,12 +45,11 @@ async function encryptedHeaders(): Promise<Record<string, string>> {
 
 let _cookies: string | null = null;
 let _cookiesAt = 0;
-const SESSION_TTL = 15 * 60 * 1000; // 15 min (conservative)
+const SESSION_TTL = 15 * 60 * 1000;
 
 /**
  * Bootstrap an anonymous appsavy session by manually following redirects
- * and accumulating Set-Cookie headers at each hop. Node.js fetch doesn't
- * have a cookie jar, so we do it ourselves.
+ * and accumulating Set-Cookie headers at each hop.
  */
 async function ensureSession(): Promise<string> {
   if (_cookies && Date.now() - _cookiesAt < SESSION_TTL) return _cookies;
@@ -64,54 +57,42 @@ async function ensureSession(): Promise<string> {
   const allCookies: Map<string, string> = new Map();
   const ua = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36";
 
-  let url: string = `${BOOTSTRAP}?PROJECTID=${PROJECT_ID}&FORMID=${FORM_ID}`;
-  let hops = 0;
-  const MAX_HOPS = 5;
-
-  while (hops < MAX_HOPS) {
-    hops++;
-    const cookieHeader = [...allCookies.values()].join("; ");
-
-    const r = await fetch(url, {
-      headers: {
-        accept: "text/html",
-        "user-agent": ua,
-        ...(cookieHeader ? { cookie: cookieHeader } : {}),
-      },
-      redirect: "manual", // don't follow — we collect cookies ourselves
-      cache: "no-store",
-    });
-
-    // Collect Set-Cookie from this response
-    const sc = r.headers.getSetCookie?.() ?? [];
-    for (const raw of sc) {
-      const nameVal = raw.split(";")[0]; // "name=value"
-      const eqIdx = nameVal.indexOf("=");
-      if (eqIdx > 0) {
-        const name = nameVal.slice(0, eqIdx).trim();
-        allCookies.set(name, nameVal);
+  async function getWithCookies(startUrl: string, maxHops = 6) {
+    let url = startUrl;
+    for (let i = 0; i < maxHops; i++) {
+      const cookieHeader = [...allCookies.values()].join("; ");
+      const r = await fetch(url, {
+        headers: {
+          accept: "text/html",
+          "user-agent": ua,
+          ...(cookieHeader ? { cookie: cookieHeader } : {}),
+        },
+        redirect: "manual",
+        cache: "no-store",
+      });
+      for (const raw of (r.headers.getSetCookie?.() ?? [])) {
+        const nameVal = raw.split(";")[0];
+        const eqIdx = nameVal.indexOf("=");
+        if (eqIdx > 0) allCookies.set(nameVal.slice(0, eqIdx).trim(), nameVal);
       }
+      if (r.status >= 300 && r.status < 400) {
+        const loc = r.headers.get("location");
+        if (!loc) break;
+        url = loc.startsWith("http") ? loc : `${BASE_URL}${loc}`;
+        continue;
+      }
+      break;
     }
-
-    // Follow redirect if 3xx
-    if (r.status >= 300 && r.status < 400) {
-      const location = r.headers.get("location");
-      if (!location) break;
-      url = location.startsWith("http") ? location : `${BASE_URL}${location}`;
-      continue;
-    }
-
-    // Done — either 200 or error
-    break;
   }
+
+  await getWithCookies(`${BOOTSTRAP}?PROJECTID=${PROJECT_ID}&FORMID=${FORM_ID}`);
+  await getWithCookies(`${BASE_URL}/coreapps/UI/Form?FormId=${FORM_ID}`);
 
   if (allCookies.size === 0) {
-    throw new Error("Appsavy bootstrap returned no cookies after " + hops + " hops");
+    throw new Error("Appsavy bootstrap returned no cookies");
   }
 
-  const cookieStr = [...allCookies.values()].join("; ");
-  console.log(`[appsavy] session bootstrapped: ${allCookies.size} cookies after ${hops} hops`);
-  _cookies = cookieStr;
+  _cookies = [...allCookies.values()].join("; ");
   _cookiesAt = Date.now();
   return _cookies;
 }
@@ -119,11 +100,6 @@ async function ensureSession(): Promise<string> {
 async function postApi(method: string, inputXml: string, retryOnce = true): Promise<string> {
   const cookies = await ensureSession();
   const enc = await encryptedHeaders();
-
-  const payload = {
-    inputxml: btoa(inputXml),
-    DocVersion: 1,
-  };
 
   const r = await fetch(`${API}/${method}`, {
     method: "POST",
@@ -138,12 +114,11 @@ async function postApi(method: string, inputXml: string, retryOnce = true): Prom
       "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
       ...enc,
     },
-    body: JSON.stringify(payload),
+    body: JSON.stringify({ inputxml: btoa(inputXml), DocVersion: 1 }),
     cache: "no-store",
   });
 
   if (r.status === 401 && retryOnce) {
-    // Session expired — reset cookies and retry once with fresh session
     _cookies = null;
     _cookiesAt = 0;
     return postApi(method, inputXml, false);
@@ -154,27 +129,21 @@ async function postApi(method: string, inputXml: string, retryOnce = true): Prom
   return r.text();
 }
 
-// ─── XML parsing (minimal, no external deps) ─────────────────────────────────
+// ─── XML parsing ──────────────────────────────────────────────────────────────
 
-interface XmlRow {
-  [key: string]: string;
-}
+interface XmlRow { [key: string]: string }
 
 function parseRowsets(raw: string): Array<{ ac_id: string; rows: XmlRow[] }> {
   const blocks: Array<{ ac_id: string; rows: XmlRow[] }> = [];
-  // Match each <RESULTS ...>...</RESULTS>
   const resultsRe = /<RESULTS[^>]*AC_ID="(\d+)"[^>]*>([\s\S]*?)<\/RESULTS>/gi;
   let m: RegExpExecArray | null;
   while ((m = resultsRe.exec(raw)) !== null) {
-    const acId = m[1];
     const inner = m[2];
     const rows: XmlRow[] = [];
     const rowsetRe = /<Rowset>([\s\S]*?)<\/Rowset>/gi;
     let rm: RegExpExecArray | null;
     while ((rm = rowsetRe.exec(inner)) !== null) {
       const row: XmlRow = {};
-      // Fields have attributes: <DATA_ID TYPE="TEXT" CAPTION="...">value</DATA_ID>
-      // Match tag name, skip attributes, capture content
       const fieldRe = /<(\w+)\b[^>]*>([\s\S]*?)<\/\1>/g;
       let fm: RegExpExecArray | null;
       while ((fm = fieldRe.exec(rm[1])) !== null) {
@@ -182,12 +151,12 @@ function parseRowsets(raw: string): Array<{ ac_id: string; rows: XmlRow[] }> {
       }
       if (Object.keys(row).length > 0) rows.push(row);
     }
-    blocks.push({ ac_id: acId, rows });
+    blocks.push({ ac_id: m[1], rows });
   }
   return blocks;
 }
 
-// ─── Complaint field schema (from appsavy.py COMPLAINT_FIELDS) ────────────────
+// ─── Complaint fields ─────────────────────────────────────────────────────────
 
 const COMPLAINT_FIELDS: Array<[number, number, string]> = [
   [52071, 39534, "customer_account_no"], [38886, 30729, "address"],
@@ -213,7 +182,7 @@ const COMPLAINT_FIELDS: Array<[number, number, string]> = [
 ];
 
 function buildRelationalXml(parentValue: string, children: Array<[number, number]>): string {
-  const head =
+  return (
     '<?xml version="1.0"?>' +
     '<Request VERSION="2" LANGUAGE_ID="" LOCATION="">' +
     `<Company Company_Id="${COMPANY_ID}" />` +
@@ -221,18 +190,14 @@ function buildRelationalXml(parentValue: string, children: Array<[number, number
     '<User User_Id="anonymous" />' +
     '<IUVLogin IUVLogin_Id="anonymous" />' +
     `<ROLE ROLE_ID="${ROLE_ID}" />` +
-    `<Event Control_Id="${EVENT_CONTROL}" />`;
-
-  const body = children
-    .map(
-      ([cid, ac]) =>
-        `<Child Control_Id="${cid}" Report="HTML" AC_ID="${ac}">` +
-        `<Parent Control_Id="${EVENT_CONTROL}" Value="${parentValue}" Data_Form_Id=""/>` +
-        `</Child>`
-    )
-    .join("");
-
-  return head + body + "</Request>";
+    `<Event Control_Id="${EVENT_CONTROL}" />` +
+    children.map(([cid, ac]) =>
+      `<Child Control_Id="${cid}" Report="HTML" AC_ID="${ac}">` +
+      `<Parent Control_Id="${EVENT_CONTROL}" Value="${parentValue}" Data_Form_Id=""/>` +
+      `</Child>`
+    ).join("") +
+    "</Request>"
+  );
 }
 
 function parseComplaintDetail(raw: string): Record<string, unknown> {
@@ -245,45 +210,39 @@ function parseComplaintDetail(raw: string): Record<string, unknown> {
       }
     }
   }
-
   const pick = (...names: string[]): string | null => {
     for (const n of names) if (merged[n]) return merged[n];
     return null;
   };
-
   const statusRaw = pick("COMPLAINT_STATUS");
-  const isOpen = statusRaw ? !statusRaw.toUpperCase().includes("CLOSE") : false;
-
   return {
-    data_id: pick("DATA_ID"),
-    complaint_no: pick("COMPLAINT_NO"),
-    status: statusRaw,
-    is_open: isOpen,
-    entry_date: pick("ENTRYDATE"),
-    closing_date: pick("CLOSINGDATE"),
-    consumer_name: pick("CONSUMER_NAME"),
-    mobile_no: pick("MOBILENO"),
-    address: pick("ADDRESS"),
-    customer_account: pick("CUSTOMERACNTNO"),
-    remarks: pick("REMARKS"),
-    closing_remarks: pick("CLOSINGREMARKS"),
-    closed_by: pick("CLOSEDBY"),
-    type: pick("COM_TYPE_NAME"),
-    sub_type: pick("COM_SUB_TYPE_NAME"),
-    source: pick("SRC"),
-    je_name: pick("JE_NAME"),
-    je_mobile: pick("JE_MOBILE"),
-    ae_name: pick("AE_NAME"),
-    ae_mobile: pick("AE_MOBILE"),
-    xen_name: pick("XEN_NAME"),
-    xen_mobile: pick("XEN_MOBILE"),
-    subdivision: pick("SUBDIVISION"),
-    substation: pick("SUBSTATION"),
-    assigned_to: pick("ASSIGNED_TO"),
-    base_level: pick("BASE_LEVEL"),
-    initial_user: pick("INITIALUSER"),
-    raw_fields: merged,
+    data_id: pick("DATA_ID"), complaint_no: pick("COMPLAINT_NO"),
+    status: statusRaw, is_open: statusRaw ? !statusRaw.toUpperCase().includes("CLOSE") : false,
+    entry_date: pick("ENTRYDATE"), closing_date: pick("CLOSINGDATE"),
+    consumer_name: pick("CONSUMER_NAME"), mobile_no: pick("MOBILENO"),
+    address: pick("ADDRESS"), customer_account: pick("CUSTOMERACNTNO"),
+    remarks: pick("REMARKS"), closing_remarks: pick("CLOSINGREMARKS"),
+    closed_by: pick("CLOSEDBY"), type: pick("COM_TYPE_NAME"),
+    sub_type: pick("COM_SUB_TYPE_NAME"), source: pick("SRC"),
+    je_name: pick("JE_NAME"), je_mobile: pick("JE_MOBILE"),
+    ae_name: pick("AE_NAME"), ae_mobile: pick("AE_MOBILE"),
+    xen_name: pick("XEN_NAME"), xen_mobile: pick("XEN_MOBILE"),
+    subdivision: pick("SUBDIVISION"), substation: pick("SUBSTATION"),
+    assigned_to: pick("ASSIGNED_TO"), base_level: pick("BASE_LEVEL"),
+    initial_user: pick("INITIALUSER"), raw_fields: merged,
   };
+}
+
+function parseEntryDate(raw: string | null | undefined): Date {
+  if (!raw) return new Date(0);
+  const m = /^(\d{2})\/(\d{2})\/(\d{4})\s+(\d{1,2}):(\d{2}):(\d{2})\s*(AM|PM)$/i.exec(raw.trim());
+  if (m) {
+    let h = parseInt(m[4]);
+    if (m[7]?.toUpperCase() === "PM" && h < 12) h += 12;
+    if (m[7]?.toUpperCase() === "AM" && h === 12) h = 0;
+    return new Date(parseInt(m[3]), parseInt(m[2]) - 1, parseInt(m[1]), h, parseInt(m[5]), parseInt(m[6]));
+  }
+  return new Date(0);
 }
 
 // ─── Route handler ────────────────────────────────────────────────────────────
@@ -296,17 +255,11 @@ export async function GET(req: NextRequest) {
 
   try {
     if (action === "detail" && dataId) {
-      // Single complaint detail
-      const xml = buildRelationalXml(
-        dataId,
-        COMPLAINT_FIELDS.map(([cid, ac]) => [cid, ac])
-      );
-      const raw = await postApi("GetRelationalDataA", xml);
-      return NextResponse.json(parseComplaintDetail(raw));
+      const xml = buildRelationalXml(dataId, COMPLAINT_FIELDS.map(([cid, ac]) => [cid, ac]));
+      return NextResponse.json(parseComplaintDetail(await postApi("GetRelationalDataA", xml)));
     }
 
     if (action === "my" && phone) {
-      // List + details (parallel fan-out)
       const list = await listByPhone(phone);
       const details = await Promise.all(
         list.map(async (item) => {
@@ -314,23 +267,15 @@ export async function GET(req: NextRequest) {
             item.data_id as string,
             COMPLAINT_FIELDS.map(([cid, ac]) => [cid, ac])
           );
-          const raw = await postApi("GetRelationalDataA", xml);
-          return parseComplaintDetail(raw);
+          return parseComplaintDetail(await postApi("GetRelationalDataA", xml));
         })
       );
-      // Sort newest-first by entry_date
-      details.sort((a, b) => {
-        const da = parseEntryDate(a.entry_date as string);
-        const db = parseEntryDate(b.entry_date as string);
-        return db.getTime() - da.getTime();
-      });
+      details.sort((a, b) => parseEntryDate(a.entry_date as string).getTime() - parseEntryDate(b.entry_date as string).getTime()).reverse();
       return NextResponse.json({ phone, complaints: details });
     }
 
     if (phone) {
-      // Simple list
-      const list = await listByPhone(phone);
-      return NextResponse.json({ phone, complaints: list });
+      return NextResponse.json({ phone, complaints: await listByPhone(phone) });
     }
 
     return NextResponse.json({ error: "phone query param required" }, { status: 400 });
@@ -344,59 +289,26 @@ export async function GET(req: NextRequest) {
 
 async function listByPhone(phone: string) {
   const xml =
-    '<?xml version="1.0"?>' +
-    '<Request VERSION="2" LANGUAGE_ID="" LOCATION="">' +
-    `<Company Company_Id="${COMPANY_ID}" />` +
-    `<Project Project_Id="${PROJECT_ID}" />` +
-    '<User User_Id="anonymous" />' +
-    '<IUVLogin IUVLogin_Id="anonymous" />' +
-    `<ROLE ROLE_ID="${ROLE_ID}" />` +
-    `<Event Control_Id="${LIST_EVENT_CONTROL}" />` +
+    '<?xml version="1.0"?><Request VERSION="2" LANGUAGE_ID="" LOCATION="">' +
+    `<Company Company_Id="${COMPANY_ID}" /><Project Project_Id="${PROJECT_ID}" />` +
+    '<User User_Id="anonymous" /><IUVLogin IUVLogin_Id="anonymous" />' +
+    `<ROLE ROLE_ID="${ROLE_ID}" /><Event Control_Id="${LIST_EVENT_CONTROL}" />` +
     `<Child Control_Id="${LIST_CHILD_CONTROL}" Report="HTML" AC_ID="${LIST_CHILD_AC_ID}">` +
     `<Parent Control_Id="${LIST_PARENT_CONTROL}" Value="${phone}" Data_Form_Id=""/>` +
-    "</Child>" +
-    "</Request>";
+    "</Child></Request>";
 
   const raw = await postApi("GetRelationalDataA", xml);
-  const blocks = parseRowsets(raw);
   const out: Array<Record<string, unknown>> = [];
-  for (const block of blocks) {
+  for (const block of parseRowsets(raw)) {
     for (const row of block.rows) {
       const status = row.COMPLAINT_STATUS ?? "";
       out.push({
-        data_id: row.DATA_ID,
-        complaint_no: row.COMPLAINT_NO,
-        type: row.COM_TYPE_NAME,
-        sub_type: row.COM_SUB_TYPE_NAME,
-        mobile_no: row.MOBILENO,
-        status,
+        data_id: row.DATA_ID, complaint_no: row.COMPLAINT_NO,
+        type: row.COM_TYPE_NAME, sub_type: row.COM_SUB_TYPE_NAME,
+        mobile_no: row.MOBILENO, status,
         is_open: !!status && !status.toUpperCase().includes("CLOSE"),
       });
     }
   }
   return out;
-}
-
-function parseEntryDate(raw: string | null | undefined): Date {
-  if (!raw) return new Date(0);
-  for (const fmt of [
-    // "18/04/2026 10:56:30 PM" style
-    /^(\d{2})\/(\d{2})\/(\d{4})\s+(\d{1,2}):(\d{2}):(\d{2})\s*(AM|PM)$/i,
-  ]) {
-    const m = fmt.exec(raw.trim());
-    if (m) {
-      let h = parseInt(m[4]);
-      if (m[7]?.toUpperCase() === "PM" && h < 12) h += 12;
-      if (m[7]?.toUpperCase() === "AM" && h === 12) h = 0;
-      return new Date(
-        parseInt(m[3]),
-        parseInt(m[2]) - 1,
-        parseInt(m[1]),
-        h,
-        parseInt(m[5]),
-        parseInt(m[6])
-      );
-    }
-  }
-  return new Date(0);
 }

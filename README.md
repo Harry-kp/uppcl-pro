@@ -4,16 +4,16 @@
 
 ### *Your prepaid meter, finally making sense.*
 
-Zero-knowledge analytics dashboard for **UPPCL SMART** prepaid electricity meters.
-Your credentials are encrypted in your browser -- our server never sees them.
+Open-source analytics dashboard for **UPPCL SMART** prepaid electricity meters.
+Your credentials are never stored or logged -- the entire codebase is open for you to verify.
 
 <p>
   <a href="#features"><img alt="Scope" src="https://img.shields.io/badge/scope-UPPCL_SMART_(prepaid)-0a7cff?style=for-the-badge&labelColor=0b0b0b"></a>
-  <a href="#zero-knowledge-security"><img alt="Zero-knowledge" src="https://img.shields.io/badge/zero--knowledge-your_creds_never_leave_your_browser-00c07a?style=for-the-badge&labelColor=0b0b0b"></a>
+  <a href="#security--privacy"><img alt="Open-source · no storage" src="https://img.shields.io/badge/open--source-no_storage-00c07a?style=for-the-badge&labelColor=0b0b0b"></a>
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-d1d1d1?style=for-the-badge&labelColor=0b0b0b"></a>
 </p>
 
-[Features](#features) &middot; [How it's secure](#zero-knowledge-security) &middot; [Quickstart](#quickstart) &middot; [Architecture](#architecture) &middot; [DISCOM support](#discom-compatibility)
+[Features](#features) &middot; [Security & privacy](#security--privacy) &middot; [Quickstart](#quickstart) &middot; [Architecture](#architecture) &middot; [DISCOM support](#discom-compatibility)
 
 <picture>
   <source media="(prefers-color-scheme: dark)"  srcset="docs/screenshots/home-dark.png">
@@ -25,21 +25,23 @@ Your credentials are encrypted in your browser -- our server never sees them.
 
 ---
 
-## Zero-knowledge security
+## Security & privacy
 
-> **Your username and password never touch our server.** Here is exactly what happens:
+> **Your credentials are never stored or logged.** They pass through our server over HTTPS to reach UPPCL's API. Here is exactly what happens:
 
-| Step | Where it happens | What our server sees |
-|------|------------------|---------------------|
+| What happens | Where | What the server sees |
+|---|---|---|
 | You type your UPPCL credentials | Your browser | Nothing |
-| Credentials are encrypted with RSA-OAEP + AES-256-GCM | Your browser (Web Crypto API) | Nothing |
-| Encrypted blob is sent to UPPCL | Passes through our server | Encrypted blob (cannot decrypt) |
-| UPPCL returns a 60-day JWT | Passes through our server | Encrypted response |
-| JWT is stored | Your browser (`sessionStorage`) | Nothing -- never stored on server |
+| Credentials are sent to the UPPCL API | Through our server over HTTPS | Plaintext JSON in memory during the request -- **never stored, never logged** |
+| UPPCL returns a 60-day JWT | Through our server over HTTPS | JWT in memory during the request -- **never stored, never logged** |
+| JWT is saved for your session | Your browser (`sessionStorage`) | Nothing -- never sent back to our server |
 
-**The server is a stateless CORS-bypass pipe.** It forwards encrypted bytes between your browser and UPPCL's API. It cannot decrypt them. It does not log them. It does not store them. Close your browser tab and the JWT is gone.
+**The server is a stateless CORS proxy.** It forwards your request to UPPCL's API and returns the response. It has no database, no logging of user data, no analytics, no tracking. Credentials exist in server memory only for the duration of the HTTP request.
 
-Don't trust us -- [read the 90-line route handler](src/app/api/uppcl/%5B...path%5D/route.ts) yourself.
+**Why should you trust this?**
+- The entire codebase is open-source -- [read the route handler](src/app/api/uppcl/%5B...path%5D/route.ts) yourself
+- Self-host with `bun run dev` for complete privacy -- your credentials never leave your machine
+- No database, no persistent storage of any kind
 
 ---
 
@@ -63,7 +65,7 @@ Don't trust us -- [read the 90-line route handler](src/app/api/uppcl/%5B...path%
 
 Visit **[uppcl-pro.vercel.app](https://uppcl-pro.vercel.app)** and sign in with your UPPCL SMART credentials.
 
-Everything is encrypted in your browser. The server never sees your credentials.
+Your credentials are sent over HTTPS and are never stored or logged. For full privacy, self-host instead.
 
 ### Option 2: Self-host
 
@@ -98,16 +100,14 @@ Browser (your machine)                    Server (Vercel / self-hosted)
 ========================                  =============================
 
 1. You enter credentials                 
-2. Web Crypto API encrypts them          
-   (RSA-OAEP + AES-256-GCM)             
-3. Encrypted blob sent ---------->       /api/uppcl/* (stateless pipe)
+2. Credentials sent over HTTPS ------>   /api/uppcl/* (stateless CORS proxy)
                                               |
-                                              | forwards verbatim
+                                              | forwards to UPPCL API
                                               v
                                          uppcl.sem.jio.com
                                               |
-4. Response returned <-------------      returns upstream response
-5. JWT stored in sessionStorage          (server never stores anything)
+3. Response returned <----------------   returns upstream response
+4. JWT stored in sessionStorage          (server stores nothing)
 ```
 
 ### Key files
@@ -115,12 +115,12 @@ Browser (your machine)                    Server (Vercel / self-hosted)
 ```
 src/
   lib/
-    crypto.ts          Browser-side ALTCHA + RSA-OAEP + AES-GCM (Web Crypto API)
+    crypto.ts          ALTCHA proof-of-work + Appsavy AES helpers (Web Crypto API)
     session.ts         JWT in sessionStorage (never on server)
-    api.ts             SWR hooks + encrypted request builder
+    api.ts             SWR hooks + request builder
   app/
     api/
-      uppcl/[...path]/route.ts   Stateless CORS-bypass forwarder (~90 lines)
+      uppcl/[...path]/route.ts   Stateless CORS proxy to UPPCL API (~90 lines)
       complaints/route.ts        Appsavy proxy (anonymous sessions, no user creds)
     page.tsx           Home dashboard
     analytics/         Usage analytics
@@ -135,7 +135,7 @@ src/
 
 | Route | What it does | User data involved |
 |-------|-------------|-------------------|
-| `/api/uppcl/*` | Forwards encrypted blobs to UPPCL | None -- only encrypted bytes pass through |
+| `/api/uppcl/*` | CORS proxy -- forwards requests to UPPCL API | Credentials + JWT pass through in memory (never stored or logged) |
 | `/api/complaints` | Queries appsavy.com for complaint data | Phone number only (public 1912 portal, no login) |
 
 ---
@@ -160,11 +160,11 @@ On a non-PVVNL DISCOM? [File a verification issue](https://github.com/Harry-kp/u
 
 The upstream UPPCL SMART API (hosted by Jio at `uppcl.sem.jio.com`) uses:
 - **ALTCHA proof-of-work** captcha on login
-- **RSA-OAEP + AES-256-GCM** hybrid envelope encryption on every request body
+- All endpoints now accept plaintext JSON (encryption was previously required but dropped by UPPCL)
 - **60-day JWTs** with tenant-scoped access
 - Dynamic tenant UUID discovery from login response
 
-All of this is handled transparently by `src/lib/crypto.ts` running in your browser via the Web Crypto API.
+ALTCHA proof-of-work and Appsavy AES are handled by `src/lib/crypto.ts` in the browser via the Web Crypto API. Credentials are sent as plaintext JSON over HTTPS through our CORS proxy.
 
 The 1912 complaint portal (`appsavy.com`) uses anonymous sessions with AES-128-CBC encrypted headers (constant key `"8080808080808080"` -- yes, really).
 
@@ -174,9 +174,10 @@ See [`CLAUDE.MD`](CLAUDE.MD) for the full reverse-engineering knowledge base: en
 
 ## Security
 
-- **Credentials**: Encrypted in your browser, never sent in plaintext to our server
+- **Credentials**: Sent as plaintext JSON over HTTPS through our server to UPPCL -- **never stored, never logged**
 - **JWT**: Stored in `sessionStorage` (browser only), cleared when the tab closes
-- **Server**: Stateless forwarder, no database, no logging of user data
+- **Server**: Stateless CORS proxy, no database, no logging of user data, no analytics
+- **Self-hosted**: Run locally and your credentials never leave your machine
 - **Complaints**: Anonymous sessions only -- no user credentials involved
 
 See [`SECURITY.md`](SECURITY.md) for the full threat model.
