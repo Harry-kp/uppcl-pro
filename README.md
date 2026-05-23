@@ -1,7 +1,5 @@
 <div align="center">
 
-<br><br>
-
 # UPPCL Pro
 
 **Your prepaid meter, finally making sense.**
