@@ -80,7 +80,7 @@ async function ensureSession(): Promise<string> {
   return _cookies;
 }
 
-async function postApi(method: string, inputXml: string): Promise<string> {
+async function postApi(method: string, inputXml: string, retryOnce = true): Promise<string> {
   const cookies = await ensureSession();
   const enc = await encryptedHeaders();
 
@@ -106,10 +106,11 @@ async function postApi(method: string, inputXml: string): Promise<string> {
     cache: "no-store",
   });
 
-  if (r.status === 401) {
-    // Session expired — reset and let caller retry
+  if (r.status === 401 && retryOnce) {
+    // Session expired — reset cookies and retry once with fresh session
     _cookies = null;
-    throw new Error("appsavy session expired");
+    _cookiesAt = 0;
+    return postApi(method, inputXml, false);
   }
   if (!r.ok) {
     throw new Error(`appsavy ${method} HTTP ${r.status}: ${(await r.text()).slice(0, 200)}`);
