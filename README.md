@@ -1,11 +1,5 @@
 <div align="center">
 
-<picture>
-  <source media="(prefers-color-scheme: dark)"  srcset="docs/screenshots/home-dark.png">
-  <source media="(prefers-color-scheme: light)" srcset="docs/screenshots/home-light.png">
-  <img alt="UPPCL Pro dashboard" src="docs/screenshots/home-dark.png" width="880">
-</picture>
-
 <br><br>
 
 # UPPCL Pro
@@ -28,7 +22,11 @@ Live balance, runway forecast, anomaly detection, complaint tracking.
 </div>
 
 <br>
-
+<picture>
+  <source media="(prefers-color-scheme: dark)"  srcset="docs/screenshots/home-dark.png">
+  <source media="(prefers-color-scheme: light)" srcset="docs/screenshots/home-light.png">
+  <img alt="UPPCL Pro dashboard" src="docs/screenshots/home-dark.png" width="880">
+</picture>
 ## What you get
 
 | | |
