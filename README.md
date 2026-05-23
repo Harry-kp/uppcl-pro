@@ -85,7 +85,6 @@ bun run build
 bun run start      # serves on http://localhost:3000
 ```
 
-That's it. No Python. No Docker. No reverse proxy. Just Next.js.
 
 ### Requirements
 
