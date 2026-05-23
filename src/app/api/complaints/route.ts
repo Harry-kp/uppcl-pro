@@ -110,7 +110,7 @@ async function ensureSession(): Promise<string> {
   }
 
   const cookieStr = [...allCookies.values()].join("; ");
-  console.log(`[appsavy] session bootstrapped: ${allCookies.size} cookies after ${hops} hops`);
+  // Session ready
   _cookies = cookieStr;
   _cookiesAt = Date.now();
   return _cookies;

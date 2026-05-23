@@ -84,39 +84,30 @@ function pemToArrayBuffer(pem: string): ArrayBuffer {
 
 /**
  * Fetch UPPCL's RSA public key via our CORS-proxy route.
- * Caches for 24h in memory (same as the Python version).
+ * Caches for 24h in memory.
  */
 export async function fetchPublicKey(
   oaepHash: "SHA-256" | "SHA-1" = "SHA-256"
 ): Promise<CryptoKey> {
-  // Return cached key only if same hash — OAEP hash is baked into the CryptoKey at import time
   if (_cachedKey && _cachedHash === oaepHash && Date.now() - _cachedAt < KEY_TTL_MS) {
-    console.log(`[crypto] using cached pubkey (OAEP-${oaepHash})`);
     return _cachedKey;
   }
 
-  console.log(`[crypto] fetching pubkey from /api/uppcl/pubkey...`);
   const r = await fetch("/api/uppcl/pubkey");
   if (!r.ok) throw new Error(`Failed to fetch public key: HTTP ${r.status}`);
   const pem = await r.text();
-
-  console.log(`[crypto] pubkey response: ${pem.length} chars, starts with: ${pem.slice(0, 40)}`);
 
   if (!pem.includes("BEGIN PUBLIC KEY")) {
     throw new Error(`Unexpected pubkey format: ${pem.slice(0, 80)}`);
   }
 
-  const derBytes = pemToArrayBuffer(pem);
-  console.log(`[crypto] DER bytes: ${new Uint8Array(derBytes).length} bytes`);
-
   const key = await crypto.subtle.importKey(
     "spki",
-    derBytes,
+    pemToArrayBuffer(pem),
     { name: "RSA-OAEP", hash: oaepHash },
     false,
     ["encrypt"]
   );
-  console.log(`[crypto] key imported OK (OAEP-${oaepHash})`);
 
   _cachedKey = key;
   _cachedPem = pem;
@@ -157,45 +148,31 @@ export async function encryptPayload(
   body: Record<string, unknown>,
   pubKey: CryptoKey
 ): Promise<EncryptedEnvelope> {
-  // Generate fresh AES-256 key + 12-byte IV
   const aesKeyRaw = crypto.getRandomValues(new Uint8Array(32));
   const iv = crypto.getRandomValues(new Uint8Array(12));
-  console.log(`[crypto] AES key: ${aesKeyRaw.length} bytes, IV: ${iv.length} bytes`);
 
-  // Import as CryptoKey for AES-GCM
   const aesKey = await crypto.subtle.importKey("raw", aesKeyRaw, "AES-GCM", false, [
     "encrypt",
   ]);
 
-  // Encrypt the JSON body
-  const plaintextStr = JSON.stringify(body);
-  const plaintext = new TextEncoder().encode(plaintextStr);
-  console.log(`[crypto] plaintext: ${plaintext.length} bytes → "${plaintextStr}"`);
-
+  const plaintext = new TextEncoder().encode(JSON.stringify(body));
   const ciphertext = await crypto.subtle.encrypt(
     { name: "AES-GCM", iv, tagLength: 128 },
     aesKey,
     plaintext
   );
-  console.log(`[crypto] AES-GCM ciphertext: ${new Uint8Array(ciphertext).length} bytes (includes 16-byte tag)`);
 
-  // Wrap the AES key with RSA-OAEP
   const wrappedKey = await crypto.subtle.encrypt(
     { name: "RSA-OAEP" },
     pubKey,
     aesKeyRaw
   );
-  console.log(`[crypto] RSA-OAEP wrapped key: ${new Uint8Array(wrappedKey).length} bytes`);
 
   const inner = {
     payload: b64Encode(ciphertext),
     key: b64Encode(wrappedKey),
     iv: b64Encode(iv),
   };
-  console.log(`[crypto] inner envelope keys: ${Object.keys(inner).join(", ")}`);
-  console.log(`[crypto] inner.payload b64 length: ${inner.payload.length}`);
-  console.log(`[crypto] inner.key b64 length: ${inner.key.length}`);
-  console.log(`[crypto] inner.iv b64 length: ${inner.iv.length}`);
 
   return { payload: JSON.stringify(inner) };
 }
@@ -206,11 +183,10 @@ const APPSAVY_KEY = new TextEncoder().encode("8080808080808080");
 const APPSAVY_IV = new TextEncoder().encode("8080808080808080");
 
 /**
- * AES-128-CBC encrypt with PKCS7 padding — matches appsavy.py _aes_b64().
- * Web Crypto doesn't natively support CBC padding, so we do PKCS7 manually.
+ * AES-128-CBC encrypt for appsavy headers.
+ * Web Crypto adds PKCS7 padding automatically.
  */
 export async function appsavyEncrypt(plain: string): Promise<string> {
-  // Web Crypto AES-CBC adds PKCS7 padding automatically — do NOT pad manually
   const data = new TextEncoder().encode(plain);
   const key = await crypto.subtle.importKey("raw", APPSAVY_KEY, "AES-CBC", false, [
     "encrypt",
