@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Activity, ScrollText, Radio, Settings, Wallet, MessageSquare, Search, X } from "lucide-react";
+import { Home, Activity, ScrollText, Radio, Settings, Wallet, MessageSquare, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { useHealth } from "@/lib/api";
@@ -18,12 +18,10 @@ const nav = [
 ] as const;
 
 export function Sidebar({
-  onOpenPalette,
   onClose,
   onNavigate,
   className,
 }: {
-  onOpenPalette: () => void;
   onClose?: () => void;
   onNavigate?: () => void;
   className?: string;
@@ -61,13 +59,6 @@ export function Sidebar({
             </button>
           )}
         </div>
-        <button
-          onClick={onOpenPalette}
-          className="mt-4 flex w-full items-center gap-2 rounded-md bg-surface-container-low px-3 py-2 text-[12px] text-on-surface-variant transition hover:bg-surface-container hover:text-on-surface md:hidden"
-        >
-          <Search className="h-3.5 w-3.5" strokeWidth={1.75} />
-          <span>Search…</span>
-        </button>
       </div>
 
       {/* Nav */}

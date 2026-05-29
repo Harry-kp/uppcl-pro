@@ -96,13 +96,21 @@ function ShellInner({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex h-dvh overflow-hidden bg-(--color-void)">
       <div className="hidden md:flex">
-        <Sidebar onOpenPalette={() => setPaletteOpen(true)} />
+        <Sidebar />
       </div>
       {mobileNavOpen && (
         <div className="fixed inset-0 z-40 flex md:hidden">
-          <div className="flex-1 bg-black/60 backdrop-blur-sm" onClick={() => setMobileNavOpen(false)} />
+          <div
+            className="flex-1 bg-black/60 backdrop-blur-sm"
+            onClick={() => setMobileNavOpen(false)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") setMobileNavOpen(false);
+            }}
+            role="button"
+            tabIndex={0}
+            aria-label="Close navigation"
+          />
           <Sidebar
-            onOpenPalette={() => setPaletteOpen(true)}
             onClose={() => setMobileNavOpen(false)}
             onNavigate={() => setMobileNavOpen(false)}
             className="w-[260px] max-w-[80vw]"

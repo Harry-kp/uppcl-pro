@@ -93,22 +93,14 @@ export function Topbar({
         {/* Search-palette trigger */}
         <button
           onClick={onOpenPalette}
-          className="group hidden items-center gap-2 rounded-md bg-surface-container-low px-3 py-1.5 text-[12px] text-on-surface-variant transition hover:bg-surface-container hover:text-on-surface sm:flex"
+          className="group flex items-center gap-2 rounded-md bg-surface-container-low px-2.5 py-2 text-[12px] text-on-surface-variant transition hover:bg-surface-container hover:text-on-surface sm:px-3 sm:py-1.5"
           aria-label="Open command palette"
         >
           <Search className="h-3.5 w-3.5" strokeWidth={1.75} />
-          <span>Search…</span>
-          <span className="ml-6 flex items-center gap-0.5 font-mono text-[10px] text-on-surface-variant/80">
+          <span className="hidden sm:inline">Search…</span>
+          <span className="ml-4 hidden items-center gap-0.5 font-mono text-[10px] text-on-surface-variant/80 sm:flex">
             <Command className="h-3 w-3" strokeWidth={2.5} /> K
           </span>
-        </button>
-
-        <button
-          onClick={onOpenPalette}
-          className="rounded-md p-2 text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface sm:hidden"
-          aria-label="Open command palette"
-        >
-          <Search className="h-4 w-4" strokeWidth={1.75} />
         </button>
 
         {/* Theme toggle */}
