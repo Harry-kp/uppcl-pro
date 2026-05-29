@@ -68,6 +68,7 @@ function ShellInner({ children }: { children: React.ReactNode }) {
   useKeyboardShortcuts(bindings);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- close mobile nav on route change
     setMobileNavOpen(false);
   }, [pathname]);
 
