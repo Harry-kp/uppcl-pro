@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { Sidebar } from "./Sidebar";
 import { Topbar } from "./Topbar";
 import { CommandPalette } from "./CommandPalette";
@@ -46,7 +46,6 @@ function ShellInner({ children }: { children: React.ReactNode }) {
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const router = useRouter();
-  const pathname = usePathname();
   const { push } = useToast();
   const { theme, toggle } = useTheme();
   const { data: health, error: healthError, isLoading: healthLoading } = useHealth();
@@ -66,11 +65,6 @@ function ShellInner({ children }: { children: React.ReactNode }) {
     [router, push, toggle, theme]
   );
   useKeyboardShortcuts(bindings);
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- close mobile nav on route change
-    setMobileNavOpen(false);
-  }, [pathname]);
 
   useEffect(() => {
     if (!mobileNavOpen) return;
