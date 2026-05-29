@@ -150,15 +150,15 @@ export default function Home() {
         {/* Balance */}
         <button
           onClick={() => setPanel("balance")}
-          className="glow-hero group relative flex flex-col justify-between rounded-xl bg-surface-container-low p-6 text-left transition-colors hover:bg-surface-container"
+          className="glow-hero group relative flex flex-col justify-between rounded-xl bg-surface-container-low p-5 text-left transition-colors hover:bg-surface-container sm:p-6"
         >
           <div className="flex items-start justify-between">
             <div>
-              <div className="text-[10px] uppercase tracking-[0.28em] text-on-surface-variant">
+              <div className="text-[11px] uppercase tracking-[0.28em] text-on-surface-variant sm:text-[10px]">
                 Available Balance
               </div>
               <div className="mt-3 flex items-baseline gap-2">
-                <span className="font-mono text-[20px] text-primary-fixed-dim">₹</span>
+                <span className="font-mono text-[18px] text-primary-fixed-dim sm:text-[20px]">₹</span>
                 <Tooltip
                   side="bottom"
                   content={
@@ -171,12 +171,12 @@ export default function Home() {
                     </div>
                   }
                 >
-                  <span className="font-mono text-[64px] font-light leading-none tracking-tight text-on-surface animate-count-up">
+                  <span className="font-mono text-[40px] font-light leading-none tracking-tight text-on-surface animate-count-up sm:text-[64px]">
                     {rupees(balance)}
                   </span>
                 </Tooltip>
               </div>
-              <div className="mt-2 flex items-center gap-2 text-[11px] text-on-surface-variant">
+              <div className="mt-2 flex flex-wrap items-center gap-2 text-[12px] text-on-surface-variant sm:text-[11px]">
                 {data.balance.updated_at ? (
                   <>updated {formatRelative(data.balance.updated_at)}</>
                 ) : (
@@ -197,7 +197,7 @@ export default function Home() {
           </div>
 
           <div className="mt-8">
-            <div className="mb-2 flex items-center justify-between text-[10px] uppercase tracking-[0.24em] text-on-surface-variant">
+            <div className="mb-2 flex flex-wrap items-center justify-between gap-2 text-[11px] uppercase tracking-[0.24em] text-on-surface-variant sm:text-[10px]">
               <span>{Math.min(14, units.length)}-day consumption trend</span>
               <span className="font-mono text-primary-fixed-dim">
                 avg {kwh(data.consumption_30d.avg_daily_kwh)} kWh/d
@@ -215,14 +215,14 @@ export default function Home() {
         {/* Runway */}
         <button
           onClick={() => setPanel("runway")}
-          className="flex flex-col items-center justify-center rounded-xl bg-surface-container-low p-6 text-center transition-colors hover:bg-surface-container"
+          className="flex flex-col items-center justify-center rounded-xl bg-surface-container-low p-5 text-center transition-colors hover:bg-surface-container sm:p-6"
         >
           <RunwayGauge days={data.runway.days} avgDailySpend={data.runway.avg_daily_spend} />
-          <div className="mt-4 text-[11px] text-on-surface-variant/80">
+          <div className="mt-4 text-[12px] text-on-surface-variant/80 sm:text-[11px]">
             basis: {data.runway.basis_days} days of spend history
           </div>
           {emptyEta && (
-            <div className="mt-1 font-mono text-[11px] text-on-surface-variant">
+            <div className="mt-1 font-mono text-[12px] text-on-surface-variant sm:text-[11px]">
               empty by {emptyEta.toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
             </div>
           )}
@@ -357,11 +357,11 @@ export default function Home() {
       </div>
 
       {/* RECHARGE RECOMMENDATION */}
-      <div className="flex items-start justify-between gap-4 rounded-xl bg-surface-container-low p-5">
+      <div className="flex flex-col gap-4 rounded-xl bg-surface-container-low p-5 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-start gap-3">
           <div className="h-full w-0.5 shrink-0 self-stretch rounded-full bg-primary-container" />
           <div>
-            <div className="text-[10px] uppercase tracking-[0.24em] text-primary-fixed-dim">
+            <div className="text-[11px] uppercase tracking-[0.24em] text-primary-fixed-dim sm:text-[10px]">
               Recommended Action
             </div>
             <div className="mt-1.5 text-[15px] text-on-surface">
@@ -388,10 +388,10 @@ export default function Home() {
             </div>
           </div>
         </div>
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex w-full shrink-0 flex-col items-stretch gap-2 sm:w-auto sm:flex-row sm:items-center">
           <button
             onClick={() => push("Reminder set — we'll ping you 3 days before empty", { kind: "success" })}
-            className="flex items-center gap-1.5 rounded-md bg-surface-container-high px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-on-surface transition hover:bg-surface-bright"
+            className="flex w-full items-center justify-center gap-1.5 rounded-md bg-surface-container-high px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-on-surface transition hover:bg-surface-bright sm:w-auto"
           >
             <BellRing className="h-3 w-3" /> Remind 3 d before
           </button>
@@ -399,7 +399,7 @@ export default function Home() {
             href="https://uppcl.sem.jio.com/uppclsmart/"
             target="_blank"
             rel="noreferrer"
-            className="flex items-center gap-1.5 rounded-md bg-primary-container px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-on-primary-fixed transition hover:brightness-110"
+            className="flex w-full items-center justify-center gap-1.5 rounded-md bg-primary-container px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-on-primary-fixed transition hover:brightness-110 sm:w-auto"
           >
             Open UPPCL Payment <ArrowUpRight className="h-3 w-3" strokeWidth={2.5} />
           </a>

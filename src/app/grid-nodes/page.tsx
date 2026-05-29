@@ -108,20 +108,20 @@ export default function GridNodesPage() {
 
   return (
     <div className="mx-auto flex max-w-[1440px] flex-col gap-4">
-      <header className="flex items-end justify-between">
+      <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <div className="text-[10px] uppercase tracking-[0.24em] text-on-surface-variant">
             Meter health
           </div>
-          <h1 className="mt-1 font-mono text-[32px] font-light tracking-tight text-on-surface">
+          <h1 className="mt-1 font-mono text-[28px] font-light tracking-tight text-on-surface sm:text-[32px]">
             Is your meter behaving?
           </h1>
-          <p className="mt-1 max-w-[640px] text-[12px] text-on-surface-variant">
+          <p className="mt-1 max-w-[640px] text-[13px] text-on-surface-variant sm:text-[12px]">
             Reading reliability (Actual vs Estimated), data-integrity calendar, peak-vs-sanctioned
             load, and power-quality proxies for your meter.
           </p>
         </div>
-        <div className="text-right font-mono text-[11px] text-on-surface-variant">
+        <div className="text-left font-mono text-[11px] text-on-surface-variant sm:text-right">
           <div>{site?.deviceId ?? "—"}</div>
           <div>serial {site?.meterInstallationNumber ?? "—"}</div>
         </div>
@@ -129,11 +129,11 @@ export default function GridNodesPage() {
 
       {/* Row 1: reliability donut + peak-vs-sanctioned gauge */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_1.4fr]">
-        <section className="rounded-xl bg-surface-container-low p-6">
+        <section className="rounded-xl bg-surface-container-low p-5 sm:p-6">
           <div className="text-[10px] uppercase tracking-[0.24em] text-on-surface-variant">
             Data reliability
           </div>
-          <div className="mt-4 flex items-center gap-6">
+          <div className="mt-4 flex flex-col items-center gap-4 sm:flex-row sm:items-center sm:gap-6">
             <Donut
               size={180}
               stroke={12}
@@ -166,7 +166,7 @@ export default function GridNodesPage() {
           </div>
         </section>
 
-        <section className="rounded-xl bg-surface-container-low p-6">
+        <section className="rounded-xl bg-surface-container-low p-5 sm:p-6">
           <div className="mb-1 flex items-start justify-between">
             <div>
               <div className="text-[10px] uppercase tracking-[0.24em] text-on-surface-variant">
@@ -207,7 +207,7 @@ export default function GridNodesPage() {
           <div className="mt-4">
             <GaugeBar value={peakKw} sanctioned={sanctioned} />
           </div>
-          <div className="mt-4 grid grid-cols-3 gap-4 text-[11px] text-on-surface-variant">
+          <div className="mt-4 grid grid-cols-1 gap-3 text-[11px] text-on-surface-variant sm:grid-cols-3 sm:gap-4">
             <MeterStat k="Peak"         v={`${peakKw.toFixed(2)} kW`} />
             <MeterStat k="Avg"          v={`${avgKw.toFixed(2)} kW`} />
             <MeterStat k="Sanctioned"   v={sanctioned > 0 ? `${sanctioned.toFixed(2)} kW` : "—"} />
@@ -216,7 +216,7 @@ export default function GridNodesPage() {
       </div>
 
       {/* Row 2: data integrity 365-day calendar */}
-      <section className="rounded-xl bg-surface-container-low p-6">
+      <section className="rounded-xl bg-surface-container-low p-5 sm:p-6">
         <div className="mb-4 flex items-center justify-between">
           <div>
             <div className="text-[10px] uppercase tracking-[0.24em] text-on-surface-variant">
@@ -235,7 +235,7 @@ export default function GridNodesPage() {
 
       {/* Row 3: stability matrix — peak power line + PF line */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <section className="rounded-xl bg-surface-container-low p-6">
+        <section className="rounded-xl bg-surface-container-low p-5 sm:p-6">
           <div className="mb-3 flex items-center justify-between">
             <div className="text-[10px] uppercase tracking-[0.24em] text-on-surface-variant">
               Peak kW — 90-day trend
@@ -255,7 +255,7 @@ export default function GridNodesPage() {
             <div className="py-16 text-center text-[11px] text-on-surface-variant">no peak-power history</div>
           )}
         </section>
-        <section className="rounded-xl bg-surface-container-low p-6">
+        <section className="rounded-xl bg-surface-container-low p-5 sm:p-6">
           <div className="mb-3 flex items-center justify-between">
             <div className="text-[10px] uppercase tracking-[0.24em] text-on-surface-variant">
               Power factor — monthly
@@ -283,11 +283,11 @@ export default function GridNodesPage() {
       </div>
 
       {/* Row 4: meter metadata card */}
-      <section className="rounded-xl bg-surface-container-low p-6">
+      <section className="rounded-xl bg-surface-container-low p-5 sm:p-6">
         <div className="mb-4 text-[10px] uppercase tracking-[0.24em] text-on-surface-variant">
           Node identity
         </div>
-        <div className="grid grid-cols-2 gap-x-8 gap-y-3 font-mono text-[12px] lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-x-8 gap-y-3 font-mono text-[12px] sm:grid-cols-2 lg:grid-cols-3">
           <Kv k="connection"            v={site?.connectionId} />
           <Kv k="device"                v={site?.deviceId} />
           <Kv k="installation #"        v={site?.meterInstallationNumber} />
@@ -304,7 +304,7 @@ export default function GridNodesPage() {
       </section>
 
       {/* Row 5: bottom stats */}
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         <BottomStat k="Bills received"    v={String(totalReads)} hint="past year" />
         <BottomStat k="Actual readings"   v={`${actualPct.toFixed(0)}%`} hint="vs estimated" />
         <BottomStat
@@ -353,8 +353,8 @@ function GaugeBar({ value, sanctioned }: { value: number; sanctioned: number }) 
 function MeterStat({ k, v }: { k: string; v: string }) {
   return (
     <div>
-      <div className="text-[10px] uppercase tracking-[0.2em] text-on-surface-variant/80">{k}</div>
-      <div className="mt-0.5 font-mono text-[16px] text-on-surface">{v}</div>
+      <div className="text-[11px] uppercase tracking-[0.2em] text-on-surface-variant/80 sm:text-[10px]">{k}</div>
+      <div className="mt-0.5 font-mono text-[14px] text-on-surface sm:text-[16px]">{v}</div>
     </div>
   );
 }
@@ -362,7 +362,7 @@ function MeterStat({ k, v }: { k: string; v: string }) {
 function Kv({ k, v }: { k: string; v?: string | null }) {
   return (
     <div className="flex items-start justify-between gap-3 border-b border-white/5 pb-2">
-      <span className="text-[11px] uppercase tracking-[0.18em] text-on-surface-variant">{k}</span>
+      <span className="text-[12px] uppercase tracking-[0.18em] text-on-surface-variant sm:text-[11px]">{k}</span>
       <span className="truncate text-right text-on-surface">{v || "—"}</span>
     </div>
   );
@@ -371,9 +371,9 @@ function Kv({ k, v }: { k: string; v?: string | null }) {
 function BottomStat({ k, v, hint }: { k: string; v: string; hint: string }) {
   return (
     <div className="rounded-xl bg-surface-container-high p-4">
-      <div className="text-[10px] uppercase tracking-[0.2em] text-on-surface-variant">{k}</div>
-      <div className="mt-2 font-mono text-[22px] font-light text-on-surface">{v}</div>
-      <div className="mt-1 text-[11px] text-on-surface-variant">{hint}</div>
+      <div className="text-[11px] uppercase tracking-[0.2em] text-on-surface-variant sm:text-[10px]">{k}</div>
+      <div className="mt-2 font-mono text-[18px] font-light text-on-surface sm:text-[22px]">{v}</div>
+      <div className="mt-1 text-[12px] text-on-surface-variant sm:text-[11px]">{hint}</div>
     </div>
   );
 }

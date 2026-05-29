@@ -35,15 +35,15 @@ export default function ComplaintsPage() {
 
   return (
     <div className="mx-auto flex max-w-[1200px] flex-col gap-4">
-      <header className="flex items-end justify-between gap-4">
+      <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.24em] text-on-surface-variant">
             <MessageSquare className="h-3 w-3" /> 1912 complaint history
           </div>
-          <h1 className="mt-1 font-mono text-[32px] font-light tracking-tight text-on-surface">
+          <h1 className="mt-1 font-mono text-[28px] font-light tracking-tight text-on-surface sm:text-[32px]">
             Your complaints
           </h1>
-          <p className="mt-1 max-w-[640px] text-[12px] text-on-surface-variant">
+          <p className="mt-1 max-w-[640px] text-[13px] text-on-surface-variant sm:text-[12px]">
             Live status of every complaint filed with UPPCL&apos;s 1912 helpline. Auto-fetched
             using the phone number on your account — override below if you want to look
             up a different number.
@@ -51,22 +51,22 @@ export default function ComplaintsPage() {
         </div>
         <button
           onClick={() => window.dispatchEvent(new CustomEvent("uppcl:open-outage"))}
-          className="flex items-center gap-1.5 rounded-md bg-secondary-container px-4 py-2.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-on-secondary-fixed transition hover:brightness-110"
+          className="flex w-full items-center justify-center gap-1.5 rounded-md bg-secondary-container px-4 py-2.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-on-secondary-fixed transition hover:brightness-110 sm:w-auto"
         >
           <AlertTriangle className="h-3.5 w-3.5" /> Report outage
         </button>
       </header>
 
       {/* Phone-used indicator with inline edit */}
-      <div className="flex items-center gap-3 rounded-lg bg-surface-container-low px-4 py-3">
+      <div className="flex flex-col gap-3 rounded-lg bg-surface-container-low px-4 py-3 sm:flex-row sm:items-center">
         <Phone className="h-4 w-4 text-on-surface-variant" strokeWidth={1.75} />
         {editing ? (
           <form
             onSubmit={(e) => { e.preventDefault(); commit(); }}
-            className="flex flex-1 items-center gap-2"
+            className="flex flex-1 flex-col gap-2 sm:flex-row sm:items-center"
           >
             <input
-              className="flex-1 bg-transparent font-mono text-[14px] text-on-surface outline-none placeholder:text-on-surface-variant/50"
+              className="w-full flex-1 bg-transparent font-mono text-[14px] text-on-surface outline-none placeholder:text-on-surface-variant/50"
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
               autoFocus
@@ -75,14 +75,14 @@ export default function ComplaintsPage() {
             />
             <button
               type="submit"
-              className="rounded-md bg-primary-container px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-on-primary-fixed hover:brightness-110"
+              className="w-full rounded-md bg-primary-container px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-on-primary-fixed hover:brightness-110 sm:w-auto"
             >
               Apply
             </button>
             <button
               type="button"
               onClick={() => { setDraft(autoPhone ?? ""); setEditing(false); }}
-              className="rounded-md bg-surface-container-high px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-on-surface-variant hover:bg-surface-bright"
+              className="w-full rounded-md bg-surface-container-high px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-on-surface-variant hover:bg-surface-bright sm:w-auto"
             >
               Cancel
             </button>
@@ -106,14 +106,14 @@ export default function ComplaintsPage() {
             </div>
             <button
               onClick={() => { setDraft(activePhone ?? ""); setEditing(true); }}
-              className="flex items-center gap-1.5 rounded-md bg-surface-container-high px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-on-surface-variant hover:bg-surface-bright hover:text-on-surface"
+              className="flex w-full items-center justify-center gap-1.5 rounded-md bg-surface-container-high px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-on-surface-variant hover:bg-surface-bright hover:text-on-surface sm:w-auto"
             >
               <Pencil className="h-3 w-3" /> Change number
             </button>
             {isOverridden && (
               <button
                 onClick={() => { setOverride(null); setDraft(autoPhone ?? ""); }}
-                className="rounded-md bg-surface-container-high px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-on-surface-variant hover:bg-surface-bright hover:text-on-surface"
+                className="w-full rounded-md bg-surface-container-high px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-on-surface-variant hover:bg-surface-bright hover:text-on-surface sm:w-auto"
               >
                 Reset
               </button>

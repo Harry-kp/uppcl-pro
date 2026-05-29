@@ -67,7 +67,7 @@ export function CalendarHeatmap({ cells, unit = "kWh", className }: Props) {
     <div className={cn("relative overflow-x-auto", className)}>
       <div className="flex gap-2">
         {/* Weekday labels */}
-        <div className="mt-[14px] flex flex-col gap-[3px] pr-1 text-[9px] text-on-surface-variant/70">
+        <div className="mt-[14px] flex flex-col gap-[3px] pr-1 text-[10px] text-on-surface-variant/70 sm:text-[9px]">
           {WEEKDAYS.map((w, i) => (
             <span key={w} className={cn("h-[14px] leading-[14px]", i % 2 === 1 && "invisible")}>
               {w}
@@ -77,7 +77,7 @@ export function CalendarHeatmap({ cells, unit = "kWh", className }: Props) {
 
         {/* Grid */}
         <div className="relative">
-          <div className="mb-1 flex h-3 text-[9px] text-on-surface-variant/70">
+          <div className="mb-1 flex h-3 text-[10px] text-on-surface-variant/70 sm:text-[9px]">
             {weeks.map((_, i) => {
               const label = monthLabels.find((m) => m.idx === i);
               return (
@@ -100,7 +100,7 @@ export function CalendarHeatmap({ cells, unit = "kWh", className }: Props) {
       </div>
 
       {/* Legend */}
-      <div className="mt-3 flex items-center gap-2 text-[10px] text-on-surface-variant">
+      <div className="mt-3 flex items-center gap-2 text-[11px] text-on-surface-variant sm:text-[10px]">
         <span>less</span>
         {[0, 0.25, 0.5, 0.75, 1].map((p) => (
           <span

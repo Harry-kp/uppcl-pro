@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Sidebar } from "./Sidebar";
 import { Topbar } from "./Topbar";
 import { CommandPalette } from "./CommandPalette";
@@ -44,7 +44,9 @@ function useTheme() {
 
 function ShellInner({ children }: { children: React.ReactNode }) {
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const router = useRouter();
+  const pathname = usePathname();
   const { push } = useToast();
   const { theme, toggle } = useTheme();
   const { data: health, error: healthError, isLoading: healthLoading } = useHealth();
@@ -64,6 +66,19 @@ function ShellInner({ children }: { children: React.ReactNode }) {
     [router, push, toggle, theme]
   );
   useKeyboardShortcuts(bindings);
+
+  useEffect(() => {
+    setMobileNavOpen(false);
+  }, [pathname]);
+
+  useEffect(() => {
+    if (!mobileNavOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMobileNavOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [mobileNavOpen]);
 
   // ── Auth gate ───────────────────────────────────────────────────────
   // While we're still fetching /health, hold a minimal splash instead of
@@ -85,10 +100,28 @@ function ShellInner({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex h-dvh overflow-hidden bg-(--color-void)">
-      <Sidebar onOpenPalette={() => setPaletteOpen(true)} />
+      <div className="hidden md:flex">
+        <Sidebar onOpenPalette={() => setPaletteOpen(true)} />
+      </div>
+      {mobileNavOpen && (
+        <div className="fixed inset-0 z-40 flex md:hidden">
+          <div className="flex-1 bg-black/60 backdrop-blur-sm" onClick={() => setMobileNavOpen(false)} />
+          <Sidebar
+            onOpenPalette={() => setPaletteOpen(true)}
+            onClose={() => setMobileNavOpen(false)}
+            onNavigate={() => setMobileNavOpen(false)}
+            className="w-[260px] max-w-[80vw]"
+          />
+        </div>
+      )}
       <div className="flex min-w-0 flex-1 flex-col">
-        <Topbar onOpenPalette={() => setPaletteOpen(true)} theme={theme} onToggleTheme={toggle} />
-        <main className="flex-1 overflow-y-auto px-8 py-6">{children}</main>
+        <Topbar
+          onOpenPalette={() => setPaletteOpen(true)}
+          theme={theme}
+          onToggleTheme={toggle}
+          onOpenNav={() => setMobileNavOpen(true)}
+        />
+        <main className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5 lg:px-8 lg:py-6">{children}</main>
       </div>
       <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
       {/* Global outage-report panel — any page fires `uppcl:open-outage` to open it. */}

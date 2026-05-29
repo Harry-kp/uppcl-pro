@@ -77,7 +77,7 @@ export function Tooltip({ content, children, side = "top", delay = 120, classNam
           ref={tipRef}
           role="tooltip"
           className={cn(
-            "pointer-events-none fixed z-[100] max-w-[340px] rounded-md bg-surface-container-highest px-2.5 py-1.5 text-[11px] leading-snug text-on-surface shadow-ambient animate-count-up",
+            "pointer-events-none fixed z-[100] max-w-[min(340px,calc(100vw-2rem))] rounded-md bg-surface-container-highest px-2.5 py-1.5 text-[12px] leading-snug text-on-surface shadow-ambient animate-count-up sm:text-[11px]",
             className
           )}
           style={{ top: pos.top, left: pos.left }}

@@ -143,13 +143,13 @@ export default function LedgerPage() {
   return (
     <div className="mx-auto flex max-w-[1440px] flex-col gap-4">
       <header>
-        <div className="text-[10px] uppercase tracking-[0.24em] text-on-surface-variant">
+        <div className="text-[11px] uppercase tracking-[0.24em] text-on-surface-variant sm:text-[10px]">
           Bills &amp; cost
         </div>
-        <h1 className="mt-1 font-mono text-[32px] font-light tracking-tight text-on-surface">
+        <h1 className="mt-1 font-mono text-[28px] font-light tracking-tight text-on-surface sm:text-[32px]">
           Your bills, explained
         </h1>
-        <p className="mt-1 max-w-[640px] text-[12px] text-on-surface-variant">
+        <p className="mt-1 max-w-[640px] text-[13px] text-on-surface-variant sm:text-[12px]">
           Effective ₹/unit trend, daily charge composition, subsidy YTD, and a timeline of every
           event (daily bills, monthly invoices, recharges) that touched your meter.
         </p>
@@ -157,11 +157,11 @@ export default function LedgerPage() {
 
       {/* Row 1 — effective rate + subsidy YTD */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.6fr_1fr]">
-        <section className="rounded-xl bg-surface-container-low p-6">
-          <div className="mb-2 flex items-center justify-between">
+        <section className="rounded-xl bg-surface-container-low p-5 sm:p-6">
+          <div className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <div className="text-[10px] uppercase tracking-[0.24em] text-on-surface-variant">Effective ₹/unit trend</div>
-              <div className="mt-1 font-mono text-[26px] font-light text-on-surface">
+              <div className="mt-1 font-mono text-[22px] font-light text-on-surface sm:text-[26px]">
                 ₹{effRateByMonth.length ? (effRateByMonth[effRateByMonth.length - 1].rate).toFixed(2) : "—"}
                 <span className="ml-2 font-mono text-[11px] text-on-surface-variant">
                   {effRateByMonth.length >= 2 && (
@@ -231,7 +231,7 @@ export default function LedgerPage() {
           </div>
         </section>
 
-        <section className="flex flex-col items-center justify-center rounded-xl bg-surface-container-low p-6">
+        <section className="flex flex-col items-center justify-center rounded-xl bg-surface-container-low p-5 sm:p-6">
           <Donut
             segments={[
               { label: "YTD subsidy", value: subsidyYtd, color: chart.a },
@@ -251,8 +251,8 @@ export default function LedgerPage() {
 
       {/* Row 2 — cost composition + slab usage */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.6fr_1fr]">
-        <section className="rounded-xl bg-surface-container-low p-6">
-          <div className="mb-4 flex items-center justify-between">
+        <section className="rounded-xl bg-surface-container-low p-5 sm:p-6">
+          <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div className="text-[10px] uppercase tracking-[0.24em] text-on-surface-variant">
               Charge composition · last 30 days
             </div>
@@ -278,12 +278,12 @@ export default function LedgerPage() {
           )}
         </section>
 
-        <section className="rounded-xl bg-surface-container-low p-6">
+        <section className="rounded-xl bg-surface-container-low p-5 sm:p-6">
           <div className="mb-3 text-[10px] uppercase tracking-[0.24em] text-on-surface-variant">
             Tariff slab usage
           </div>
           {totalUnits > 0 ? (
-            <div className="flex items-center gap-6">
+            <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-center sm:gap-6">
               <Donut
                 size={140}
                 stroke={12}
@@ -319,7 +319,7 @@ export default function LedgerPage() {
       </div>
 
       {/* Row 3 — Unified event timeline */}
-      <section className="rounded-xl bg-surface-container-low p-6">
+      <section className="rounded-xl bg-surface-container-low p-5 sm:p-6">
         <div className="mb-1 text-[10px] uppercase tracking-[0.24em] text-on-surface-variant">
           Unified event timeline
         </div>
@@ -330,8 +330,8 @@ export default function LedgerPage() {
       </section>
 
       {/* Row 4 — Transaction ledger */}
-      <section className="rounded-xl bg-surface-container-low p-6">
-        <div className="mb-4 flex items-center justify-between">
+      <section className="rounded-xl bg-surface-container-low p-5 sm:p-6">
+        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <div className="text-[10px] uppercase tracking-[0.24em] text-on-surface-variant">
               Transaction ledger · cost mapping
@@ -340,7 +340,7 @@ export default function LedgerPage() {
           </div>
           <button
             onClick={exportCsv}
-            className="flex items-center gap-1.5 rounded-md bg-surface-container-high px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-on-surface transition hover:bg-surface-bright"
+            className="flex w-full items-center justify-center gap-1.5 rounded-md bg-surface-container-high px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-on-surface transition hover:bg-surface-bright sm:w-auto"
           >
             <Download className="h-3.5 w-3.5" /> Export CSV
           </button>

@@ -80,19 +80,19 @@ export default function AnalyticsPage() {
     <div className="mx-auto flex max-w-[1440px] flex-col gap-4">
       {/* HERO ROW: total + sparkline | baseline-vs-active */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.6fr_1fr]">
-        <section className="glow-hero relative flex flex-col justify-between rounded-xl bg-surface-container-low p-6">
+        <section className="glow-hero relative flex flex-col justify-between rounded-xl bg-surface-container-low p-5 sm:p-6">
           <div className="flex items-start justify-between">
             <div>
-              <div className="text-[10px] uppercase tracking-[0.28em] text-on-surface-variant">
+              <div className="text-[11px] uppercase tracking-[0.28em] text-on-surface-variant sm:text-[10px]">
                 Usage · last 30 days
               </div>
               <div className="mt-3 flex items-baseline gap-2">
-                <span className="font-mono text-[64px] font-light leading-none tracking-tight text-on-surface animate-count-up">
+                <span className="font-mono text-[40px] font-light leading-none tracking-tight text-on-surface animate-count-up sm:text-[64px]">
                   {kwh(total30, 2)}
                 </span>
-                <span className="font-mono text-[16px] text-on-surface-variant">kWh</span>
+                <span className="font-mono text-[14px] text-on-surface-variant sm:text-[16px]">kWh</span>
               </div>
-              <div className="mt-2 flex items-center gap-3 text-[11px] text-on-surface-variant">
+              <div className="mt-2 flex flex-wrap items-center gap-3 text-[12px] text-on-surface-variant sm:text-[11px]">
                 <span>
                   avg <span className="font-mono text-on-surface">{kwh(avg30, 2)}</span> kWh/day
                 </span>
@@ -126,7 +126,7 @@ export default function AnalyticsPage() {
           </div>
 
           <div className="mt-6">
-            <div className="mb-1.5 flex items-center justify-between text-[10px] uppercase tracking-[0.24em] text-on-surface-variant">
+            <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2 text-[11px] uppercase tracking-[0.24em] text-on-surface-variant sm:text-[10px]">
               <span>last {last30.length}-day consumption trend</span>
               <span className="font-mono text-primary-fixed-dim">avg {kwh(avg30)} kWh/d</span>
             </div>
@@ -139,7 +139,7 @@ export default function AnalyticsPage() {
           </div>
         </section>
 
-        <section className="rounded-xl bg-surface-container-low p-6">
+        <section className="rounded-xl bg-surface-container-low p-5 sm:p-6">
           <div className="flex items-center justify-between">
             <div className="text-[10px] uppercase tracking-[0.28em] text-on-surface-variant">
               Baseline vs Active load
@@ -166,7 +166,7 @@ export default function AnalyticsPage() {
 
       {/* PATTERNS ROW: calendar heatmap | day-of-week */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.8fr_1fr]">
-        <section className="rounded-xl bg-surface-container-low p-6">
+        <section className="rounded-xl bg-surface-container-low p-5 sm:p-6">
           <div className="mb-4 flex items-center justify-between">
             <div>
               <div className="text-[10px] uppercase tracking-[0.24em] text-on-surface-variant">
@@ -183,7 +183,7 @@ export default function AnalyticsPage() {
           <CalendarHeatmap cells={cells} />
         </section>
 
-        <section className="rounded-xl bg-surface-container-low p-6">
+        <section className="rounded-xl bg-surface-container-low p-5 sm:p-6">
           <div className="mb-4 flex items-center justify-between">
             <div>
               <div className="text-[10px] uppercase tracking-[0.24em] text-on-surface-variant">
@@ -218,7 +218,7 @@ export default function AnalyticsPage() {
       </div>
 
       {/* TREND ROW: full-width daily line */}
-      <section className="rounded-xl bg-surface-container-low p-6">
+      <section className="rounded-xl bg-surface-container-low p-5 sm:p-6">
         <div className="mb-3 flex items-center justify-between">
           <div>
             <div className="text-[10px] uppercase tracking-[0.24em] text-on-surface-variant">
@@ -251,7 +251,7 @@ export default function AnalyticsPage() {
 
       {/* BOTTOM ROW: monthly bars + PF + ToD */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <section className="rounded-xl bg-surface-container-low p-6 lg:col-span-1">
+        <section className="rounded-xl bg-surface-container-low p-5 sm:p-6 lg:col-span-1">
           <div className="mb-4 flex items-center justify-between">
             <div className="text-[10px] uppercase tracking-[0.24em] text-on-surface-variant">
               Annual profile
@@ -300,7 +300,7 @@ export default function AnalyticsPage() {
           )}
         </section>
 
-        <section className="rounded-xl bg-surface-container-low p-6 lg:col-span-1">
+        <section className="rounded-xl bg-surface-container-low p-5 sm:p-6 lg:col-span-1">
           <div className="mb-4 flex items-start justify-between">
             <div>
               <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-[0.24em] text-on-surface-variant">
@@ -369,11 +369,11 @@ export default function AnalyticsPage() {
 function Stat({ label, value, sub }: { label: string; value: string; sub: string }) {
   return (
     <div className="text-right">
-      <div className="text-[9px] uppercase tracking-[0.22em] text-on-surface-variant/80">
+      <div className="text-[10px] uppercase tracking-[0.22em] text-on-surface-variant/80 sm:text-[9px]">
         {label}
       </div>
-      <div className="mt-1 font-mono text-[16px] font-light text-on-surface">{value}</div>
-      <div className="font-mono text-[9px] text-on-surface-variant/70">{sub}</div>
+      <div className="mt-1 font-mono text-[14px] font-light text-on-surface sm:text-[16px]">{value}</div>
+      <div className="font-mono text-[10px] text-on-surface-variant/70 sm:text-[9px]">{sub}</div>
     </div>
   );
 }
