@@ -61,7 +61,7 @@ export function ComplaintsSection({ phone: override, hideHeader, hideFullPageLin
   return (
     <section className={cn(hideHeader ? "" : "rounded-xl bg-surface-container-low p-6")}>
       {!hideHeader && (
-        <div className="mb-4 flex items-center justify-between">
+        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.24em] text-on-surface-variant">
               <MessageSquare className="h-3 w-3" /> 1912 Complaint history
@@ -78,17 +78,17 @@ export function ComplaintsSection({ phone: override, hideHeader, hideFullPageLin
               )}
             </h2>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
             <button
               onClick={() => window.dispatchEvent(new CustomEvent("uppcl:open-outage"))}
-              className="flex items-center gap-1.5 rounded-md bg-secondary-container px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-on-secondary-fixed transition hover:brightness-110"
+              className="flex w-full items-center justify-center gap-1.5 rounded-md bg-secondary-container px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-on-secondary-fixed transition hover:brightness-110 sm:w-auto sm:text-[10px]"
             >
               <AlertTriangle className="h-3 w-3" /> Report outage
             </button>
             {!hideFullPageLink && (
               <Link
                 href="/complaints"
-                className="flex items-center gap-1.5 rounded-md bg-surface-container-high px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-on-surface-variant transition hover:bg-surface-bright hover:text-on-surface"
+                className="flex w-full items-center justify-center gap-1.5 rounded-md bg-surface-container-high px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-on-surface-variant transition hover:bg-surface-bright hover:text-on-surface sm:w-auto sm:text-[10px]"
               >
                 Full page <ArrowRight className="h-3 w-3" />
               </Link>
@@ -154,7 +154,7 @@ function ComplaintRow({ c, onOpen }: { c: ComplaintDetail; onOpen: () => void })
         </div>
 
         <div className="min-w-0 flex-1">
-          <div className="flex items-baseline justify-between gap-3">
+          <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between sm:gap-3">
             <div className="min-w-0">
               <span className="font-mono text-[12px] text-on-surface-variant">
                 {filed ? filed.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "—"}
@@ -235,9 +235,9 @@ function OfficerChip({ label, name, phone }: { label: string; name: string | nul
   const call = (e: React.MouseEvent) => { e.stopPropagation(); };
   return (
     <Tooltip content={tooltip}>
-      <span className="inline-flex items-center gap-1.5 rounded-full bg-surface-container-lowest px-2 py-1 text-[10px]">
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-surface-container-lowest px-2 py-1 text-[11px] sm:text-[10px]">
         <span className="font-mono text-on-surface-variant">{label}</span>
-        <span className="max-w-[120px] truncate text-on-surface">{name ?? "—"}</span>
+        <span className="max-w-[80px] truncate text-on-surface sm:max-w-[120px]">{name ?? "—"}</span>
         {phone && (
           <a
             href={`tel:${phone}`}
@@ -368,7 +368,7 @@ function KvBlock({ k, v, mono, block }: { k: string; v: React.ReactNode; mono?: 
   }
   return (
     <div className="flex items-center justify-between gap-3 border-b border-white/5 py-1.5 last:border-0">
-      <span className="text-[10px] uppercase tracking-[0.14em] text-on-surface-variant">{k}</span>
+      <span className="text-[11px] uppercase tracking-[0.14em] text-on-surface-variant sm:text-[10px]">{k}</span>
       <span className={cn("text-right", mono ? "font-mono text-on-surface" : "text-on-surface")}>{v || "—"}</span>
     </div>
   );

@@ -44,10 +44,13 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center bg-black/60 pt-[15vh] backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-start justify-center bg-black/60 pt-[12vh] backdrop-blur-sm md:pt-[15vh]"
       onClick={() => onOpenChange(false)}
     >
-      <div onClick={(e) => e.stopPropagation()} className="w-[640px] rounded-xl bg-surface-container-low shadow-ambient">
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="w-[min(640px,calc(100vw-2rem))] rounded-xl bg-surface-container-low shadow-ambient"
+      >
         <Command label="Command palette" className="flex flex-col" loop>
           <div className="flex items-center gap-3 border-b border-white/5 px-4 py-3">
             <span className="text-on-surface-variant">⌕</span>

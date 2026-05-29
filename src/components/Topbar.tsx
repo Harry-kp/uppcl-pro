@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { Bell, Command, Moon, Search, Sun, LogOut, User } from "lucide-react";
+import { Bell, Command, Moon, Search, Sun, LogOut, User, Menu } from "lucide-react";
 import { mutate as swrMutate } from "swr";
 import { useHealth, logout } from "@/lib/api";
 import { cn } from "@/lib/utils";
@@ -21,10 +21,12 @@ const PAGE_LABELS: Record<string, { title: string; crumb: string }> = {
 
 export function Topbar({
   onOpenPalette,
+  onOpenNav,
   theme,
   onToggleTheme,
 }: {
   onOpenPalette: () => void;
+  onOpenNav?: () => void;
   theme: "dark" | "light";
   onToggleTheme: () => void;
 }) {
@@ -64,30 +66,39 @@ export function Topbar({
   };
 
   return (
-    <header className="flex h-14 shrink-0 items-center justify-between gap-4 border-b border-white/[0.03] px-8">
+    <header className="flex h-14 shrink-0 items-center justify-between gap-3 border-b border-white/[0.03] px-4 sm:px-6 lg:px-8">
       {/* Left: breadcrumb */}
-      <div className="flex items-center gap-3">
-        <span className="font-mono text-[13px] tracking-[0.02em] text-on-surface">
+      <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+        {onOpenNav && (
+          <button
+            onClick={onOpenNav}
+            className="rounded-md p-2 text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface md:hidden"
+            aria-label="Open navigation"
+          >
+            <Menu className="h-4 w-4" />
+          </button>
+        )}
+        <span className="hidden font-mono text-[13px] tracking-[0.02em] text-on-surface sm:inline">
           UPPCL Pro
         </span>
-        <span className="text-on-surface-variant/40">/</span>
-        <span className="text-[13px] text-on-surface">{page.title}</span>
+        <span className="hidden text-on-surface-variant/40 sm:inline">/</span>
+        <span className="truncate text-[13px] text-on-surface">{page.title}</span>
         {page.crumb && (
-          <span className="text-[11px] text-on-surface-variant/70">· {page.crumb}</span>
+          <span className="hidden text-[11px] text-on-surface-variant/70 md:inline">· {page.crumb}</span>
         )}
       </div>
 
       {/* Right: search + icons + profile */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1.5 sm:gap-2">
         {/* Search-palette trigger */}
         <button
           onClick={onOpenPalette}
-          className="group flex items-center gap-2 rounded-md bg-surface-container-low px-3 py-1.5 text-[12px] text-on-surface-variant transition hover:bg-surface-container hover:text-on-surface"
+          className="group flex items-center gap-2 rounded-md bg-surface-container-low px-2.5 py-2 text-[12px] text-on-surface-variant transition hover:bg-surface-container hover:text-on-surface sm:px-3 sm:py-1.5"
           aria-label="Open command palette"
         >
           <Search className="h-3.5 w-3.5" strokeWidth={1.75} />
-          <span>Search…</span>
-          <span className="ml-6 flex items-center gap-0.5 font-mono text-[10px] text-on-surface-variant/80">
+          <span className="hidden sm:inline">Search…</span>
+          <span className="ml-4 hidden items-center gap-0.5 font-mono text-[10px] text-on-surface-variant/80 sm:flex">
             <Command className="h-3 w-3" strokeWidth={2.5} /> K
           </span>
         </button>
@@ -116,7 +127,7 @@ export function Topbar({
             )}
           </button>
           {notifOpen && (
-            <div className="absolute right-0 top-10 z-50 w-[320px] rounded-xl bg-surface-container-low p-2 shadow-ambient">
+            <div className="absolute right-0 top-10 z-50 w-[min(320px,calc(100vw-2rem))] rounded-xl bg-surface-container-low p-2 shadow-ambient">
               <div className="px-3 py-2 text-[10px] uppercase tracking-[0.2em] text-on-surface-variant">
                 Notifications
               </div>
@@ -156,7 +167,7 @@ export function Topbar({
             U
           </button>
           {profileOpen && (
-            <div className="absolute right-0 top-10 z-50 w-[260px] overflow-hidden rounded-xl bg-surface-container-low shadow-ambient">
+            <div className="absolute right-0 top-10 z-50 w-[min(260px,calc(100vw-2rem))] overflow-hidden rounded-xl bg-surface-container-low shadow-ambient">
               <div className="border-b border-white/5 px-4 py-3">
                 <div className="text-[11px] text-on-surface-variant">signed in</div>
                 <div className="font-mono text-[13px] text-on-surface">

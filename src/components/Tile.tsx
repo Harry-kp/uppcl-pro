@@ -45,13 +45,13 @@ export const Tile = forwardRef<HTMLElement, TileProps>(function Tile(
     >
       {/* header */}
       <div className="flex items-start justify-between">
-        <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.24em] text-on-surface-variant">
+        <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.24em] text-on-surface-variant sm:text-[10px]">
           {icon}
           <span>{label}</span>
         </div>
         <div className="flex items-center gap-2">
           {tag && (
-            <span className="rounded-sm bg-surface-container px-2 py-0.5 font-mono text-[10px] text-on-surface-variant">
+            <span className="rounded-sm bg-surface-container px-2 py-0.5 font-mono text-[11px] text-on-surface-variant sm:text-[10px]">
               {tag}
             </span>
           )}
@@ -69,7 +69,7 @@ export const Tile = forwardRef<HTMLElement, TileProps>(function Tile(
           <Tooltip content={formula} side="top">
             <span
               className={cn(
-                "inline-block font-mono text-[28px] font-light leading-none tracking-tight animate-count-up",
+                "inline-block font-mono text-[24px] font-light leading-none tracking-tight animate-count-up sm:text-[28px]",
                 accent === "good" && "text-primary-fixed-dim",
                 accent === "warn" && "text-secondary",
                 accent === "muted" && "text-on-surface-variant",
@@ -82,7 +82,7 @@ export const Tile = forwardRef<HTMLElement, TileProps>(function Tile(
         ) : (
           <span
             className={cn(
-              "inline-block font-mono text-[28px] font-light leading-none tracking-tight animate-count-up",
+              "inline-block font-mono text-[24px] font-light leading-none tracking-tight animate-count-up sm:text-[28px]",
               accent === "good" && "text-primary-fixed-dim",
               accent === "warn" && "text-secondary",
               accent === "muted" && "text-on-surface-variant",
@@ -96,7 +96,7 @@ export const Tile = forwardRef<HTMLElement, TileProps>(function Tile(
 
       {/* hint */}
       {hint && !loading && (
-        <div className="mt-3 text-[11px] text-on-surface-variant">{hint}</div>
+        <div className="mt-3 text-[12px] text-on-surface-variant sm:text-[11px]">{hint}</div>
       )}
       {loading && <div className="mt-3 h-3 w-2/3 animate-pulse rounded bg-surface-container" />}
     </article>

@@ -83,23 +83,23 @@ export default function RechargesPage() {
 
   return (
     <div className="mx-auto flex max-w-[1440px] flex-col gap-4">
-      <header className="flex items-end justify-between">
+      <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <div className="text-[10px] uppercase tracking-[0.24em] text-on-surface-variant">
             Financial Ledger
           </div>
-          <h1 className="mt-1 font-mono text-[32px] font-light tracking-tight text-on-surface">
+          <h1 className="mt-1 font-mono text-[28px] font-light tracking-tight text-on-surface sm:text-[32px]">
             Recharges &amp; Runway
           </h1>
-          <p className="mt-1 text-[12px] text-on-surface-variant">
+          <p className="mt-1 text-[13px] text-on-surface-variant sm:text-[12px]">
             Optimize when and how much to drop in. Sliders below estimate runway from your historical burn.
           </p>
         </div>
-        <div className="text-right">
+        <div className="text-left sm:text-right">
           <div className="text-[10px] uppercase tracking-[0.22em] text-on-surface-variant">
             Estimated depletion
           </div>
-          <div className="mt-1 font-mono text-[36px] font-light text-on-surface">
+          <div className="mt-1 font-mono text-[30px] font-light text-on-surface sm:text-[36px]">
             {runway > 0 ? runway.toFixed(0) : "—"}
             <span className="ml-1 text-[12px] text-on-surface-variant">DAYS</span>
           </div>
@@ -109,7 +109,7 @@ export default function RechargesPage() {
       {/* Row 1: Recommender + alerts column */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_320px]">
         {/* Sweet-spot recommender */}
-        <section className="rounded-xl bg-surface-container-low p-6">
+        <section className="rounded-xl bg-surface-container-low p-5 sm:p-6">
           <div className="mb-5 flex items-start justify-between">
             <div>
               <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.24em] text-primary-fixed-dim">
@@ -121,7 +121,7 @@ export default function RechargesPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-[1fr_1fr] gap-8">
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-[1fr_1fr] md:gap-8">
             {/* sliders column */}
             <div className="space-y-6">
               <SliderRow
@@ -139,7 +139,7 @@ export default function RechargesPage() {
                   <span className="text-[11px] uppercase tracking-[0.18em] text-on-surface-variant">Frequency</span>
                   <span className="font-mono text-[14px] text-primary-fixed-dim">{frequency}</span>
                 </div>
-                <div className="mt-3 grid grid-cols-5 gap-1">
+                <div className="mt-3 grid grid-cols-3 gap-1 sm:grid-cols-5">
                   {/* Pills show short labels to fit a 5-col grid; the full
                       name (e.g. "Bi-Monthly") stays visible in the header
                       above so nothing is lost. */}
@@ -170,11 +170,11 @@ export default function RechargesPage() {
             </div>
 
             {/* projected runway column */}
-            <div className="flex flex-col items-center justify-center rounded-lg bg-surface-container p-6 text-center">
+            <div className="flex flex-col items-center justify-center rounded-lg bg-surface-container p-5 text-center sm:p-6">
               <div className="text-[10px] uppercase tracking-[0.26em] text-on-surface-variant">
                 Projected Runway
               </div>
-              <div className="mt-2 font-mono text-[56px] font-light leading-none text-on-surface">
+              <div className="mt-2 font-mono text-[40px] font-light leading-none text-on-surface sm:text-[56px]">
                 {projectedRunway > 0 ? projectedRunway.toFixed(0) : "—"}
               </div>
               <div className="mt-1 text-[10px] uppercase tracking-[0.22em] text-on-surface-variant/80">
@@ -222,8 +222,8 @@ export default function RechargesPage() {
       </div>
 
       {/* Row 2: Lifespan chart */}
-      <section className="rounded-xl bg-surface-container-low p-6">
-        <div className="mb-4 flex items-center justify-between">
+      <section className="rounded-xl bg-surface-container-low p-5 sm:p-6">
+        <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <div className="text-[10px] uppercase tracking-[0.24em] text-on-surface-variant">
               Recharge Lifespan Analytics
@@ -232,7 +232,7 @@ export default function RechargesPage() {
               Historical duration analysis by amount tier
             </p>
           </div>
-          <div className="flex items-center gap-4 font-mono text-[10px] text-on-surface-variant">
+          <div className="flex flex-wrap items-center gap-4 font-mono text-[10px] text-on-surface-variant">
             <span className="inline-flex items-center gap-1.5">
               <span className="h-2 w-2 rounded-sm bg-primary-container" /> ELITE (≥₹5k)
             </span>
@@ -260,12 +260,12 @@ export default function RechargesPage() {
                     </div>
                   }
                 >
-                  <div className="flex items-center gap-3 rounded-md px-2 py-1 transition-colors hover:bg-surface-container">
-                    <div className="w-40 font-mono text-[10px] text-on-surface-variant">
+                  <div className="flex flex-wrap items-center gap-3 rounded-md px-2 py-2 transition-colors hover:bg-surface-container sm:py-1">
+                    <div className="w-full font-mono text-[10px] text-on-surface-variant sm:w-40">
                       {new Date(l.from).toLocaleDateString("en-IN", { day: "numeric", month: "short" })} –{" "}
                       {new Date(l.to).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
                     </div>
-                    <div className="flex-1 overflow-hidden rounded-sm bg-surface-container">
+                    <div className="min-w-[160px] flex-1 overflow-hidden rounded-sm bg-surface-container">
                       <div
                         className={"h-3 transition-[width] duration-700 " + (elite ? "bg-primary-container" : "bg-primary-fixed-dim")}
                         style={{ width: `${pct}%` }}
@@ -287,7 +287,7 @@ export default function RechargesPage() {
             </div>
           )}
         </div>
-        <div className="mt-4 grid grid-cols-3 gap-6 border-t border-white/5 pt-4 text-center">
+        <div className="mt-4 grid grid-cols-1 gap-6 border-t border-white/5 pt-4 text-center sm:grid-cols-3">
           <Stat k="Avg days / recharge"   v={avgDaysPerRecharge ? avgDaysPerRecharge.toFixed(1) : "—"} />
           <Stat k="Avg cost / day"        v={`₹${avgCostPerDay.toFixed(2)}`} />
           <Stat k="Vault efficiency"      v={lifespans.length ? `${((avgDaysPerRecharge / 30) * 100).toFixed(1)}%` : "—"} />
@@ -295,14 +295,14 @@ export default function RechargesPage() {
       </section>
 
       {/* Row 3: Transaction ledger */}
-      <section className="rounded-xl bg-surface-container-low p-6">
-        <div className="mb-4 flex items-center justify-between">
+      <section className="rounded-xl bg-surface-container-low p-5 sm:p-6">
+        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="text-[10px] uppercase tracking-[0.24em] text-on-surface-variant">
             Transaction ledger
           </div>
           <button
             onClick={setAlert}
-            className="flex items-center gap-1.5 rounded-md bg-surface-container-high px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-on-surface transition hover:bg-surface-bright"
+            className="flex w-full items-center justify-center gap-1.5 rounded-md bg-surface-container-high px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-on-surface transition hover:bg-surface-bright sm:w-auto"
           >
             <BellRing className="h-3 w-3" /> Set reminder for next
           </button>
@@ -398,7 +398,7 @@ function SliderRow({ label, display, min, max, step, value, onChange, ticks }: {
         onChange={(e) => onChange(parseInt(e.target.value))}
         className="mt-3 w-full accent-primary-fixed-dim"
       />
-      <div className="mt-1 flex justify-between font-mono text-[9px] text-on-surface-variant/60">
+      <div className="mt-1 flex justify-between font-mono text-[10px] text-on-surface-variant/60 sm:text-[9px]">
         {ticks.map((t, i) => <span key={i}>{t}</span>)}
       </div>
     </div>
@@ -420,13 +420,13 @@ function AlertCard({ kind, title, body, cta, onCta, icon }: {
       <div className="flex items-start gap-3">
         <div className={tone.accent}>{ico}</div>
         <div className="flex-1">
-          <div className="text-[12px] font-semibold text-on-surface">{title}</div>
-          <div className="mt-1 text-[11px] text-on-surface-variant">{body}</div>
+          <div className="text-[13px] font-semibold text-on-surface sm:text-[12px]">{title}</div>
+          <div className="mt-1 text-[12px] text-on-surface-variant sm:text-[11px]">{body}</div>
           {cta && (
             <button
               onClick={onCta}
               className={
-                "mt-3 rounded-md px-2 py-1 text-[9px] font-semibold uppercase tracking-[0.14em] " +
+                "mt-3 rounded-md px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] sm:text-[9px] " +
                 (kind === "warn"
                   ? "bg-secondary-container text-on-secondary-fixed"
                   : "bg-surface-container-high text-on-surface-variant")
@@ -448,8 +448,8 @@ function Th({ children }: { children: React.ReactNode }) {
 function Stat({ k, v }: { k: string; v: string }) {
   return (
     <div>
-      <div className="font-mono text-[24px] font-light text-on-surface">{v}</div>
-      <div className="mt-1 text-[10px] uppercase tracking-[0.2em] text-on-surface-variant">{k}</div>
+      <div className="font-mono text-[20px] font-light text-on-surface sm:text-[24px]">{v}</div>
+      <div className="mt-1 text-[11px] uppercase tracking-[0.2em] text-on-surface-variant sm:text-[10px]">{k}</div>
     </div>
   );
 }
@@ -458,7 +458,7 @@ function KvBlock({ k, v, big, mono }: { k: string; v: React.ReactNode; big?: boo
   return (
     <div className="flex items-center justify-between gap-4 border-b border-white/5 pb-2 last:border-0">
       <span className="text-[11px] uppercase tracking-[0.18em] text-on-surface-variant">{k}</span>
-      <span className={mono ? "font-mono text-on-surface" : big ? "font-mono text-[20px] text-on-surface" : "text-on-surface"}>{v || "—"}</span>
+      <span className={mono ? "font-mono text-on-surface" : big ? "font-mono text-[18px] text-on-surface sm:text-[20px]" : "text-on-surface"}>{v || "—"}</span>
     </div>
   );
 }

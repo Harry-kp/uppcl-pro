@@ -39,10 +39,10 @@ export default function SettingsPage() {
         <div className="text-[10px] uppercase tracking-[0.24em] text-on-surface-variant">
           Preferences
         </div>
-        <h1 className="mt-1 font-mono text-[32px] font-light tracking-tight text-on-surface">
+        <h1 className="mt-1 font-mono text-[28px] font-light tracking-tight text-on-surface sm:text-[32px]">
           Settings
         </h1>
-        <p className="mt-1 text-[12px] text-on-surface-variant">
+        <p className="mt-1 text-[13px] text-on-surface-variant sm:text-[12px]">
           Session, connection details, appearance, and external links.
         </p>
       </header>
@@ -63,10 +63,10 @@ export default function SettingsPage() {
             <Row k="tenant uuid"     v={h?.tenant ?? "—"} small />
 
           </div>
-          <div className="mt-4 flex items-center gap-2">
+          <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center">
             <button
               onClick={signOut}
-              className="flex items-center gap-1.5 rounded-md bg-surface-container-high px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-on-surface transition hover:bg-surface-bright"
+              className="flex w-full items-center justify-center gap-1.5 rounded-md bg-surface-container-high px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-on-surface transition hover:bg-surface-bright sm:w-auto"
             >
               <LogOut className="h-3 w-3" /> Sign out
             </button>
@@ -111,7 +111,7 @@ export default function SettingsPage() {
           <div className="text-[10px] uppercase tracking-[0.24em] text-on-surface-variant">
             Appearance
           </div>
-          <div className="mt-4 flex gap-2">
+          <div className="mt-4 flex flex-wrap gap-2">
             {([
               { v: "dark",   label: "Dark",   Icon: Moon },
               { v: "light",  label: "Light",  Icon: Sun },
@@ -123,7 +123,7 @@ export default function SettingsPage() {
                   key={v}
                   onClick={() => applyTheme(v)}
                   className={
-                    "flex items-center gap-2 rounded-lg px-4 py-3 text-[12px] font-semibold uppercase tracking-[0.14em] transition-colors " +
+                    "flex w-full items-center justify-center gap-2 rounded-lg px-4 py-3 text-[12px] font-semibold uppercase tracking-[0.14em] transition-colors sm:w-auto " +
                     (active
                       ? "bg-primary-container text-on-primary-fixed"
                       : "bg-surface-container-high text-on-surface-variant hover:bg-surface-bright hover:text-on-surface")

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Activity, ScrollText, Radio, Settings, Wallet, MessageSquare } from "lucide-react";
+import { Home, Activity, ScrollText, Radio, Settings, Wallet, MessageSquare, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { useHealth } from "@/lib/api";
@@ -17,21 +17,47 @@ const nav = [
   { href: "/settings",    label: "Settings",   icon: Settings,      hint: "Session, preferences, external links",  shortcut: "g s" },
 ] as const;
 
-export function Sidebar(_props: { onOpenPalette: () => void }) {
+export function Sidebar({
+  onClose,
+  onNavigate,
+  className,
+}: {
+  onClose?: () => void;
+  onNavigate?: () => void;
+  className?: string;
+}) {
   const pathname = usePathname();
   const { data: h, error } = useHealth();
   const proxyOk = !error && !!h?.ok;
   const authed = !!h?.authenticated;
 
   return (
-    <aside className="flex h-dvh w-[220px] shrink-0 flex-col bg-(--color-surface-container-lowest) px-4 py-6">
+    <aside
+      className={cn(
+        "flex h-dvh w-[220px] shrink-0 flex-col bg-(--color-surface-container-lowest) px-4 py-4 sm:py-6",
+        className
+      )}
+    >
       {/* Wordmark */}
-      <div className="px-2 pb-10">
-        <div className="font-mono text-[18px] font-semibold tracking-[0.02em] text-primary-fixed-dim">
-          UPPCL
-        </div>
-        <div className="mt-0.5 text-[10px] uppercase tracking-[0.28em] text-on-surface-variant/70">
-          Kinetic Vault
+      <div className="px-2 pb-6">
+        <div className="flex items-start justify-between">
+          <div>
+            <div className="font-mono text-[18px] font-semibold tracking-[0.02em] text-primary-fixed-dim">
+              UPPCL
+            </div>
+            <div className="mt-0.5 text-[10px] uppercase tracking-[0.28em] text-on-surface-variant/70">
+              Kinetic Vault
+            </div>
+          </div>
+          {onClose && (
+            <button
+              onClick={onClose}
+              className="rounded-md p-2 text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface"
+              aria-label="Close navigation"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
         </div>
       </div>
 
@@ -55,6 +81,7 @@ export function Sidebar(_props: { onOpenPalette: () => void }) {
             >
               <Link
                 href={href}
+                onClick={onNavigate}
                 className={cn(
                   "group flex items-center gap-3 rounded-lg px-3 py-2 text-[13px] transition-colors",
                   active

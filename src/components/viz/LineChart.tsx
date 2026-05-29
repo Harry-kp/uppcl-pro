@@ -123,7 +123,7 @@ export function LineChart({ series, height = 200, yMin, yMax, format, xFormat, s
 
       {hover && hoverPoint && (
         <div
-          className="pointer-events-none absolute rounded-md bg-surface-container-highest px-2.5 py-1.5 text-[11px] shadow-ambient"
+          className="pointer-events-none absolute max-w-[70vw] rounded-md bg-surface-container-highest px-2.5 py-1.5 text-[11px] shadow-ambient"
           style={{ left: `calc(${(hover.x / w) * 100}% + 8px)`, top: 4 }}
         >
           {hoverPoint.label && (
