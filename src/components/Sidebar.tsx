@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Activity, ScrollText, Radio, Settings, Wallet, MessageSquare, X } from "lucide-react";
+import { Home, Activity, ScrollText, Radio, Settings, Wallet, MessageSquare, Sparkles, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { useHealth } from "@/lib/api";
@@ -10,6 +10,7 @@ import { useHealth } from "@/lib/api";
 const nav = [
   { href: "/",            label: "Home",       icon: Home,        hint: "Balance · runway · anomalies",          shortcut: "g h" },
   { href: "/analytics",   label: "Usage",      icon: Activity,    hint: "Consumption heatmap + patterns",        shortcut: "g u" },
+  { href: "/insights",    label: "Insights",   icon: Sparkles,    hint: "Power quality · tariff · carbon",       shortcut: "g i" },
   { href: "/ledger",      label: "Bills",      icon: ScrollText,  hint: "Cost breakdown + unified timeline",     shortcut: "g b" },
   { href: "/recharges",   label: "Recharges",  icon: Wallet,      hint: "Sweet-spot recommender + history",      shortcut: "g r" },
   { href: "/grid-nodes",  label: "Meter",      icon: Radio,         hint: "Health, data integrity, peak load",     shortcut: "g m" },

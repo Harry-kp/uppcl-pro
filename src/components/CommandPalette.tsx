@@ -4,7 +4,7 @@ import { Command } from "cmdk";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { mutate as swrMutate } from "swr";
-import { Home, Activity, ScrollText, Radio, Settings, Zap, Bell, Download, Clock, RefreshCw, Wallet, LogOut, ExternalLink, AlertTriangle, MessageSquare } from "lucide-react";
+import { Home, Activity, ScrollText, Radio, Settings, Zap, Bell, Download, Clock, RefreshCw, Wallet, LogOut, ExternalLink, AlertTriangle, MessageSquare, Sparkles } from "lucide-react";
 import { useToast } from "@/components/ui/Toast";
 import { logout } from "@/lib/api";
 
@@ -70,6 +70,7 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
             <PGroup heading="Navigate">
               <PItem onSelect={() => go("/", "Home")}                    icon={<Home className="h-4 w-4" />}       shortcut="g h">Home</PItem>
               <PItem onSelect={() => go("/analytics", "Usage")}          icon={<Activity className="h-4 w-4" />}   shortcut="g u">Usage · consumption</PItem>
+              <PItem onSelect={() => go("/insights", "Insights")}        icon={<Sparkles className="h-4 w-4" />}   shortcut="g i">Insights · power quality, tariff, carbon</PItem>
               <PItem onSelect={() => go("/ledger", "Bills")}             icon={<ScrollText className="h-4 w-4" />} shortcut="g b">Bills · cost &amp; timeline</PItem>
               <PItem onSelect={() => go("/recharges", "Recharges")}      icon={<Wallet className="h-4 w-4" />}     shortcut="g r">Recharges · sweet spot</PItem>
               <PItem onSelect={() => go("/grid-nodes", "Meter")}         icon={<Radio className="h-4 w-4" />}          shortcut="g m">Meter · health</PItem>
