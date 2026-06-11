@@ -10,13 +10,12 @@ import { Tooltip } from "@/components/ui/Tooltip";
 import { useToast } from "@/components/ui/Toast";
 
 const PAGE_LABELS: Record<string, { title: string; crumb: string }> = {
-  "/":            { title: "Home",      crumb: "glance view" },
-  "/analytics":   { title: "Usage",     crumb: "consumption patterns" },
-  "/ledger":      { title: "Bills",     crumb: "cost & timeline" },
-  "/recharges":   { title: "Recharges", crumb: "sweet spot" },
-  "/grid-nodes":  { title: "Meter",      crumb: "health & integrity" },
-  "/complaints":  { title: "Complaints", crumb: "1912 history" },
-  "/settings":    { title: "Settings",   crumb: "preferences" },
+  "/":            { title: "Home",     crumb: "glance view" },
+  "/analytics":   { title: "Usage",    crumb: "consumption, appliances, carbon" },
+  "/ledger":      { title: "Bills",    crumb: "tariff, payments, planner" },
+  "/grid-nodes":  { title: "Meter",    crumb: "power quality & health" },
+  "/support":     { title: "Support",  crumb: "contacts, alerts, complaints" },
+  "/settings":    { title: "Settings", crumb: "preferences" },
 };
 
 export function Topbar({

@@ -87,7 +87,7 @@ export function ComplaintsSection({ phone: override, hideHeader, hideFullPageLin
             </button>
             {!hideFullPageLink && (
               <Link
-                href="/complaints"
+                href="/support"
                 className="flex w-full items-center justify-center gap-1.5 rounded-md bg-surface-container-high px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-on-surface-variant transition hover:bg-surface-bright hover:text-on-surface sm:w-auto sm:text-[10px]"
               >
                 Full page <ArrowRight className="h-3 w-3" />

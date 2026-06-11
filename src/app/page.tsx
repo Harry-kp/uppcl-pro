@@ -311,7 +311,7 @@ function PrepaidHome({ dashboard: data }: { dashboard: DashboardResponse }) {
               </div>
             ) : undefined
           }
-          href="/recharges"
+          href="/ledger"
         />
         <Tile
           icon={<FileText className="h-3 w-3" />}
