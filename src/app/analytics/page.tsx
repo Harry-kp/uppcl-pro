@@ -30,7 +30,10 @@ const APPLIANCE_KEYS = ["ac", "fridge", "geyser", "washing_machine", "nightbasel
 
 export default function AnalyticsPage() {
   // Daily kWh from eventsummary — works for BOTH prepaid and postpaid meters.
-  const { data: daily } = useConsumption(365);
+  // NOTE: eventsummary/aggregate only serves ~the last 150 days (absolute-age
+  // cap, verified live — older `from` dates return []). The full-year view comes
+  // from the monthly groupBy:year rollup below, not from daily data.
+  const { data: daily } = useConsumption(150);
   const { data: yearly } = useYearlyHistory();
   const { data: applianceResp } = useApplianceData();
   const [tipAppliance, setTipAppliance] = useState<string>("fridge");

@@ -92,6 +92,12 @@ POST eventsummary/consumptionAggregation {deviceId, groupBy:"month", uom:"KWH", 
 → {data:{averageConsumption:"12.65", maximumConsumption:"15.63", maximumPower:"2.20"}}
 ```
 
+> **`eventsummary/aggregate` ~150-day cap (verified live).** Daily aggregate only
+> serves roughly the last 150 days — any request whose `from` is older than ~150 days
+> ago returns `data:[]`, even for a narrow span (e.g. `from`=240d ago, `to`=120d ago → empty).
+> So daily-granularity history maxes at ~150 days; for a full year use the monthly
+> `eventsummary/search` `groupBy:"year"` rollup instead. Request `days ≤ 150` for the daily series.
+
 > **CLAUDE.md corrections.** These three were marked "known-broken"; they work with the right
 > params: `consumptionAggregation` needs `groupBy`+`month`+`year`+`uom` (the "[object Object]"
 > error was missing params); `eventsummary/search` works with `groupBy:"month"` (not only
