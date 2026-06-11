@@ -10,7 +10,7 @@ import {
   type DiscomDetails,
 } from "@/lib/api";
 import { formatRelative } from "@/lib/utils";
-import Link from "next/link";
+import { ComplaintLookup } from "@/components/ComplaintLookup";
 import {
   LifeBuoy, Phone, MessageCircle, Mail, Megaphone, Siren, BellRing, Ticket,
   MapPin, MessageSquare, ArrowUpRight,
@@ -77,19 +77,13 @@ export default function SupportPage() {
           />
         </div>
 
-        <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+        <div className="mt-4">
           <button
             onClick={() => window.dispatchEvent(new CustomEvent("uppcl:open-outage"))}
-            className="flex flex-1 items-center justify-center gap-1.5 rounded-md bg-surface-container-high px-3 py-2.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-on-surface transition hover:bg-surface-bright"
+            className="flex w-full items-center justify-center gap-1.5 rounded-md bg-surface-container-high px-3 py-2.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-on-surface transition hover:bg-surface-bright sm:w-auto"
           >
             <Siren className="h-3.5 w-3.5" /> Report power outage
           </button>
-          <Link
-            href="/complaints"
-            className="flex flex-1 items-center justify-center gap-1.5 rounded-md bg-surface-container-high px-3 py-2.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-on-surface transition hover:bg-surface-bright"
-          >
-            <MessageSquare className="h-3.5 w-3.5" /> Track 1912 complaints
-          </Link>
         </div>
 
         {discom.address && (
@@ -120,6 +114,19 @@ export default function SupportPage() {
           empty="No open service tickets."
         />
       </div>
+
+      {/* 1912 COMPLAINTS */}
+      <section className="rounded-xl bg-surface-container-low p-5 sm:p-6">
+        <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-[0.24em] text-on-surface-variant">
+          <MessageSquare className="h-3 w-3" /> 1912 complaint history
+        </div>
+        <p className="mt-1 text-[11px] text-on-surface-variant">
+          Live status of complaints filed with UPPCL&apos;s 1912 helpline — auto-fetched from your account phone.
+        </p>
+        <div className="mt-4">
+          <ComplaintLookup />
+        </div>
+      </section>
     </div>
   );
 }
