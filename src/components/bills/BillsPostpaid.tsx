@@ -6,36 +6,47 @@ import {
   usePayments,
   useYearlyHistory,
   useDashboard,
+  useWssMeter,
+  useWssArrears,
   downloadBillPdf,
+  downloadReceiptPdf,
+  downloadArrearsPdf,
 } from "@/lib/api";
 import { SlabBar, UP_DOMESTIC_SLABS } from "@/components/viz/SlabBar";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { useToast } from "@/components/ui/Toast";
 import { toNum } from "@/lib/stats";
-import { rupees, kwh, formatRelative } from "@/lib/utils";
+import { rupees, kwh } from "@/lib/utils";
 import { Receipt, ArrowUpRight, Download } from "lucide-react";
 
 /** Postpaid money hub: monthly invoices + official PDF download, tariff/slab,
- *  projected next bill, and payment history. */
+ *  projected next bill, payment history, and a document vault. */
 export function BillsPostpaid() {
   const { data: invoicesResp } = useInvoices(24);
   const { data: payments } = usePayments(50);
   const { data: yearly } = useYearlyHistory();
   const { data: dashboard } = useDashboard();
+  const { data: meterResp } = useWssMeter();
+  const { data: arrearsResp } = useWssArrears();
   const { push } = useToast();
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
-  async function download(invoiceId: string) {
-    setDownloadingId(invoiceId);
+  async function downloadDoc(id: string, fn: () => Promise<void>, label: string) {
+    setDownloadingId(id);
     try {
-      await downloadBillPdf({ invoice_id: invoiceId });
-      push("Bill PDF downloaded", { kind: "success" });
+      await fn();
+      push(`${label} downloaded`, { kind: "success" });
     } catch (e) {
-      push((e as Error).message || "Could not download the bill", { kind: "error" });
+      push((e as Error).message || `Could not download ${label.toLowerCase()}`, { kind: "error" });
     } finally {
       setDownloadingId(null);
     }
   }
+  const download = (invoiceId: string) =>
+    downloadDoc(invoiceId, () => downloadBillPdf({ invoice_id: invoiceId }), "Bill PDF");
+
+  const tariffCategory = meterResp?.data?.purposeOfSupply;       // e.g. "LMV1"
+  const arrearsAmt = toNum(arrearsResp?.data?.amount);
 
   const invoices = useMemo(
     () =>
@@ -109,13 +120,17 @@ export function BillsPostpaid() {
           </div>
           <div className="flex flex-col justify-center gap-4">
             <div className="flex items-center justify-between text-[11px] uppercase tracking-[0.18em] text-on-surface-variant">
-              <span>Tariff slab position</span>
+              <span>
+                Tariff slab position
+                {tariffCategory && <span className="ml-2 rounded-full bg-surface-container-high px-2 py-0.5 font-mono text-[10px] text-primary-fixed-dim">{tariffCategory}</span>}
+              </span>
               <span className="font-mono">{kwh(thisMonthKwh, 0)} units this month</span>
             </div>
             <SlabBar units={thisMonthKwh} slabs={UP_DOMESTIC_SLABS} />
             <div className="text-[10px] text-on-surface-variant/70">
-              Slab rates are indicative UP domestic (LMV-1) figures; your effective ₹/kWh is the authoritative
-              number, derived from your actual bills.
+              {tariffCategory
+                ? <>Official tariff category <span className="text-on-surface">{tariffCategory}</span> (UP domestic). Slab rates are indicative; your effective ₹/kWh above is derived from your actual bills.</>
+                : <>Slab rates are indicative UP domestic (LMV-1) figures; your effective ₹/kWh above is the authoritative number.</>}
             </div>
           </div>
         </div>
@@ -172,11 +187,31 @@ export function BillsPostpaid() {
 
       {/* Payments */}
       <section className="rounded-xl bg-surface-container-low p-5 sm:p-6">
-        <div className="mb-4 flex items-center justify-between">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
           <div className="text-[10px] uppercase tracking-[0.24em] text-on-surface-variant">Payment history</div>
-          <a href="https://uppcl.sem.jio.com/uppclsmart/" target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-[10px] uppercase tracking-[0.14em] text-on-surface-variant hover:text-on-surface">
-            Pay on UPPCL <ArrowUpRight className="h-3 w-3" />
-          </a>
+          <div className="flex items-center gap-2">
+            {arrearsAmt > 0 && (
+              <button
+                onClick={() => downloadDoc("arrears", downloadArrearsPdf, "Arrears statement")}
+                disabled={downloadingId === "arrears"}
+                className="inline-flex items-center gap-1 rounded-md bg-surface-container-high px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-secondary transition hover:bg-surface-bright disabled:opacity-50"
+              >
+                <Download className="h-3 w-3" /> {downloadingId === "arrears" ? "…" : "Arrears statement"}
+              </button>
+            )}
+            {pays.length > 0 && (
+              <button
+                onClick={() => downloadDoc("receipt", downloadReceiptPdf, "Receipt PDF")}
+                disabled={downloadingId === "receipt"}
+                className="inline-flex items-center gap-1 rounded-md bg-surface-container-high px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-on-surface transition hover:bg-surface-bright disabled:opacity-50"
+              >
+                <Download className="h-3 w-3" /> {downloadingId === "receipt" ? "…" : "Last receipt"}
+              </button>
+            )}
+            <a href="https://uppcl.sem.jio.com/uppclsmart/" target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-[10px] uppercase tracking-[0.14em] text-on-surface-variant hover:text-on-surface">
+              Pay on UPPCL <ArrowUpRight className="h-3 w-3" />
+            </a>
+          </div>
         </div>
         {pays.length ? (
           <div className="overflow-x-auto">
@@ -203,7 +238,7 @@ export function BillsPostpaid() {
             </table>
           </div>
         ) : (
-          <div className="py-10 text-center text-[11px] text-on-surface-variant">No payments on file yet. Last paid {pays[0] ? formatRelative(pays[0].payment_dt) : "—"}.</div>
+          <div className="py-10 text-center text-[11px] text-on-surface-variant">No payments on file yet.</div>
         )}
       </section>
     </div>
@@ -213,3 +248,4 @@ export function BillsPostpaid() {
 function Th({ children }: { children: React.ReactNode }) {
   return <th className="sticky top-0 border-b border-white/5 px-3 py-2 text-left font-normal">{children}</th>;
 }
+

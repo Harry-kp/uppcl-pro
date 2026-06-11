@@ -10,6 +10,7 @@ import {
   useOutstanding,
   usePayments,
   useUsageStats,
+  useWssMeter,
 } from "@/lib/api";
 import { Donut } from "@/components/viz/Donut";
 import { CalendarHeatmap, CalendarCell } from "@/components/viz/CalendarHeatmap";
@@ -29,6 +30,8 @@ export default function GridNodesPage() {
   const { data: outstandingResp } = useOutstanding();
   const { data: paymentsResp } = usePayments(5);
   const { data: statsResp } = useUsageStats();
+  const { data: meterResp } = useWssMeter();
+  const wm = meterResp?.data;
 
   const msiNow =
     outstandingResp?.data?.msi ||
@@ -281,6 +284,26 @@ export default function GridNodesPage() {
           )}
         </section>
       </div>
+
+      {/* Official meter reading (from the UPPCL bill portal) */}
+      {wm && (
+        <section className="rounded-xl bg-surface-container-low p-5 sm:p-6">
+          <div className="mb-4 flex items-center justify-between">
+            <div className="text-[10px] uppercase tracking-[0.24em] text-on-surface-variant">Official meter reading</div>
+            <span className="rounded-full bg-surface-container-high px-2 py-0.5 font-mono text-[9px] uppercase tracking-[0.14em] text-primary-fixed-dim">UPPCL</span>
+          </div>
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+            <BottomStat
+              k="Last reading"
+              v={wm.previousReadingKWH ? `${kwh(toNum(wm.previousReadingKWH), 0)} kWh` : "—"}
+              hint={wm.previousReadDateTime ? new Date(wm.previousReadDateTime.replace(/-/g, " ")).toLocaleDateString("en-IN", { day: "numeric", month: "short" }) : "cumulative"}
+            />
+            <BottomStat k="Meter status" v={wm.meterStatus ?? "—"} hint="UPPCL register" />
+            <BottomStat k="Tariff category" v={wm.purposeOfSupply ?? "—"} hint="purpose of supply" />
+            <BottomStat k="Make / type" v={wm.manufacturerCode ?? "—"} hint={wm.meterConfigType ?? "meter"} />
+          </div>
+        </section>
+      )}
 
       {/* Node identity */}
       <section className="rounded-xl bg-surface-container-low p-5 sm:p-6">

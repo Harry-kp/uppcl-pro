@@ -232,54 +232,75 @@ export async function logout(): Promise<void> {
   clearSession();
 }
 
-/**
- * Download the official bill PDF directly from UPPCL's /wss portal.
- *
- * The portal AES-encrypts request & response bodies (`_cdata`). We encrypt the
- * payload, POST via the /api/wss proxy, decrypt the response, and save the
- * base64-encoded PDF. Verified end-to-end. See docs/api-reverse-engineering.md §9.
- *   payload: {kno: connectionId, discomName: <DISCOM upper>, billNo: invoice_id,
- *             category: <accountType>, flag: "BILL"}  →  {Response: <base64 PDF>}
- */
-export async function downloadBillPdf(invoice: { invoice_id: string }): Promise<void> {
-  const site = await primarySite();
-  const payload = JSON.stringify({
-    kno: site.connectionId,
-    discomName: String(site.tenantId).toUpperCase(),
-    billNo: invoice.invoice_id,
-    category: String(site.accountType ?? "10"),
-    flag: "BILL",
-  });
+// ─── UPPCL /wss legacy bill portal (official bills/receipts/meter data) ───────
+// The portal AES-encrypts request & response bodies (`_cdata`). wssPost encrypts
+// the payload, POSTs via the /api/wss proxy, and decrypts the response.
+// See docs/api-reverse-engineering.md §9.
 
-  const r = await fetch("/api/wss/v2/api/viewBillDownloadPDF", {
+/** Account/discom identifiers in the shapes the /wss endpoints expect. */
+function wssDiscom(site: SiteRecord): string {
+  return String(site.tenantId).toUpperCase(); // e.g. "PVVNL"
+}
+
+async function wssPost<T = Record<string, unknown>>(path: string, payload: Record<string, unknown>): Promise<T> {
+  const r = await fetch(`/api/wss/${path}`, {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ _cdata: await wssEncrypt(payload) }),
+    body: JSON.stringify({ _cdata: await wssEncrypt(JSON.stringify(payload)) }),
     cache: "no-store",
   });
-  if (!r.ok) throw new ProxyError(r.status, "Bill service unavailable");
-
+  if (!r.ok) throw new ProxyError(r.status, "Bill portal unavailable");
   const json = (await r.json()) as { _cdata?: string };
-  if (!json._cdata) throw new ProxyError(502, "Bill download failed");
+  if (!json._cdata) throw new ProxyError(502, "Bill portal returned no data");
+  return JSON.parse(await wssDecrypt(json._cdata)) as T;
+}
 
-  const result = JSON.parse(await wssDecrypt(json._cdata)) as {
-    statusCode?: string;
-    Response?: string;
-    statusMsg?: string;
-  };
-  if (result.statusCode !== "VIEW_BILL_PDF_200" || !result.Response) {
-    throw new ProxyError(404, result.statusMsg || "Bill PDF not available for this connection");
-  }
-
-  const bytes = Uint8Array.from(atob(result.Response), (c) => c.charCodeAt(0));
+/** Save a base64 PDF as a browser download. */
+function savePdfBase64(b64: string, filename: string): void {
+  const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
   const url = URL.createObjectURL(new Blob([bytes], { type: "application/pdf" }));
   const a = document.createElement("a");
   a.href = url;
-  a.download = `uppcl-bill-${invoice.invoice_id}.pdf`;
+  a.download = filename;
   document.body.appendChild(a);
   a.click();
   a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 10_000);
+}
+
+/** Download the official bill PDF for a monthly invoice. */
+export async function downloadBillPdf(invoice: { invoice_id: string }): Promise<void> {
+  const site = await primarySite();
+  const res = await wssPost<{ statusCode?: string; Response?: string; statusMsg?: string }>(
+    "v2/api/viewBillDownloadPDF",
+    { kno: site.connectionId, discomName: wssDiscom(site), billNo: invoice.invoice_id, category: String(site.accountType ?? "10"), flag: "BILL" }
+  );
+  if (res.statusCode !== "VIEW_BILL_PDF_200" || !res.Response) {
+    throw new ProxyError(404, res.statusMsg || "Bill PDF not available for this connection");
+  }
+  savePdfBase64(res.Response, `uppcl-bill-${invoice.invoice_id}.pdf`);
+}
+
+/** Download the official PDF receipt for the most recent online payment. */
+export async function downloadReceiptPdf(): Promise<void> {
+  const site = await primarySite();
+  const res = await wssPost<{ statusCode?: string; bytecode?: string; statusMsg?: string }>(
+    "v2/lastOnlinePaymentReciept",
+    { kno: site.connectionId, discomName: wssDiscom(site) }
+  );
+  if (!res.bytecode) throw new ProxyError(404, res.statusMsg || "No payment receipt available");
+  savePdfBase64(res.bytecode, `uppcl-receipt-${site.connectionId}.pdf`);
+}
+
+/** Download the official arrears statement PDF. */
+export async function downloadArrearsPdf(): Promise<void> {
+  const site = await primarySite();
+  const res = await wssPost<{ byteCode?: string; statusMsg?: string }>(
+    "v2/InstaPayment/viewArrear",
+    { discomName: wssDiscom(site), kno: site.connectionId, reportName: "ARREAR" }
+  );
+  if (!res.byteCode) throw new ProxyError(404, res.statusMsg || "No arrears statement available");
+  savePdfBase64(res.byteCode, `uppcl-arrears-${site.connectionId}.pdf`);
 }
 
 // ─── Data fetchers (mirror the old Python proxy endpoints) ────────────────────
@@ -432,6 +453,20 @@ async function fetcher<T>(key: string): Promise<T> {
 
   if (key === "/downtime") {
     return uppcl_get("announcements/activeDowntimeAnnouncement") as Promise<T>;
+  }
+
+  // ── Official data from the /wss bill portal (AES-encrypted) ────────
+  if (key === "/wss/consumer") {
+    return wssPost("v2/api/getConsumerDetails", { kno: cid, discomName: wssDiscom(site) }) as Promise<T>;
+  }
+  if (key === "/wss/meter") {
+    return wssPost("v2/Utility/getMeterData", {
+      kNumber: cid, discom: wssDiscom(site),
+      sanctionedLoad: site.sanctionedLoad, connectionType: site.connectionType,
+    }) as Promise<T>;
+  }
+  if (key === "/wss/arrears") {
+    return wssPost("v2/InstaPayment/getArrearAmountStatus", { accountID: cid, discom: wssDiscom(site) }) as Promise<T>;
   }
 
   if (key.startsWith("/appliances")) {
@@ -885,6 +920,60 @@ export const useDowntime = () =>
 /** Appliance-level disaggregation (empty until UPPCL's model has enough data). */
 export const useApplianceData = () =>
   useSWR<UpstreamEnvelope<ApplianceRow[]>>("/appliances", fetcher, swrOpts);
+
+/* ── Official /wss bill-portal data (richer than the jio platform) ── */
+
+export interface WssConsumer {
+  status?: string;
+  ConsumerDetails?: {
+    kno?: string;
+    mobileNo?: string;
+    email?: string;
+    currentAddress?: string;   // may carry a scheme-eligibility note
+    billingAddress?: string;
+    installationAddress?: string;
+    category?: string;
+    dueAmount?: string;
+    dueDate?: string;
+    billNo?: string;
+    onlineBillingStatus?: string;
+    division?: string;
+    subDivision?: string;
+    dateOfBirth?: string;
+  };
+}
+
+export interface WssMeter {
+  status?: string;
+  data?: {
+    purposeOfSupply?: string;   // e.g. "LMV1" — official tariff category
+    supplyType?: string;
+    meterStatus?: string;
+    manufacturerCode?: string;
+    meterConfigType?: string;
+    meterSerialNumber?: string;
+    badgeNumber?: string;
+    previousReadingKWH?: string;
+    previousReadDateTime?: string;
+  };
+}
+
+export interface WssArrears {
+  status?: string;
+  data?: { amount?: string; status?: string };
+}
+
+/** Official consumer profile (division, due date, billing mode, scheme flag). */
+export const useWssConsumer = () =>
+  useSWR<WssConsumer>("/wss/consumer", fetcher, swrOpts);
+
+/** Official meter data (tariff category, meter status, last cumulative reading). */
+export const useWssMeter = () =>
+  useSWR<WssMeter>("/wss/meter", fetcher, swrOpts);
+
+/** Official arrears amount. */
+export const useWssArrears = () =>
+  useSWR<WssArrears>("/wss/arrears", fetcher, swrOpts);
 
 /* ── Complaint hooks (same signatures, different backend route) ── */
 

@@ -9,6 +9,8 @@ import {
   useOutstanding,
   useLatestInvoice,
   useUsageStats,
+  useWssConsumer,
+  useWssArrears,
   downloadBillPdf,
   type DashboardResponse,
   type MonthlyInvoice,
@@ -493,6 +495,8 @@ function PostpaidHome({ dashboard: data }: { dashboard: DashboardResponse }) {
   const { data: invoiceResp } = useLatestInvoice();
   const { data: statsResp } = useUsageStats();
   const { data: yearly } = useYearlyHistory();
+  const { data: wssConsumer } = useWssConsumer();
+  const { data: wssArrears } = useWssArrears();
   const { push } = useToast();
 
   const [panel, setPanel] = useState<null | "bill" | "projection">(null);
@@ -633,6 +637,27 @@ function PostpaidHome({ dashboard: data }: { dashboard: DashboardResponse }) {
       id: "demand", tone: demandPct >= 100 ? "critical" : "warn", icon: <AlertTriangle className="h-3 w-3" />,
       title: <>Peak demand {kwh(peakKw)} kW is {demandPct}% of your {sanctioned} kW sanctioned load</>,
       href: "/grid-nodes", cta: "Details",
+    });
+  }
+  // Official arrears (from the bill portal) — distinct from the current bill.
+  const officialArrears = toNum(wssArrears?.data?.amount);
+  if (officialArrears > 0) {
+    insights.push({
+      id: "arrears", tone: "critical", icon: <AlertTriangle className="h-3 w-3" />,
+      title: <>₹{rupees(officialArrears, { decimals: 0 })} in arrears on your account</>,
+      detail: <>clear it to avoid disconnection</>,
+      href: "https://uppcl.sem.jio.com/uppclsmart/", cta: "Pay",
+    });
+  }
+  // Bill-relief scheme eligibility, surfaced from the official consumer record.
+  const addr = wssConsumer?.ConsumerDetails?.currentAddress ?? "";
+  const schemeMatch = addr.match(/\$(True|False)[^,]*?[Ee]ligible [Ff]or ([^,]+)/);
+  if (schemeMatch && schemeMatch[1].toLowerCase() === "true") {
+    insights.push({
+      id: "scheme", tone: "good", icon: <Check className="h-3 w-3" />,
+      title: <>You&apos;re eligible for {schemeMatch[2].trim()}</>,
+      detail: <>a UPPCL bill-relief scheme</>,
+      href: "https://uppcl.sem.jio.com/uppclsmart/", cta: "Details",
     });
   }
 
