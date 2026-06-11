@@ -147,6 +147,32 @@ async function uppcl_post(
   return proxy_post("uppcl", path, body, extraHeaders);
 }
 
+/** GET against /accounts/api (a few endpoints — e.g. downtime — are GET-only). */
+async function uppcl_get(path: string): Promise<unknown> {
+  const jwt = getJwt();
+  if (!jwt) throw new ProxyError(401, "No active session — sign in first");
+  const session = getSession()!;
+
+  const r = await fetch(`/api/uppcl/${path}`, {
+    headers: {
+      apikey: UPPCL_API_KEY,
+      tenantid: tenantHeader(session.tenant),
+      token: jwt,
+      authorization: `Bearer ${jwt}`,
+    },
+    cache: "no-store",
+  });
+
+  if (r.status === 200) return r.json();
+  if (r.status === 401 || r.status === 403) {
+    clearSession();
+    globalMutate("/health");
+    throw new ProxyError(401, "Session expired — sign in again");
+  }
+  const text = await r.text();
+  throw new ProxyError(r.status, text.slice(0, 200));
+}
+
 // ─── Auth ─────────────────────────────────────────────────────────────────────
 
 export async function login(username: string, password: string): Promise<void> {
@@ -373,6 +399,17 @@ async function fetcher<T>(key: string): Promise<T> {
 
   if (key === "/tenant-preferences") {
     return proxy_post("bootstrap", "tenant/searchPreference", { tenantId: tid }) as Promise<T>;
+  }
+
+  if (key === "/downtime") {
+    return uppcl_get("announcements/activeDowntimeAnnouncement") as Promise<T>;
+  }
+
+  if (key.startsWith("/appliances")) {
+    // Appliance-level disaggregation ("DaData"). Empty until UPPCL's model has data.
+    const start = `${today.getFullYear()}-${pad2(today.getMonth() + 1)}-01`;
+    const end = today.toISOString().split("T")[0];
+    return uppcl_post("dadata/v2/search", { deviceId: did, compare: "month", fromDate: start, toDate: end, tenantId: tid }) as Promise<T>;
   }
 
   if (key.startsWith("/dadata")) {
@@ -783,9 +820,42 @@ export const useTickets = (status: "open" | "closed" | "all" = "open") =>
 export const useSavingTip = (appliance: string) =>
   useSWR<UpstreamEnvelope<SavingTip[]>>(appliance ? `/tips?appliance=${appliance}` : null, fetcher, swrOpts);
 
+export interface DiscomDetails {
+  address?: string;
+  customerCareNumber?: string;
+  helplineNumber?: string;
+  whatsappNumber?: string;
+  email?: string;
+  alias?: string;
+  title?: string;
+  logo?: string;
+  playStoreLink?: string;
+}
+
+export interface TenantPreferences {
+  discomDetails?: DiscomDetails;
+  [k: string]: unknown;
+}
+
+export interface DowntimeAnnouncement {
+  body?: string;
+  title?: string;
+  [k: string]: unknown;
+}
+
+export interface ApplianceRow { [k: string]: unknown }
+
 /** UPPCL's feature-flag + discom config tree (bootstrap API). */
 export const useTenantPreferences = () =>
-  useSWR<UpstreamEnvelope<Record<string, unknown>>>("/tenant-preferences", fetcher, swrOpts);
+  useSWR<UpstreamEnvelope<TenantPreferences>>("/tenant-preferences", fetcher, swrOpts);
+
+/** Active maintenance / downtime announcement (null when none). */
+export const useDowntime = () =>
+  useSWR<UpstreamEnvelope<DowntimeAnnouncement | null>>("/downtime", fetcher, swrOpts);
+
+/** Appliance-level disaggregation (empty until UPPCL's model has enough data). */
+export const useApplianceData = () =>
+  useSWR<UpstreamEnvelope<ApplianceRow[]>>("/appliances", fetcher, swrOpts);
 
 /* ── Complaint hooks (same signatures, different backend route) ── */
 

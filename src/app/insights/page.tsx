@@ -1,28 +1,43 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import {
   useDashboard,
   useYearlyHistory,
   useUsageStats,
   useInvoices,
+  useApplianceData,
+  useSavingTip,
 } from "@/lib/api";
 import { RadialGauge, type GaugeAccent } from "@/components/viz/RadialGauge";
 import { CarbonCounter } from "@/components/viz/CarbonCounter";
 import { SlabBar, UP_DOMESTIC_SLABS } from "@/components/viz/SlabBar";
 import { Sparkline } from "@/components/viz/Sparkline";
 import { Tooltip } from "@/components/ui/Tooltip";
+import { cn } from "@/lib/utils";
 import { toNum } from "@/lib/stats";
 import { kwh, rupees } from "@/lib/utils";
-import { Activity, Gauge, Leaf, Receipt, Info } from "lucide-react";
+import { Activity, Gauge, Leaf, Receipt, Info, PlugZap, Lightbulb } from "lucide-react";
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+const APPLIANCES = [
+  { code: "fridge", label: "Fridge" },
+  { code: "geyser", label: "Geyser" },
+  { code: "washing_machine", label: "Washing m/c" },
+  { code: "nightbaseload", label: "Night load" },
+  { code: "others", label: "Others" },
+] as const;
+const APPLIANCE_KEYS = ["ac", "fridge", "geyser", "washing_machine", "nightbaseload", "others"] as const;
 
 export default function InsightsPage() {
   const { data, error, isLoading } = useDashboard();
   const { data: yearly } = useYearlyHistory();
   const { data: statsResp } = useUsageStats();
   const { data: invoicesResp } = useInvoices(18);
+  const { data: applianceResp } = useApplianceData();
+  const [tipAppliance, setTipAppliance] = useState<string>("fridge");
+  const { data: tipsResp } = useSavingTip(tipAppliance);
 
   const derived = useMemo(() => {
     if (!data) return null;
@@ -98,6 +113,15 @@ export default function InsightsPage() {
     sanctioned, peakKw, demandPct, demandAccent, demandAdvice,
     thisMonthKwh, avgDailyKwh, effectiveRate, projectedKwh, projectedBill,
   } = derived;
+
+  // Appliance disaggregation (empty until UPPCL's model has data for this meter).
+  const applianceRows = applianceResp?.data ?? [];
+  const applianceTotals = APPLIANCE_KEYS
+    .map((k) => ({ key: k, value: applianceRows.reduce((s, row) => s + toNum((row as Record<string, unknown>)[k]), 0) }))
+    .filter((a) => a.value > 0)
+    .sort((a, b) => b.value - a.value);
+  const applianceTotal = applianceTotals.reduce((s, a) => s + a.value, 0);
+  const tips = (tipsResp?.data ?? []).filter((t) => t.tipEnglish).slice(0, 3);
 
   return (
     <div className="mx-auto flex max-w-[1440px] flex-col gap-4">
@@ -219,6 +243,81 @@ export default function InsightsPage() {
               </div>
             )}
           </div>
+        </div>
+      </section>
+
+      {/* WHERE YOUR POWER GOES (appliance disaggregation) */}
+      <section className="rounded-xl bg-surface-container-low p-5 sm:p-6">
+        <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-[0.24em] text-on-surface-variant">
+          <PlugZap className="h-3 w-3" /> Where your power goes
+        </div>
+        {applianceTotal > 0 ? (
+          <div className="mt-5 flex flex-col gap-3">
+            {applianceTotals.map((a) => {
+              const pct = Math.round((a.value / applianceTotal) * 100);
+              const label = APPLIANCES.find((x) => x.code === a.key)?.label ?? a.key;
+              return (
+                <div key={a.key}>
+                  <div className="mb-1 flex items-center justify-between text-[12px]">
+                    <span className="text-on-surface">{label}</span>
+                    <span className="font-mono text-on-surface-variant">{kwh(a.value, 0)} kWh · {pct}%</span>
+                  </div>
+                  <div className="h-2 overflow-hidden rounded-full bg-surface-container-high">
+                    <div className="h-full rounded-full bg-primary-container" style={{ width: `${pct}%` }} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="mt-4 flex items-start gap-3 rounded-lg bg-surface-container p-4">
+            <span className="h-1.5 w-1.5 shrink-0 translate-y-2 rounded-full bg-primary-fixed-dim glow-primary" />
+            <p className="text-[13px] leading-relaxed text-on-surface-variant">
+              <span className="text-on-surface">Learning your usage.</span> UPPCL&apos;s appliance model needs a few
+              more weeks of metered data before it can split your consumption by appliance. This panel lights up
+              automatically once it&apos;s ready.
+            </p>
+          </div>
+        )}
+      </section>
+
+      {/* SAVING TIPS */}
+      <section className="rounded-xl bg-surface-container-low p-5 sm:p-6">
+        <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-[0.24em] text-on-surface-variant">
+          <Lightbulb className="h-3 w-3" /> Saving tips
+        </div>
+        {pf !== null && pf < 0.9 && (
+          <p className="mt-3 text-[12px] text-secondary">
+            Your power factor is low — lightly-loaded motors and idle inductive appliances are common causes.
+          </p>
+        )}
+        <div className="mt-4 flex flex-wrap gap-2">
+          {APPLIANCES.map((a) => (
+            <button
+              key={a.code}
+              onClick={() => setTipAppliance(a.code)}
+              className={cn(
+                "rounded-full px-3 py-1.5 text-[11px] font-medium transition",
+                tipAppliance === a.code
+                  ? "bg-primary-container text-on-primary-fixed"
+                  : "bg-surface-container-high text-on-surface-variant hover:bg-surface-bright hover:text-on-surface"
+              )}
+            >
+              {a.label}
+            </button>
+          ))}
+        </div>
+        <div className="mt-4 flex flex-col gap-2">
+          {tips.length > 0 ? (
+            tips.map((t) => (
+              <div key={t._id} className="flex items-start gap-2.5 rounded-lg bg-surface-container p-3">
+                <Lightbulb className="mt-0.5 h-3.5 w-3.5 shrink-0 text-secondary" />
+                <p className="text-[13px] leading-relaxed text-on-surface">{t.tipEnglish}</p>
+              </div>
+            ))
+          ) : (
+            <div className="text-[12px] text-on-surface-variant">No tips available right now.</div>
+          )}
         </div>
       </section>
     </div>

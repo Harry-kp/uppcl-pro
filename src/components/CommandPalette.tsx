@@ -4,7 +4,7 @@ import { Command } from "cmdk";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { mutate as swrMutate } from "swr";
-import { Home, Activity, ScrollText, Radio, Settings, Zap, Bell, Download, Clock, RefreshCw, Wallet, LogOut, ExternalLink, AlertTriangle, MessageSquare, Sparkles } from "lucide-react";
+import { Home, Activity, ScrollText, Radio, Settings, Zap, Bell, Download, Clock, RefreshCw, Wallet, LogOut, ExternalLink, AlertTriangle, MessageSquare, Sparkles, LifeBuoy } from "lucide-react";
 import { useToast } from "@/components/ui/Toast";
 import { logout } from "@/lib/api";
 
@@ -75,6 +75,7 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
               <PItem onSelect={() => go("/recharges", "Recharges")}      icon={<Wallet className="h-4 w-4" />}     shortcut="g r">Recharges · sweet spot</PItem>
               <PItem onSelect={() => go("/grid-nodes", "Meter")}         icon={<Radio className="h-4 w-4" />}          shortcut="g m">Meter · health</PItem>
               <PItem onSelect={() => go("/complaints", "Complaints")}    icon={<MessageSquare className="h-4 w-4" />}  shortcut="g c">Complaints · 1912 history</PItem>
+              <PItem onSelect={() => go("/support", "Support")}          icon={<LifeBuoy className="h-4 w-4" />}       shortcut="g p">Support · contacts, alerts, tickets</PItem>
               <PItem onSelect={() => go("/settings", "Settings")}        icon={<Settings className="h-4 w-4" />}       shortcut="g s">Settings</PItem>
             </PGroup>
 

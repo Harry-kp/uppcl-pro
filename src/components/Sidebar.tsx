@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Activity, ScrollText, Radio, Settings, Wallet, MessageSquare, Sparkles, X } from "lucide-react";
+import { Home, Activity, ScrollText, Radio, Settings, Wallet, MessageSquare, Sparkles, LifeBuoy, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { useHealth } from "@/lib/api";
@@ -15,6 +15,7 @@ const nav = [
   { href: "/recharges",   label: "Recharges",  icon: Wallet,      hint: "Sweet-spot recommender + history",      shortcut: "g r" },
   { href: "/grid-nodes",  label: "Meter",      icon: Radio,         hint: "Health, data integrity, peak load",     shortcut: "g m" },
   { href: "/complaints",  label: "Complaints", icon: MessageSquare, hint: "1912 complaint history & status",       shortcut: "g c" },
+  { href: "/support",     label: "Support",    icon: LifeBuoy,      hint: "Contacts, outage, meter alerts & tickets", shortcut: "g p" },
   { href: "/settings",    label: "Settings",   icon: Settings,      hint: "Session, preferences, external links",  shortcut: "g s" },
 ] as const;
 
