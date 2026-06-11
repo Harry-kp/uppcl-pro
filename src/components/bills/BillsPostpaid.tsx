@@ -59,13 +59,18 @@ export function BillsPostpaid() {
   const { thisMonthKwh, avgDailyKwh, effectiveRate, projectedKwh, projectedBill } = derived;
 
   async function download(inv: MonthlyInvoice) {
+    // Open the tab synchronously inside the click gesture, THEN redirect it once
+    // the link resolves — otherwise the post-await window.open is popup-blocked.
+    const win = window.open("about:blank", "_blank");
     setDownloadingId(inv.invoice_id);
     try {
       const url = await billDownloadLink({ invoice_id: inv.invoice_id, bill_dt: inv.bill_dt });
-      window.open(url, "_blank", "noopener,noreferrer");
-      push("Opening your official bill PDF…", { kind: "success" });
+      if (win) win.location.href = url;
+      else window.location.href = url;
+      push("Opening your official bill…", { kind: "success" });
     } catch (e) {
-      push((e as Error).message || "Could not fetch the bill PDF", { kind: "error" });
+      if (win) win.close();
+      push((e as Error).message || "Could not open the bill", { kind: "error" });
     } finally {
       setDownloadingId(null);
     }
@@ -135,7 +140,9 @@ export function BillsPostpaid() {
               <tbody className="font-mono">
                 {invoices.map((inv) => {
                   const amt = toNum(inv.bill_amt);
-                  const paid = toNum(inv.payment_amt) >= Math.abs(amt) && amt > 0;
+                  // Paid = a payment date exists. (payment_amt can differ slightly
+                  // from bill_amt due to rounding/adjustments — outstanding is the truth.)
+                  const paid = Boolean((inv.payment_dt || "").trim());
                   const credit = amt < 0;
                   const td = "px-3 py-2 bg-surface-container-lowest text-on-surface";
                   return (
@@ -156,7 +163,7 @@ export function BillsPostpaid() {
                           disabled={downloadingId === inv.invoice_id}
                           className="inline-flex items-center gap-1 rounded-md bg-surface-container-high px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-on-surface transition hover:bg-surface-bright disabled:opacity-50"
                         >
-                          <Download className="h-3 w-3" /> {downloadingId === inv.invoice_id ? "…" : "PDF"}
+                          <Download className="h-3 w-3" /> {downloadingId === inv.invoice_id ? "…" : "View"}
                         </button>
                       </td>
                     </tr>

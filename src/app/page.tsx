@@ -564,7 +564,8 @@ function PostpaidHome({ dashboard: data }: { dashboard: DashboardResponse }) {
     const sanctioned = toNum(data.site.sanctionedLoad);
     const demandPct = sanctioned > 0 && peakKw > 0 ? Math.round((peakKw / sanctioned) * 100) : null;
 
-    const billPaid = inv ? toNum(inv.payment_amt) >= Math.abs(toNum(inv.bill_amt)) && toNum(inv.bill_amt) > 0 : false;
+    // Paid = a payment date exists (payment_amt may differ slightly via rounding).
+    const billPaid = inv ? Boolean((inv.payment_dt || "").trim()) : false;
 
     return {
       series, labels, avgDailyKwh, outstandingAmt, hasDues, daysToDue, cycleProgress,
@@ -581,13 +582,17 @@ function PostpaidHome({ dashboard: data }: { dashboard: DashboardResponse }) {
 
   async function downloadBill() {
     if (!inv) return;
+    // Open the tab in the click gesture, then redirect — avoids popup-blocking.
+    const win = window.open("about:blank", "_blank");
     setDownloading(true);
     try {
       const url = await billDownloadLink({ invoice_id: inv.invoice_id, bill_dt: inv.bill_dt });
-      window.open(url, "_blank", "noopener,noreferrer");
-      push("Opening your official bill PDF…", { kind: "success" });
+      if (win) win.location.href = url;
+      else window.location.href = url;
+      push("Opening your official bill…", { kind: "success" });
     } catch (e) {
-      push((e as Error).message || "Could not fetch the bill PDF", { kind: "error" });
+      if (win) win.close();
+      push((e as Error).message || "Could not open the bill", { kind: "error" });
     } finally {
       setDownloading(false);
     }
@@ -778,7 +783,7 @@ function PostpaidHome({ dashboard: data }: { dashboard: DashboardResponse }) {
               disabled={downloading}
               className="flex w-full items-center justify-center gap-1.5 rounded-md bg-surface-container-high px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-on-surface transition hover:bg-surface-bright disabled:opacity-50 sm:w-auto"
             >
-              <Download className="h-3 w-3" /> {downloading ? "Fetching…" : "Download bill"}
+              <Download className="h-3 w-3" /> {downloading ? "Opening…" : "View bill"}
             </button>
           )}
           <a
@@ -815,7 +820,7 @@ function PostpaidHome({ dashboard: data }: { dashboard: DashboardResponse }) {
               disabled={downloading}
               className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-md bg-primary-container px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-on-primary-fixed transition hover:brightness-110 disabled:opacity-50"
             >
-              <Download className="h-3 w-3" /> {downloading ? "Fetching…" : "Download official bill PDF"}
+              <Download className="h-3 w-3" /> {downloading ? "Opening…" : "View official bill"}
             </button>
           )}
           <div className="mt-6 rounded-md bg-surface-container p-3 text-[11px] text-on-surface-variant">
