@@ -129,7 +129,7 @@ export default function GridNodesPage() {
             Is your meter behaving?
           </h1>
           <p className="mt-1 max-w-[640px] text-[13px] text-on-surface-variant sm:text-[12px]">
-            Power quality (factor + peak demand), load headroom, and{isPostpaid ? "" : " reading reliability and"} data
+            Power quality (factor + peak demand), load headroom, and{billsAsc.length > 0 ? " reading reliability and" : ""} data
             integrity for your meter.
           </p>
         </div>
@@ -186,8 +186,9 @@ export default function GridNodesPage() {
         </div>
       </section>
 
-      {/* Reading reliability + data integrity — prepaid daily bills only */}
-      {!isPostpaid && (
+      {/* Reading reliability + data integrity — shown whenever daily-bill data
+          exists (prepaid, or a postpaid meter with a prior prepaid period). */}
+      {billsAsc.length > 0 && (
         <>
           <section className="rounded-xl bg-surface-container-low p-5 sm:p-6">
             <div className="text-[10px] uppercase tracking-[0.24em] text-on-surface-variant">Data reliability</div>
@@ -302,8 +303,8 @@ export default function GridNodesPage() {
 
       {/* Bottom stats */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        {!isPostpaid && <BottomStat k="Bills received" v={String(totalReads)} hint="past year" />}
-        {!isPostpaid && <BottomStat k="Actual readings" v={`${actualPct.toFixed(0)}%`} hint="vs estimated" />}
+        {billsAsc.length > 0 && <BottomStat k="Bills received" v={String(totalReads)} hint="daily records" />}
+        {billsAsc.length > 0 && <BottomStat k="Actual readings" v={`${actualPct.toFixed(0)}%`} hint="vs estimated" />}
         <BottomStat
           k="Total 90-day kWh"
           v={kwh(consAsc.reduce((a, r) => a + (Number.isFinite(toNum(r.energyImportKWH.value)) ? toNum(r.energyImportKWH.value) : 0), 0), 0)}

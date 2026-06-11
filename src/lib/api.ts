@@ -331,6 +331,24 @@ async function fetcher<T>(key: string): Promise<T> {
     return uppcl_post("bill/billHistory", { consumerId: cid, tenantId: tid, skip: 0, limit }) as Promise<T>;
   }
 
+  // Postpaid monthly invoices — MUST precede the generic /bills branch below,
+  // because "/bills/latest".startsWith("/bills") is true.
+  if (key.startsWith("/bills/latest")) {
+    // Single latest monthly invoice (fetchLatestBill:true → object, not array).
+    const from = humanDate(daysAgo(13 * 31));
+    const to = humanDate(today);
+    return uppcl_post("bill/billHistory", { type: "monthlyBill", from, to, tenantId: tid, fetchLatestBill: true, consumerId: cid }) as Promise<T>;
+  }
+
+  if (key.startsWith("/bills/invoices")) {
+    // Full monthly invoice history (no fetchLatestBill → array). See RE doc §7.
+    const monthsBack = parseInt(params.get("months") ?? "18");
+    const from = humanDate(daysAgo(monthsBack * 31));
+    const to = humanDate(today);
+    return uppcl_post("bill/billHistory", { type: "monthlyBill", from, to, tenantId: tid, consumerId: cid }) as Promise<T>;
+  }
+
+  // Generic daily-bill search (prepaid daily bills).
   if (key.startsWith("/bills")) {
     const days = parseInt(params.get("days") ?? "90");
     const limit = parseInt(params.get("limit") ?? String(days));
@@ -360,22 +378,6 @@ async function fetcher<T>(key: string): Promise<T> {
   if (key.startsWith("/history/yearly")) {
     const year = parseInt(params.get("year") ?? String(today.getFullYear()));
     return uppcl_post("eventsummary/search", { deviceId: did, tenantId: tid, groupBy: "year", year: String(year), uom: "KWH" }) as Promise<T>;
-  }
-
-  // ── Postpaid bills (monthly invoices) ──────────────────────────────
-  if (key.startsWith("/bills/latest")) {
-    // Single latest monthly invoice (fetchLatestBill:true → object, not array).
-    const from = humanDate(daysAgo(13 * 31));
-    const to = humanDate(today);
-    return uppcl_post("bill/billHistory", { type: "monthlyBill", from, to, tenantId: tid, fetchLatestBill: true, consumerId: cid }) as Promise<T>;
-  }
-
-  if (key.startsWith("/bills/invoices")) {
-    // Full monthly invoice history (no fetchLatestBill → array). See RE doc §7.
-    const monthsBack = parseInt(params.get("months") ?? "18");
-    const from = humanDate(daysAgo(monthsBack * 31));
-    const to = humanDate(today);
-    return uppcl_post("bill/billHistory", { type: "monthlyBill", from, to, tenantId: tid, consumerId: cid }) as Promise<T>;
   }
 
   // ── Power-quality / usage stats, alarms, alerts, native tickets ────
