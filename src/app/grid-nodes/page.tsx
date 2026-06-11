@@ -19,7 +19,8 @@ import { RadialGauge, type GaugeAccent } from "@/components/viz/RadialGauge";
 import { mean, toNum } from "@/lib/stats";
 import { kwh } from "@/lib/utils";
 import { chart } from "@/lib/chartColors";
-import { Activity, Gauge } from "lucide-react";
+import { Activity, Gauge, Info } from "lucide-react";
+import { Tooltip } from "@/components/ui/Tooltip";
 
 export default function GridNodesPage() {
   const { data: bills } = useBills(365);
@@ -158,6 +159,9 @@ export default function GridNodesPage() {
             <div className="flex-1">
               <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-[0.18em] text-on-surface-variant">
                 <Activity className="h-3 w-3" /> Power factor
+                <Tooltip content={<div className="max-w-[240px]">Real power ÷ apparent power (0–1). Below 0.90, UPPCL adds a surcharge; closer to 1 means less wasted (reactive) current.</div>}>
+                  <Info className="h-3 w-3 cursor-help text-on-surface-variant/70" />
+                </Tooltip>
               </div>
               <p className="mt-2 text-[13px] leading-relaxed text-on-surface">{pfAdvice}</p>
             </div>
@@ -175,6 +179,9 @@ export default function GridNodesPage() {
             <div className="flex-1">
               <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-[0.18em] text-on-surface-variant">
                 <Gauge className="h-3 w-3" /> Peak demand vs sanctioned load
+                <Tooltip content={<div className="max-w-[240px]">The highest power your meter drew this period against your sanctioned load. Repeatedly nearing it risks max-demand penalties; exceeding it can trip your supply.</div>}>
+                  <Info className="h-3 w-3 cursor-help text-on-surface-variant/70" />
+                </Tooltip>
               </div>
               <p className="mt-2 text-[13px] leading-relaxed text-on-surface">{demandAdvice}</p>
               <div className="mt-3 grid grid-cols-3 gap-3 text-[11px] text-on-surface-variant">

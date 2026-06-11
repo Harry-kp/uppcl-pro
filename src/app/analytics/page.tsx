@@ -102,6 +102,14 @@ export default function AnalyticsPage() {
 
   return (
     <div className="mx-auto flex max-w-[1440px] flex-col gap-4">
+      <div className="px-1">
+        <h1 className="text-[15px] text-on-surface">Usage</h1>
+        <p className="mt-0.5 max-w-[680px] text-[12px] text-on-surface-variant">
+          How much electricity you use and <span className="text-on-surface">when</span> — daily kWh, weekday patterns,
+          the year at a glance, and where it goes. Power factor and demand live on the Meter tab.
+        </p>
+      </div>
+
       {/* HERO ROW: total + sparkline | baseline-vs-active */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.6fr_1fr]">
         <section className="glow-hero relative flex flex-col justify-between rounded-xl bg-surface-container-low p-5 sm:p-6">
