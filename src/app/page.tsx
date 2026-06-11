@@ -9,7 +9,6 @@ import {
   useOutstanding,
   useLatestInvoice,
   useUsageStats,
-  billDownloadLink,
   type DashboardResponse,
   type MonthlyInvoice,
 } from "@/lib/api";
@@ -40,9 +39,11 @@ import {
   Check,
   TrendingUp,
   ScrollText,
-  Download,
   Calendar,
 } from "lucide-react";
+
+// UPPCL's official bill viewer (legacy /wss portal) — reliable path to the PDF.
+const WSS_VIEW_BILL = "https://consumer.uppcl.org/wss/view-bill";
 
 // ── Dispatcher ────────────────────────────────────────────────────────────────
 // The home dashboard reshapes by meter type. Prepaid keeps the balance + runway
@@ -493,10 +494,8 @@ function PostpaidHome({ dashboard: data }: { dashboard: DashboardResponse }) {
   const { data: invoiceResp } = useLatestInvoice();
   const { data: statsResp } = useUsageStats();
   const { data: yearly } = useYearlyHistory();
-  const { push } = useToast();
 
   const [panel, setPanel] = useState<null | "bill" | "projection">(null);
-  const [downloading, setDownloading] = useState(false);
 
   const inv: MonthlyInvoice | undefined = invoiceResp?.data && (invoiceResp.data as MonthlyInvoice).invoice_id
     ? (invoiceResp.data as MonthlyInvoice)
@@ -579,24 +578,6 @@ function PostpaidHome({ dashboard: data }: { dashboard: DashboardResponse }) {
     cycleKwh, effectiveRate, projectedBill, projVsLast, pfLatest,
     peakKw, sanctioned, demandPct, lastBillAmt, billPaid,
   } = derived;
-
-  async function downloadBill() {
-    if (!inv) return;
-    // Open the tab in the click gesture, then redirect — avoids popup-blocking.
-    const win = window.open("about:blank", "_blank");
-    setDownloading(true);
-    try {
-      const url = await billDownloadLink({ invoice_id: inv.invoice_id, bill_dt: inv.bill_dt });
-      if (win) win.location.href = url;
-      else window.location.href = url;
-      push("Opening your official bill…", { kind: "success" });
-    } catch (e) {
-      if (win) win.close();
-      push((e as Error).message || "Could not open the bill", { kind: "error" });
-    } finally {
-      setDownloading(false);
-    }
-  }
 
   const insights: Insight[] = [];
   if (hasDues) {
@@ -778,13 +759,14 @@ function PostpaidHome({ dashboard: data }: { dashboard: DashboardResponse }) {
         </div>
         <div className="flex w-full shrink-0 flex-col items-stretch gap-2 sm:w-auto sm:flex-row sm:items-center">
           {inv && (
-            <button
-              onClick={downloadBill}
-              disabled={downloading}
-              className="flex w-full items-center justify-center gap-1.5 rounded-md bg-surface-container-high px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-on-surface transition hover:bg-surface-bright disabled:opacity-50 sm:w-auto"
+            <a
+              href={WSS_VIEW_BILL}
+              target="_blank"
+              rel="noreferrer"
+              className="flex w-full items-center justify-center gap-1.5 rounded-md bg-surface-container-high px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-on-surface transition hover:bg-surface-bright sm:w-auto"
             >
-              <Download className="h-3 w-3" /> {downloading ? "Opening…" : "View bill"}
-            </button>
+              View bill <ArrowUpRight className="h-3 w-3" strokeWidth={2.5} />
+            </a>
           )}
           <a
             href="https://uppcl.sem.jio.com/uppclsmart/"
@@ -815,13 +797,14 @@ function PostpaidHome({ dashboard: data }: { dashboard: DashboardResponse }) {
           <Row k="Connection"       v={data.site.connectionId} mono />
           <Row k="DISCOM"           v={data.site.tenantId} mono />
           {inv && (
-            <button
-              onClick={downloadBill}
-              disabled={downloading}
-              className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-md bg-primary-container px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-on-primary-fixed transition hover:brightness-110 disabled:opacity-50"
+            <a
+              href={WSS_VIEW_BILL}
+              target="_blank"
+              rel="noreferrer"
+              className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-md bg-primary-container px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-on-primary-fixed transition hover:brightness-110"
             >
-              <Download className="h-3 w-3" /> {downloading ? "Opening…" : "View official bill"}
-            </button>
+              View official bill <ArrowUpRight className="h-3 w-3" strokeWidth={2.5} />
+            </a>
           )}
           <div className="mt-6 rounded-md bg-surface-container p-3 text-[11px] text-on-surface-variant">
             <div className="mb-1 uppercase tracking-[0.18em] text-on-surface-variant/80">Source</div>

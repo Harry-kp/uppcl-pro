@@ -1,20 +1,22 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import {
   useInvoices,
   usePayments,
   useYearlyHistory,
   useDashboard,
-  billDownloadLink,
-  type MonthlyInvoice,
 } from "@/lib/api";
 import { SlabBar, UP_DOMESTIC_SLABS } from "@/components/viz/SlabBar";
 import { Tooltip } from "@/components/ui/Tooltip";
-import { useToast } from "@/components/ui/Toast";
 import { toNum } from "@/lib/stats";
 import { rupees, kwh, formatRelative } from "@/lib/utils";
-import { Download, Receipt, ArrowUpRight } from "lucide-react";
+import { Receipt, ArrowUpRight } from "lucide-react";
+
+// UPPCL's official bill viewer (legacy /wss portal). The uppclsmart deep-link
+// resolves to "No Bill Details Found" for converted meters, so we send users to
+// the official view-bill page where they can view/download the PDF.
+const WSS_VIEW_BILL = "https://consumer.uppcl.org/wss/view-bill";
 
 /** Postpaid money hub: monthly invoices + official PDF download, tariff/slab,
  *  projected next bill, and payment history. */
@@ -23,8 +25,6 @@ export function BillsPostpaid() {
   const { data: payments } = usePayments(50);
   const { data: yearly } = useYearlyHistory();
   const { data: dashboard } = useDashboard();
-  const { push } = useToast();
-  const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
   const invoices = useMemo(
     () =>
@@ -57,24 +57,6 @@ export function BillsPostpaid() {
   }, [yearly, dashboard, invoices]);
 
   const { thisMonthKwh, avgDailyKwh, effectiveRate, projectedKwh, projectedBill } = derived;
-
-  async function download(inv: MonthlyInvoice) {
-    // Open the tab synchronously inside the click gesture, THEN redirect it once
-    // the link resolves — otherwise the post-await window.open is popup-blocked.
-    const win = window.open("about:blank", "_blank");
-    setDownloadingId(inv.invoice_id);
-    try {
-      const url = await billDownloadLink({ invoice_id: inv.invoice_id, bill_dt: inv.bill_dt });
-      if (win) win.location.href = url;
-      else window.location.href = url;
-      push("Opening your official bill…", { kind: "success" });
-    } catch (e) {
-      if (win) win.close();
-      push((e as Error).message || "Could not open the bill", { kind: "error" });
-    } finally {
-      setDownloadingId(null);
-    }
-  }
 
   const pays = payments?.data ?? [];
 
@@ -158,13 +140,14 @@ export function BillsPostpaid() {
                       </td>
                       <td className={td + " truncate text-on-surface-variant"}>{inv.invoice_id}</td>
                       <td className={td + " rounded-r-md"}>
-                        <button
-                          onClick={() => download(inv)}
-                          disabled={downloadingId === inv.invoice_id}
-                          className="inline-flex items-center gap-1 rounded-md bg-surface-container-high px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-on-surface transition hover:bg-surface-bright disabled:opacity-50"
+                        <a
+                          href={WSS_VIEW_BILL}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1 rounded-md bg-surface-container-high px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-on-surface transition hover:bg-surface-bright"
                         >
-                          <Download className="h-3 w-3" /> {downloadingId === inv.invoice_id ? "…" : "View"}
-                        </button>
+                          View <ArrowUpRight className="h-3 w-3" />
+                        </a>
                       </td>
                     </tr>
                   );
