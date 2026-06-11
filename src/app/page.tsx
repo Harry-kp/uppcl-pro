@@ -724,31 +724,38 @@ function PostpaidHome({ dashboard: data }: { dashboard: DashboardResponse }) {
           href="/ledger"
         />
         <Tile
-          icon={<Zap className="h-3 w-3" />}
-          label="This Cycle"
-          tag="kWh"
-          value={<>{kwh(cycleKwh, 0)}</>}
-          hint={<>avg {kwh(avgDailyKwh)} kWh/day</>}
-          formula={<>Sum of <code>eventsummary</code> daily kWh since last bill date.</>}
-          href="/analytics"
-        />
-        <Tile
           icon={<Wallet className="h-3 w-3" />}
-          label="Spent so far"
-          tag="this cycle"
+          label="This cycle"
+          tag="so far"
           value={<>₹{rupees(cycleKwh * effectiveRate, { decimals: 0 })}</>}
-          hint={<>{kwh(cycleKwh, 0)} kWh × ~₹{rupees(effectiveRate, { decimals: 1 })}/kWh</>}
-          formula={<>Running energy cost this cycle — metered kWh since the last bill × your effective ₹/kWh. Excludes fixed charges, duty &amp; FPPA. Tap for Bills.</>}
+          hint={<>{kwh(cycleKwh, 0)} kWh used · ~₹{rupees(avgDailyKwh * effectiveRate, { decimals: 0 })}/day</>}
+          formula={<>Running cost since your last bill — metered kWh × your effective ₹/kWh. Energy only (excl. fixed, duty &amp; FPPA). The ring shows the projected full-cycle total.</>}
           href="/ledger"
         />
         <Tile
           icon={<TrendingUp className="h-3 w-3" />}
-          label="Daily spend"
-          tag="avg"
-          value={<>₹{rupees(avgDailyKwh * effectiveRate, { decimals: 0 })}<span className="ml-0.5 text-[14px] text-on-surface-variant">/day</span></>}
-          hint={<>{kwh(avgDailyKwh)} kWh/day at ~₹{rupees(effectiveRate, { decimals: 1 })}/kWh</>}
-          formula={<>Average daily electricity cost — how fast this cycle&apos;s bill is growing. Power factor &amp; peak demand live on the Meter tab.</>}
+          label="vs last month"
+          tag="projected"
+          accent={lastBillAmt > 0 ? (projVsLast > 10 ? "warn" : projVsLast < -5 ? "good" : "default") : "default"}
+          value={
+            lastBillAmt > 0 ? (
+              <span className={projVsLast > 0 ? "text-secondary" : projVsLast < 0 ? "text-primary-fixed-dim" : "text-on-surface"}>
+                {projVsLast >= 0 ? "+" : ""}{projVsLast}%
+              </span>
+            ) : "—"
+          }
+          hint={lastBillAmt > 0 ? <>on track for ~₹{rupees(projectedBill, { decimals: 0 })}</> : <>no prior bill to compare</>}
+          formula={<>This cycle&apos;s projected bill against last month&apos;s. Positive = trending higher; tap for the usage that&apos;s driving it.</>}
           href="/analytics"
+        />
+        <Tile
+          icon={<CreditCard className="h-3 w-3" />}
+          label="Effective rate"
+          tag="₹/kWh"
+          value={<>₹{rupees(effectiveRate, { decimals: 2 })}</>}
+          hint={<>your blended tariff</>}
+          formula={<>Last bill ÷ that month&apos;s metered kWh — the real per-unit rate that drives every projection here. Tap for the bill breakdown.</>}
+          href="/ledger"
         />
       </div>
 
