@@ -590,71 +590,53 @@ function PostpaidHome({ dashboard: data }: { dashboard: DashboardResponse }) {
   const {
     series, labels, avgDailyKwh, outstandingAmt, hasDues, daysToDue, cycleProgress,
     cycleKwh, effectiveRate, projectedBill, projVsLast, pfLatest,
-    peakKw, sanctioned, demandPct, lastBillAmt, billPaid,
+    sanctioned, demandPct, lastBillAmt, billPaid,
   } = derived;
 
-  const insights: Insight[] = [];
-  if (hasDues) {
-    insights.push({
-      id: "dues", tone: "critical", icon: <Wallet className="h-3 w-3" />,
-      title: <>₹{rupees(outstandingAmt, { decimals: 0 })} outstanding on your account</>,
-      detail: <>clear it to avoid disconnection</>,
-      href: "https://uppcl.sem.jio.com/uppclsmart/", cta: "Pay",
-    });
-  } else {
-    insights.push({
-      id: "paid", tone: "good", icon: <Check className="h-3 w-3" />,
-      title: <>You&apos;re all paid up — no outstanding dues</>,
-      detail: inv ? <>last bill ₹{rupees(lastBillAmt, { decimals: 0 })} paid</> : undefined,
-    });
-  }
-  if (daysToDue !== null && !billPaid && lastBillAmt > 0) {
-    insights.push({
-      id: "due", tone: daysToDue <= 5 ? "warn" : "info", icon: <Calendar className="h-3 w-3" />,
-      title: <>Bill of ₹{rupees(lastBillAmt, { decimals: 0 })} {daysToDue < 0 ? <>overdue by {Math.abs(daysToDue)} d</> : <>due in {daysToDue} d</>}</>,
-      onClick: () => setPanel("bill"), cta: "View bill",
-    });
-  }
-  insights.push({
-    id: "projection", tone: projVsLast > 15 ? "warn" : "info", icon: <TrendingUp className="h-3 w-3" />,
-    title: <>Projected ~₹{rupees(projectedBill, { decimals: 0 })} this cycle</>,
-    detail: lastBillAmt > 0 ? <>{projVsLast >= 0 ? "+" : ""}{projVsLast}% vs last month</> : <>at {kwh(avgDailyKwh)} kWh/day</>,
-    onClick: () => setPanel("projection"), cta: "Breakdown",
-  });
-  if (pfLatest !== null && pfLatest < 0.9) {
-    insights.push({
-      id: "pf", tone: "warn", icon: <Activity className="h-3 w-3" />,
-      title: <>Power factor {pfLatest.toFixed(2)} — below 0.9, penalty risk</>,
-      href: "/grid-nodes", cta: "Details",
-    });
-  }
-  if (demandPct !== null && demandPct >= 85) {
-    insights.push({
-      id: "demand", tone: demandPct >= 100 ? "critical" : "warn", icon: <AlertTriangle className="h-3 w-3" />,
-      title: <>Peak demand {kwh(peakKw)} kW is {demandPct}% of your {sanctioned} kW sanctioned load</>,
-      href: "/grid-nodes", cta: "Details",
-    });
-  }
-  // Official arrears (from the bill portal) — distinct from the current bill.
+  const PAY_URL = "https://uppcl.sem.jio.com/uppclsmart/";
   const officialArrears = toNum(wssArrears?.data?.amount);
-  if (officialArrears > 0) {
-    insights.push({
-      id: "arrears", tone: "critical", icon: <AlertTriangle className="h-3 w-3" />,
-      title: <>₹{rupees(officialArrears, { decimals: 0 })} in arrears on your account</>,
-      detail: <>clear it to avoid disconnection</>,
-      href: "https://uppcl.sem.jio.com/uppclsmart/", cta: "Pay",
-    });
-  }
-  // Bill-relief scheme eligibility, surfaced from the official consumer record.
   const addr = wssConsumer?.ConsumerDetails?.currentAddress ?? "";
   const schemeMatch = addr.match(/\$(True|False)[^,]*?[Ee]ligible [Ff]or ([^,]+)/);
-  if (schemeMatch && schemeMatch[1].toLowerCase() === "true") {
-    insights.push({
-      id: "scheme", tone: "good", icon: <Check className="h-3 w-3" />,
-      title: <>You&apos;re eligible for {schemeMatch[2].trim()}</>,
-      detail: <>a UPPCL bill-relief scheme</>,
-      href: "https://uppcl.sem.jio.com/uppclsmart/", cta: "Details",
-    });
+  const schemeName = schemeMatch && schemeMatch[1].toLowerCase() === "true" ? schemeMatch[2].trim() : null;
+  const dueDate = inv?.due_dt ? new Date(inv.due_dt).toLocaleDateString("en-IN", { day: "numeric", month: "short" }) : null;
+
+  // The strip carries ONLY things that need attention or action — not echoes of
+  // the hero/ring. When nothing needs action, a single calm "all good" chip.
+  const insights: Insight[] = [];
+  if (officialArrears > 0) {
+    insights.push({ id: "arrears", tone: "critical", icon: <AlertTriangle className="h-3 w-3" />,
+      title: <>₹{rupees(officialArrears, { decimals: 0 })} in arrears</>, detail: <>clear to avoid disconnection</>, href: PAY_URL, cta: "Pay" });
+  }
+  if (hasDues) {
+    insights.push({ id: "dues", tone: "critical", icon: <Wallet className="h-3 w-3" />,
+      title: <>₹{rupees(outstandingAmt, { decimals: 0 })} outstanding</>, detail: <>pay to avoid disconnection</>, href: PAY_URL, cta: "Pay" });
+  }
+  if (daysToDue !== null && !billPaid && lastBillAmt > 0) {
+    insights.push({ id: "due", tone: daysToDue <= 5 ? "warn" : "info", icon: <Calendar className="h-3 w-3" />,
+      title: <>₹{rupees(lastBillAmt, { decimals: 0 })} {daysToDue < 0 ? <>overdue by {Math.abs(daysToDue)} d</> : <>due in {daysToDue} d</>}</>,
+      onClick: () => setPanel("bill"), cta: "View bill" });
+  }
+  if (lastBillAmt > 0 && projVsLast > 15) {
+    insights.push({ id: "trending", tone: "warn", icon: <TrendingUp className="h-3 w-3" />,
+      title: <>Usage trending {projVsLast}% above last month</>, detail: <>projected ~₹{rupees(projectedBill, { decimals: 0 })} this cycle</>,
+      onClick: () => setPanel("projection"), cta: "Breakdown" });
+  }
+  if (pfLatest !== null && pfLatest < 0.9) {
+    insights.push({ id: "pf", tone: "warn", icon: <Activity className="h-3 w-3" />,
+      title: <>Power factor {pfLatest.toFixed(2)} — penalty risk</>, href: "/grid-nodes", cta: "Details" });
+  }
+  if (demandPct !== null && demandPct >= 85) {
+    insights.push({ id: "demand", tone: demandPct >= 100 ? "critical" : "warn", icon: <AlertTriangle className="h-3 w-3" />,
+      title: <>Peak demand {demandPct}% of your {sanctioned} kW limit</>, href: "/grid-nodes", cta: "Details" });
+  }
+  if (schemeName) {
+    insights.push({ id: "scheme", tone: "good", icon: <Check className="h-3 w-3" />,
+      title: <>Eligible for {schemeName}</>, detail: <>a UPPCL bill-relief scheme</>, href: PAY_URL, cta: "Details" });
+  }
+  if (insights.length === 0) {
+    insights.push({ id: "ok", tone: "good", icon: <Check className="h-3 w-3" />,
+      title: <>Paid up and on track</>,
+      detail: <>next bill ~₹{rupees(projectedBill, { decimals: 0 })}{dueDate ? ` by ${dueDate}` : ""}</> });
   }
 
   return (
@@ -684,9 +666,9 @@ function PostpaidHome({ dashboard: data }: { dashboard: DashboardResponse }) {
                   <span className={`h-1.5 w-1.5 rounded-full ${hasDues ? "bg-secondary" : "bg-primary-fixed-dim"}`} />
                   {hasDues ? "payment due" : "paid up"}
                 </span>
-                {inv?.due_dt && (
-                  <>· due {new Date(inv.due_dt).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}</>
-                )}
+                {hasDues
+                  ? (inv?.due_dt && <>· due {new Date(inv.due_dt).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}</>)
+                  : (inv && lastBillAmt > 0 && <>· last bill ₹{rupees(lastBillAmt, { decimals: 0 })} cleared{inv.payment_dt ? ` ${formatRelative(inv.payment_dt)}` : ""}</>)}
                 <span className="ml-auto flex items-center gap-1 text-on-surface-variant/70 opacity-0 transition-opacity group-hover:opacity-100">
                   <Info className="h-3 w-3" /> click for bill
                 </span>
@@ -751,30 +733,22 @@ function PostpaidHome({ dashboard: data }: { dashboard: DashboardResponse }) {
           href="/analytics"
         />
         <Tile
-          icon={<TrendingUp className="h-3 w-3" />}
-          label="Peak Demand"
-          tag={demandPct !== null ? `${demandPct}% load` : "kW"}
-          accent={demandPct !== null && demandPct >= 85 ? "warn" : "default"}
-          value={peakKw > 0 ? <>{kwh(peakKw)} <span className="text-[14px] text-on-surface-variant">kW</span></> : "—"}
-          hint={sanctioned > 0 ? <>of {sanctioned} kW sanctioned</> : <>peak this month</>}
-          formula={<>Max power from <code>/eventsummary/consumptionAggregation</code> vs sanctioned load.</>}
-          href="/grid-nodes"
+          icon={<Wallet className="h-3 w-3" />}
+          label="Spent so far"
+          tag="this cycle"
+          value={<>₹{rupees(cycleKwh * effectiveRate, { decimals: 0 })}</>}
+          hint={<>{kwh(cycleKwh, 0)} kWh × ~₹{rupees(effectiveRate, { decimals: 1 })}/kWh</>}
+          formula={<>Running energy cost this cycle — metered kWh since the last bill × your effective ₹/kWh. Excludes fixed charges, duty &amp; FPPA. Tap for Bills.</>}
+          href="/ledger"
         />
         <Tile
-          icon={<Activity className="h-3 w-3" />}
-          label="Power Factor"
-          tag="Last Month"
-          accent={pfLatest !== null && pfLatest >= 0.95 ? "good" : pfLatest !== null && pfLatest < 0.9 ? "warn" : "default"}
-          value={pfLatest !== null ? pfLatest.toFixed(2) : "—"}
-          hint={
-            pfLatest !== null ? (
-              <span className={pfLatest >= 0.95 ? "text-primary-fixed-dim" : pfLatest < 0.9 ? "text-secondary" : "text-on-surface-variant"}>
-                {pfLatest >= 0.95 ? "high efficiency" : pfLatest < 0.9 ? "penalty risk" : "acceptable"}
-              </span>
-            ) : <span className="text-on-surface-variant">no history</span>
-          }
-          formula={<>Monthly rollup from <code>/eventsummary/search</code> · groupBy:year</>}
-          href="/grid-nodes"
+          icon={<TrendingUp className="h-3 w-3" />}
+          label="Daily spend"
+          tag="avg"
+          value={<>₹{rupees(avgDailyKwh * effectiveRate, { decimals: 0 })}<span className="ml-0.5 text-[14px] text-on-surface-variant">/day</span></>}
+          hint={<>{kwh(avgDailyKwh)} kWh/day at ~₹{rupees(effectiveRate, { decimals: 1 })}/kWh</>}
+          formula={<>Average daily electricity cost — how fast this cycle&apos;s bill is growing. Power factor &amp; peak demand live on the Meter tab.</>}
+          href="/analytics"
         />
       </div>
 
