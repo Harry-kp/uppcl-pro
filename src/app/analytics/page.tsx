@@ -81,14 +81,12 @@ export default function AnalyticsPage() {
   );
   const monthlyMax = Math.max(...monthly.map((m) => m.kwh), 1);
 
-  const pfPoints = useMemo(
-    () =>
-      monthly
-        .filter((m) => Number.isFinite(m.pf) && m.pf > 0 && m.pf <= 1.5)
-        .map((m, i) => ({ x: i, y: m.pf, label: m.month.slice(0, 7) })),
-    [monthly]
-  );
-  const avgPf = pfPoints.length ? mean(pfPoints.map((p) => p.y)) : 0;
+  // Avg PF only powers the contextual saving-tip note here; the PF chart/gauge
+  // lives on the Meter tab (power quality) to avoid duplicating the metric.
+  const avgPf = useMemo(() => {
+    const vals = monthly.filter((m) => m.pf > 0 && m.pf <= 1.5).map((m) => m.pf);
+    return vals.length ? mean(vals) : 0;
+  }, [monthly]);
 
   // Appliance disaggregation (empty until UPPCL's model has data for this meter).
   const applianceRows = applianceResp?.data ?? [];
@@ -266,8 +264,8 @@ export default function AnalyticsPage() {
         )}
       </section>
 
-      {/* BOTTOM ROW: monthly bars + PF + carbon */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+      {/* BOTTOM ROW: monthly bars + carbon */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <section className="rounded-xl bg-surface-container-low p-5 sm:p-6">
           <div className="mb-4 flex items-center justify-between">
             <div className="text-[10px] uppercase tracking-[0.24em] text-on-surface-variant">
@@ -311,61 +309,6 @@ export default function AnalyticsPage() {
           ) : (
             <div className="flex h-[180px] items-center justify-center text-[11px] text-on-surface-variant">
               no yearly rollups yet
-            </div>
-          )}
-        </section>
-
-        <section className="rounded-xl bg-surface-container-low p-5 sm:p-6">
-          <div className="mb-4 flex items-start justify-between">
-            <div>
-              <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-[0.24em] text-on-surface-variant">
-                Power factor
-                <Tooltip
-                  content={
-                    <div className="space-y-1.5">
-                      <div className="font-mono text-on-surface">Power factor (PF) — what is it?</div>
-                      <div className="text-on-surface-variant">
-                        Ratio of <span className="text-on-surface">real power</span> (kW) to
-                        <span className="text-on-surface"> apparent power</span> (kVA). 1.00 = perfectly
-                        efficient; lower = more reactive current wasted.
-                      </div>
-                      <div className="text-on-surface-variant">
-                        <span className="text-on-surface">Target ≥ 0.95.</span> Inductive loads (AC
-                        compressors, old motors) drag PF down.
-                      </div>
-                    </div>
-                  }
-                >
-                  <Info className="h-3 w-3 cursor-help text-on-surface-variant/70" />
-                </Tooltip>
-              </div>
-              <div className="mt-1 font-mono text-[11px]">
-                {avgPf > 0 ? (
-                  <span className={avgPf >= 0.95 ? "text-primary-fixed-dim" : "text-secondary"}>
-                    {avgPf.toFixed(2)} avg
-                  </span>
-                ) : (
-                  <span className="text-on-surface-variant">—</span>
-                )}
-                <span className="ml-2 text-[10px] uppercase text-on-surface-variant/80">target ≥ 0.95</span>
-              </div>
-            </div>
-          </div>
-          {pfPoints.length ? (
-            <LineChart
-              height={180}
-              format={(y) => y.toFixed(2)}
-              yMin={0.8}
-              yMax={1.02}
-              xFormat={(x) => pfPoints[Math.round(x)]?.label ?? ""}
-              series={[
-                { label: "PF", color: chart.aSoft, glow: true, points: pfPoints },
-                { label: "target", color: chart.b, dashed: true, points: pfPoints.map((p) => ({ x: p.x, y: 0.95 })) },
-              ]}
-            />
-          ) : (
-            <div className="flex h-[180px] items-center justify-center text-[11px] text-on-surface-variant">
-              need at least one complete month of rollups
             </div>
           )}
         </section>
