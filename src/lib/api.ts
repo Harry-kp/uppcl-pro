@@ -35,6 +35,18 @@ function ist(d: Date): string {
   return `${d.toISOString().split("T")[0]}T00:00:00${IST_OFFSET}`;
 }
 
+/** End-of-day IST timestamp — UPPCL's eventsummary `to` wants 23:59:59, not 00:00:00. */
+function istEnd(d: Date): string {
+  return `${d.toISOString().split("T")[0]}T23:59:59${IST_OFFSET}`;
+}
+
+/** Human date like "01 Jun 2025" — the format bill/billHistory expects for from/to. */
+function humanDate(d: Date): string {
+  return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+}
+
+const pad2 = (n: number) => String(n).padStart(2, "0");
+
 function tenantHeader(tenant: string): string {
   return JSON.stringify({ isMultiLevel: true, code: tenant });
 }
@@ -77,13 +89,23 @@ function humanizeError(status: number, raw: string): string {
 // ─── Core: POST to UPPCL via our CORS-proxy route ────────────────────────────
 // UPPCL dropped encryption — all endpoints accept plaintext JSON now.
 
-async function uppcl_post(path: string, body: Record<string, unknown>): Promise<unknown> {
+/**
+ * POST to a UPPCL API base via our CORS-proxy route.
+ * `base` selects the upstream: "uppcl" → /accounts/api, "bootstrap" → /bootstrap/api.
+ * `extraHeaders` lets callers add e.g. `subtenantcode` (needed by bill/download, insight).
+ */
+async function proxy_post(
+  base: "uppcl" | "bootstrap",
+  path: string,
+  body: Record<string, unknown>,
+  extraHeaders?: Record<string, string>
+): Promise<unknown> {
   const jwt = getJwt();
   if (!jwt) throw new ProxyError(401, "No active session — sign in first");
 
   const session = getSession()!;
 
-  const r = await fetch(`/api/uppcl/${path}`, {
+  const r = await fetch(`/api/${base}/${path}`, {
     method: "POST",
     headers: {
       "content-type": "application/json",
@@ -91,6 +113,7 @@ async function uppcl_post(path: string, body: Record<string, unknown>): Promise<
       tenantid: tenantHeader(session.tenant),
       token: jwt,
       authorization: `Bearer ${jwt}`,
+      ...extraHeaders,
     },
     body: JSON.stringify(body),
     cache: "no-store",
@@ -114,6 +137,14 @@ async function uppcl_post(path: string, body: Record<string, unknown>): Promise<
     ? (parsed as { message: string }).message
     : text.slice(0, 200);
   throw new ProxyError(r.status, msg, parsed);
+}
+
+async function uppcl_post(
+  path: string,
+  body: Record<string, unknown>,
+  extraHeaders?: Record<string, string>
+): Promise<unknown> {
+  return proxy_post("uppcl", path, body, extraHeaders);
 }
 
 // ─── Auth ─────────────────────────────────────────────────────────────────────
@@ -173,6 +204,29 @@ export async function login(username: string, password: string): Promise<void> {
 
 export async function logout(): Promise<void> {
   clearSession();
+}
+
+/**
+ * Resolve the official bill PDF download link for a monthly invoice.
+ * Requires the `subtenantcode` header (= site.tenantCode) plus billNo + date + discom.
+ * Returns a tokenized URL on UPPCL's consumer portal. See RE doc §7.
+ */
+export async function billDownloadLink(invoice: { invoice_id: string; bill_dt: string }): Promise<string> {
+  const site = await primarySite();
+  const date = (invoice.bill_dt ?? "").split("T")[0]; // YYYY-MM-DD
+  const resp = (await uppcl_post(
+    "bill/download",
+    {
+      billNo: invoice.invoice_id,
+      connectionId: site.connectionId,
+      tenantId: site.tenantId,
+      date,
+      discom: site.discom,
+    },
+    { subtenantcode: site.tenantCode }
+  )) as { data?: string };
+  if (!resp.data) throw new ProxyError(404, "Bill download link unavailable");
+  return resp.data;
 }
 
 // ─── Data fetchers (mirror the old Python proxy endpoints) ────────────────────
@@ -264,14 +318,61 @@ async function fetcher<T>(key: string): Promise<T> {
     return uppcl_post("payment/v2/search", { skip: 0, limit, tenantId: tid, consumer_id: cid }) as Promise<T>;
   }
 
+  if (key.startsWith("/consumption/stats")) {
+    // Avg / max consumption + peak power for a month (eventsummary/consumptionAggregation).
+    const month = params.get("month") ?? pad2(today.getMonth() + 1);
+    const year = params.get("year") ?? String(today.getFullYear());
+    return uppcl_post("eventsummary/consumptionAggregation", { deviceId: did, tenantId: tid, groupBy: "month", uom: "KWH", month, year }) as Promise<T>;
+  }
+
   if (key.startsWith("/consumption")) {
     const days = parseInt(params.get("days") ?? "30");
-    return uppcl_post("eventsummary/aggregate", { deviceId: did, tenantId: tid, from: ist(daysAgo(days)), to: ist(today) }) as Promise<T>;
+    const uom = params.get("uom") ?? "KWH";
+    return uppcl_post("eventsummary/aggregate", { deviceId: did, tenantId: tid, from: ist(daysAgo(days)), to: istEnd(today), uom }) as Promise<T>;
   }
 
   if (key.startsWith("/history/yearly")) {
     const year = parseInt(params.get("year") ?? String(today.getFullYear()));
-    return uppcl_post("eventsummary/search", { deviceId: did, tenantId: tid, groupBy: "year", year }) as Promise<T>;
+    return uppcl_post("eventsummary/search", { deviceId: did, tenantId: tid, groupBy: "year", year: String(year), uom: "KWH" }) as Promise<T>;
+  }
+
+  // ── Postpaid bills (monthly invoices) ──────────────────────────────
+  if (key.startsWith("/bills/latest")) {
+    // Single latest monthly invoice (fetchLatestBill:true → object, not array).
+    const from = humanDate(daysAgo(13 * 31));
+    const to = humanDate(today);
+    return uppcl_post("bill/billHistory", { type: "monthlyBill", from, to, tenantId: tid, fetchLatestBill: true, consumerId: cid }) as Promise<T>;
+  }
+
+  if (key.startsWith("/bills/invoices")) {
+    // Full monthly invoice history (no fetchLatestBill → array). See RE doc §7.
+    const monthsBack = parseInt(params.get("months") ?? "18");
+    const from = humanDate(daysAgo(monthsBack * 31));
+    const to = humanDate(today);
+    return uppcl_post("bill/billHistory", { type: "monthlyBill", from, to, tenantId: tid, consumerId: cid }) as Promise<T>;
+  }
+
+  // ── Power-quality / usage stats, alarms, alerts, native tickets ────
+  if (key.startsWith("/alarms")) {
+    return uppcl_post("alarms/search", { connectionId: cid, tenantId: tid, startDate: daysAgo(30).toISOString(), endDate: today.toISOString() }) as Promise<T>;
+  }
+
+  if (key.startsWith("/alerts")) {
+    return uppcl_post("alert/search", { userId: String(site.userId ?? ""), startDate: daysAgo(30).toISOString(), endDate: today.toISOString() }) as Promise<T>;
+  }
+
+  if (key.startsWith("/tickets")) {
+    const status = params.get("status") ?? "open";
+    return uppcl_post("ticket/search", { status, userId: String(site.userId ?? "") }) as Promise<T>;
+  }
+
+  if (key.startsWith("/tips")) {
+    const appliance = params.get("appliance") ?? "others";
+    return uppcl_post("savingTip/getOne", { appliance }) as Promise<T>;
+  }
+
+  if (key === "/tenant-preferences") {
+    return proxy_post("bootstrap", "tenant/searchPreference", { tenantId: tid }) as Promise<T>;
   }
 
   if (key.startsWith("/dadata")) {
@@ -464,12 +565,14 @@ export interface Site {
   deviceId: string;
   tenantId: string;
   tenantCode: string;
+  discom: string;
+  userId: string;
   name: string;
   customerName: string;
   address: string;
   pincode: string;
   sanctionedLoad: string;
-  connectionType: string;
+  connectionType: "prepaid" | "postpaid" | string;
   meterInstallationNumber: string;
   meterPhase: string;
   meterType: string;
@@ -629,6 +732,60 @@ export const useYearlyHistory = (year?: number) =>
   useSWR<UpstreamEnvelope<ConsumptionRow[]>>(
     year ? `/history/yearly?year=${year}` : "/history/yearly", fetcher, swrOpts
   );
+
+/* ── Postpaid + cross-meter feature hooks (reverse-engineered, see docs) ── */
+
+export interface MonthlyInvoice {
+  invoice_id: string;
+  bill_from_dt: string;
+  bill_amt: string;      // negative = credit / advance balance
+  due_dt: string;
+  bill_dt: string;
+  payment_dt: string;
+  payment_amt: string;
+}
+
+export interface UsageStats {
+  averageConsumption: string;
+  maximumConsumption: string;
+  maximumPower: string;
+}
+
+export interface MeterAlarm { [k: string]: unknown }
+export interface Notification { [k: string]: unknown }
+export interface Ticket { [k: string]: unknown }
+export interface SavingTip { _id: string; tipEnglish?: string; tipHindi?: string; appliance?: string }
+
+/** Latest monthly invoice (postpaid). Single object, not an array. */
+export const useLatestInvoice = () =>
+  useSWR<UpstreamEnvelope<MonthlyInvoice>>("/bills/latest", fetcher, swrOpts);
+
+/** Full monthly invoice history (postpaid). */
+export const useInvoices = (months = 18) =>
+  useSWR<UpstreamEnvelope<MonthlyInvoice[]>>(`/bills/invoices?months=${months}`, fetcher, swrOpts);
+
+/** Avg/max consumption + peak power for a month. */
+export const useUsageStats = (month?: string, year?: string) =>
+  useSWR<UpstreamEnvelope<UsageStats>>(
+    `/consumption/stats${month && year ? `?month=${month}&year=${year}` : ""}`, fetcher, swrOpts
+  );
+
+export const useMeterAlarms = () =>
+  useSWR<UpstreamEnvelope<MeterAlarm[]>>("/alarms", fetcher, swrOpts);
+
+export const useNotifications = () =>
+  useSWR<UpstreamEnvelope<Notification[]>>("/alerts", fetcher, swrOpts);
+
+export const useTickets = (status: "open" | "closed" | "all" = "open") =>
+  useSWR<UpstreamEnvelope<Ticket[]>>(`/tickets?status=${status}`, fetcher, swrOpts);
+
+/** Localized energy-saving tips for an appliance (fridge|geyser|washing_machine|nightbaseload|others). */
+export const useSavingTip = (appliance: string) =>
+  useSWR<UpstreamEnvelope<SavingTip[]>>(appliance ? `/tips?appliance=${appliance}` : null, fetcher, swrOpts);
+
+/** UPPCL's feature-flag + discom config tree (bootstrap API). */
+export const useTenantPreferences = () =>
+  useSWR<UpstreamEnvelope<Record<string, unknown>>>("/tenant-preferences", fetcher, swrOpts);
 
 /* ── Complaint hooks (same signatures, different backend route) ── */
 
