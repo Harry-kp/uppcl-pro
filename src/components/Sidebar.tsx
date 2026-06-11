@@ -2,21 +2,18 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Activity, ScrollText, Radio, Settings, Wallet, MessageSquare, Sparkles, LifeBuoy, X } from "lucide-react";
+import { Home, Activity, ScrollText, Radio, Settings, LifeBuoy, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { useHealth } from "@/lib/api";
 
 const nav = [
-  { href: "/",            label: "Home",       icon: Home,        hint: "Balance · runway · anomalies",          shortcut: "g h" },
-  { href: "/analytics",   label: "Usage",      icon: Activity,    hint: "Consumption heatmap + patterns",        shortcut: "g u" },
-  { href: "/insights",    label: "Insights",   icon: Sparkles,    hint: "Power quality · tariff · carbon",       shortcut: "g i" },
-  { href: "/ledger",      label: "Bills",      icon: ScrollText,  hint: "Cost breakdown + unified timeline",     shortcut: "g b" },
-  { href: "/recharges",   label: "Recharges",  icon: Wallet,      hint: "Sweet-spot recommender + history",      shortcut: "g r" },
-  { href: "/grid-nodes",  label: "Meter",      icon: Radio,         hint: "Health, data integrity, peak load",     shortcut: "g m" },
-  { href: "/complaints",  label: "Complaints", icon: MessageSquare, hint: "1912 complaint history & status",       shortcut: "g c" },
-  { href: "/support",     label: "Support",    icon: LifeBuoy,      hint: "Contacts, outage, meter alerts & tickets", shortcut: "g p" },
-  { href: "/settings",    label: "Settings",   icon: Settings,      hint: "Session, preferences, external links",  shortcut: "g s" },
+  { href: "/",            label: "Home",     icon: Home,     hint: "Overview · balance/bill · what to do next", shortcut: "g h" },
+  { href: "/analytics",   label: "Usage",    icon: Activity, hint: "Consumption, patterns, appliances, carbon", shortcut: "g u" },
+  { href: "/ledger",      label: "Bills",    icon: ScrollText, hint: "Bills, tariff, payments, recharge planner", shortcut: "g b" },
+  { href: "/grid-nodes",  label: "Meter",    icon: Radio,    hint: "Power quality, load, integrity",            shortcut: "g m" },
+  { href: "/support",     label: "Support",  icon: LifeBuoy, hint: "Contacts, outage, alerts, 1912 complaints", shortcut: "g p" },
+  { href: "/settings",    label: "Settings", icon: Settings, hint: "Session, preferences, external links",      shortcut: "g s" },
 ] as const;
 
 export function Sidebar({

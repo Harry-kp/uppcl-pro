@@ -54,15 +54,12 @@ function ShellInner({ children }: { children: React.ReactNode }) {
     () => [
       { keys: "g h", action: () => { router.push("/"); push("→ Home", { kind: "info" }); } },
       { keys: "g u", action: () => { router.push("/analytics"); push("→ Usage", { kind: "info" }); } },
-      { keys: "g i", action: () => { router.push("/insights"); push("→ Insights", { kind: "info" }); } },
       { keys: "g b", action: () => { router.push("/ledger"); push("→ Bills", { kind: "info" }); } },
-      { keys: "g r", action: () => { router.push("/recharges"); push("→ Recharges", { kind: "info" }); } },
       { keys: "g m", action: () => { router.push("/grid-nodes"); push("→ Meter", { kind: "info" }); } },
-      { keys: "g c", action: () => { router.push("/complaints"); push("→ Complaints", { kind: "info" }); } },
       { keys: "g p", action: () => { router.push("/support"); push("→ Support", { kind: "info" }); } },
       { keys: "g s", action: () => { router.push("/settings"); push("→ Settings", { kind: "info" }); } },
       { keys: "t",   action: () => { toggle(); push(`Theme: ${theme === "dark" ? "light" : "dark"}`, { kind: "info" }); } },
-      { keys: "?",   action: () => push("⌘K palette · g + [h/u/i/b/r/m/c/p/s] navigate · t toggle theme", { kind: "info", ttl: 5000 }) },
+      { keys: "?",   action: () => push("⌘K palette · g + [h/u/b/m/p/s] navigate · t toggle theme", { kind: "info", ttl: 5000 }) },
     ],
     [router, push, toggle, theme]
   );
