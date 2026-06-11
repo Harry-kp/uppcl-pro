@@ -1,31 +1,50 @@
 "use client";
 
-import { useMemo } from "react";
-import { useBills, useYearlyHistory } from "@/lib/api";
+import { useMemo, useState } from "react";
+import {
+  useConsumption,
+  useYearlyHistory,
+  useApplianceData,
+  useSavingTip,
+} from "@/lib/api";
 import { CalendarHeatmap, CalendarCell } from "@/components/viz/CalendarHeatmap";
 import { DayOfWeekChart } from "@/components/viz/DayOfWeekChart";
 import { BaselineActive } from "@/components/viz/BaselineActive";
 import { LineChart } from "@/components/viz/LineChart";
 import { Sparkline } from "@/components/viz/Sparkline";
+import { CarbonCounter } from "@/components/viz/CarbonCounter";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { mean, stddev, toNum } from "@/lib/stats";
-import { kwh } from "@/lib/utils";
+import { kwh, cn } from "@/lib/utils";
 import { chart } from "@/lib/chartColors";
-import { Info, TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { Info, TrendingUp, TrendingDown, Minus, PlugZap, Lightbulb, Leaf } from "lucide-react";
+
+const APPLIANCES = [
+  { code: "fridge", label: "Fridge" },
+  { code: "geyser", label: "Geyser" },
+  { code: "washing_machine", label: "Washing m/c" },
+  { code: "nightbaseload", label: "Night load" },
+  { code: "others", label: "Others" },
+] as const;
+const APPLIANCE_KEYS = ["ac", "fridge", "geyser", "washing_machine", "nightbaseload", "others"] as const;
 
 export default function AnalyticsPage() {
-  const { data: bills } = useBills(365);
+  // Daily kWh from eventsummary — works for BOTH prepaid and postpaid meters.
+  const { data: daily } = useConsumption(365);
   const { data: yearly } = useYearlyHistory();
+  const { data: applianceResp } = useApplianceData();
+  const [tipAppliance, setTipAppliance] = useState<string>("fridge");
+  const { data: tipsResp } = useSavingTip(tipAppliance);
 
-  // One cell per day of daily data
+  // One cell per day, from eventsummary energyImportKWH.
   const cells: CalendarCell[] = useMemo(
     () =>
-      (bills?.data ?? []).flatMap((b) => {
-        const iso = (b.dailyBill.usage_date ?? b.billDate).slice(0, 10);
-        const v = toNum(b.dailyBill.units_billed_daily);
+      (daily?.data ?? []).flatMap((r) => {
+        const iso = String(r.energyImportKWH?.measureTime ?? "").slice(0, 10);
+        const v = toNum(r.energyImportKWH?.value);
         return iso && Number.isFinite(v) ? [{ date: iso, value: v }] : [];
       }),
-    [bills]
+    [daily]
   );
 
   const sortedCells = useMemo(
@@ -38,22 +57,17 @@ export default function AnalyticsPage() {
   const peak = values.length ? Math.max(...values) : 0;
   const sd = stddev(values);
 
-  // Last N days aggregates
   const last30 = sortedCells.slice(-30);
   const last7 = sortedCells.slice(-7);
   const total30 = last30.reduce((a, c) => a + c.value, 0);
   const avg30 = last30.length ? total30 / last30.length : 0;
   const avgPrev7 =
-    sortedCells.length >= 14
-      ? mean(sortedCells.slice(-14, -7).map((c) => c.value))
-      : 0;
+    sortedCells.length >= 14 ? mean(sortedCells.slice(-14, -7).map((c) => c.value)) : 0;
   const last7Avg = mean(last7.map((c) => c.value));
   const wowDelta = avgPrev7 > 0 ? ((last7Avg - avgPrev7) / avgPrev7) * 100 : 0;
 
-  // Daily series for trend line
   const dailyPoints = sortedCells.map((c, i) => ({ x: i, y: c.value, label: c.date }));
 
-  // Monthly rollups (yearly history)
   const monthly = useMemo(
     () =>
       (yearly?.data ?? [])
@@ -75,6 +89,15 @@ export default function AnalyticsPage() {
     [monthly]
   );
   const avgPf = pfPoints.length ? mean(pfPoints.map((p) => p.y)) : 0;
+
+  // Appliance disaggregation (empty until UPPCL's model has data for this meter).
+  const applianceRows = applianceResp?.data ?? [];
+  const applianceTotals = APPLIANCE_KEYS
+    .map((k) => ({ key: k, value: applianceRows.reduce((s, row) => s + toNum((row as Record<string, unknown>)[k]), 0) }))
+    .filter((a) => a.value > 0)
+    .sort((a, b) => b.value - a.value);
+  const applianceTotal = applianceTotals.reduce((s, a) => s + a.value, 0);
+  const tips = (tipsResp?.data ?? []).filter((t) => t.tipEnglish).slice(0, 3);
 
   return (
     <div className="mx-auto flex max-w-[1440px] flex-col gap-4">
@@ -100,9 +123,7 @@ export default function AnalyticsPage() {
                 <Tooltip
                   content={
                     <div>
-                      <div className="font-mono text-on-surface">
-                        week-over-week on last 7 days
-                      </div>
+                      <div className="font-mono text-on-surface">week-over-week on last 7 days</div>
                       <div className="text-on-surface-variant">
                         {avgPrev7 > 0
                           ? `prev 7-day avg: ${avgPrev7.toFixed(2)} kWh · current 7-day avg: ${last7Avg.toFixed(2)} kWh`
@@ -116,7 +137,6 @@ export default function AnalyticsPage() {
               </div>
             </div>
 
-            {/* Inline key stats */}
             <div className="hidden gap-6 md:flex">
               <Stat label="Avg"   value={`${kwh(avg)}`} sub="kWh/day" />
               <Stat label="σ"     value={`${kwh(sd)}`} sub="kWh/day" />
@@ -189,18 +209,15 @@ export default function AnalyticsPage() {
               <div className="text-[10px] uppercase tracking-[0.24em] text-on-surface-variant">
                 Day of week
               </div>
-              <h3 className="mt-1 font-mono text-[14px] text-on-surface">
-                When do you use more?
-              </h3>
+              <h3 className="mt-1 font-mono text-[14px] text-on-surface">When do you use more?</h3>
             </div>
             <Tooltip
               content={
                 <div className="space-y-1">
-                  <div className="font-mono text-on-surface">Why not Day × Hour?</div>
+                  <div className="font-mono text-on-surface">Daily granularity</div>
                   <div className="text-on-surface-variant">
-                    Upstream returns daily totals only (measureTime always 00:00).
-                    Hour-slab fields (tod_1..tod_10) are zero for flat-tariff accounts.
-                    This Mon-Sun breakdown is the tightest signal available.
+                    Upstream returns daily kWh totals (measureTime always 00:00). This Mon-Sun
+                    breakdown is the tightest signal available.
                   </div>
                 </div>
               }
@@ -244,21 +261,19 @@ export default function AnalyticsPage() {
           />
         ) : (
           <div className="py-16 text-center text-[11px] text-on-surface-variant">
-            need at least 2 days of bills to draw a trend line
+            need at least 2 days of data to draw a trend line
           </div>
         )}
       </section>
 
-      {/* BOTTOM ROW: monthly bars + PF + ToD */}
+      {/* BOTTOM ROW: monthly bars + PF + carbon */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <section className="rounded-xl bg-surface-container-low p-5 sm:p-6 lg:col-span-1">
+        <section className="rounded-xl bg-surface-container-low p-5 sm:p-6">
           <div className="mb-4 flex items-center justify-between">
             <div className="text-[10px] uppercase tracking-[0.24em] text-on-surface-variant">
               Annual profile
             </div>
-            <div className="font-mono text-[10px] text-on-surface-variant/70">
-              monthly · groupBy:year
-            </div>
+            <div className="font-mono text-[10px] text-on-surface-variant/70">monthly · groupBy:year</div>
           </div>
           {monthly.length ? (
             <div className="flex gap-1.5" style={{ height: 180 }}>
@@ -300,7 +315,7 @@ export default function AnalyticsPage() {
           )}
         </section>
 
-        <section className="rounded-xl bg-surface-container-low p-5 sm:p-6 lg:col-span-1">
+        <section className="rounded-xl bg-surface-container-low p-5 sm:p-6">
           <div className="mb-4 flex items-start justify-between">
             <div>
               <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-[0.24em] text-on-surface-variant">
@@ -310,18 +325,13 @@ export default function AnalyticsPage() {
                     <div className="space-y-1.5">
                       <div className="font-mono text-on-surface">Power factor (PF) — what is it?</div>
                       <div className="text-on-surface-variant">
-                        Ratio of <span className="text-on-surface">real power</span> (kW, does useful work)
-                        to <span className="text-on-surface">apparent power</span> (kVA, what the grid delivers).
-                        1.00 = perfectly efficient; lower = more of the current is &quot;reactive&quot; and wasted.
+                        Ratio of <span className="text-on-surface">real power</span> (kW) to
+                        <span className="text-on-surface"> apparent power</span> (kVA). 1.00 = perfectly
+                        efficient; lower = more reactive current wasted.
                       </div>
                       <div className="text-on-surface-variant">
-                        <span className="text-on-surface">Target ≥ 0.95</span> — DISCOMs penalise below this on
-                        commercial tariffs. For residential it&apos;s an appliance-health signal: inductive loads
-                        (AC compressors, old motors) drag PF down.
-                      </div>
-                      <div className="text-on-surface-variant">
-                        <span className="text-secondary">Falling PF</span> → check for an aging AC, motor, or
-                        unbalanced neutral before your next bill cycle.
+                        <span className="text-on-surface">Target ≥ 0.95.</span> Inductive loads (AC
+                        compressors, old motors) drag PF down.
                       </div>
                     </div>
                   }
@@ -360,7 +370,88 @@ export default function AnalyticsPage() {
           )}
         </section>
 
-        <TodSlabs bills={bills?.data ?? []} />
+        <section className="rounded-xl bg-surface-container-low p-5 sm:p-6">
+          <div className="mb-4 flex items-center gap-1.5 text-[10px] uppercase tracking-[0.24em] text-on-surface-variant">
+            <Leaf className="h-3 w-3" /> Carbon footprint
+          </div>
+          <CarbonCounter periodKwh={total30} periodLabel="last 30 days" />
+        </section>
+      </div>
+
+      {/* APPLIANCE + TIPS ROW */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <section className="rounded-xl bg-surface-container-low p-5 sm:p-6">
+          <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-[0.24em] text-on-surface-variant">
+            <PlugZap className="h-3 w-3" /> Where your power goes
+          </div>
+          {applianceTotal > 0 ? (
+            <div className="mt-5 flex flex-col gap-3">
+              {applianceTotals.map((a) => {
+                const pct = Math.round((a.value / applianceTotal) * 100);
+                const label = APPLIANCES.find((x) => x.code === a.key)?.label ?? a.key;
+                return (
+                  <div key={a.key}>
+                    <div className="mb-1 flex items-center justify-between text-[12px]">
+                      <span className="text-on-surface">{label}</span>
+                      <span className="font-mono text-on-surface-variant">{kwh(a.value, 0)} kWh · {pct}%</span>
+                    </div>
+                    <div className="h-2 overflow-hidden rounded-full bg-surface-container-high">
+                      <div className="h-full rounded-full bg-primary-container" style={{ width: `${pct}%` }} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="mt-4 flex items-start gap-3 rounded-lg bg-surface-container p-4">
+              <span className="h-1.5 w-1.5 shrink-0 translate-y-2 rounded-full bg-primary-fixed-dim glow-primary" />
+              <p className="text-[13px] leading-relaxed text-on-surface-variant">
+                <span className="text-on-surface">Learning your usage.</span> UPPCL&apos;s appliance model needs a few
+                more weeks of metered data before it can split your consumption by appliance. This panel lights up
+                automatically once it&apos;s ready.
+              </p>
+            </div>
+          )}
+        </section>
+
+        <section className="rounded-xl bg-surface-container-low p-5 sm:p-6">
+          <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-[0.24em] text-on-surface-variant">
+            <Lightbulb className="h-3 w-3" /> Saving tips
+          </div>
+          {avgPf > 0 && avgPf < 0.9 && (
+            <p className="mt-3 text-[12px] text-secondary">
+              Your power factor is low — lightly-loaded motors and idle inductive appliances are common causes.
+            </p>
+          )}
+          <div className="mt-4 flex flex-wrap gap-2">
+            {APPLIANCES.map((a) => (
+              <button
+                key={a.code}
+                onClick={() => setTipAppliance(a.code)}
+                className={cn(
+                  "rounded-full px-3 py-1.5 text-[11px] font-medium transition",
+                  tipAppliance === a.code
+                    ? "bg-primary-container text-on-primary-fixed"
+                    : "bg-surface-container-high text-on-surface-variant hover:bg-surface-bright hover:text-on-surface"
+                )}
+              >
+                {a.label}
+              </button>
+            ))}
+          </div>
+          <div className="mt-4 flex flex-col gap-2">
+            {tips.length > 0 ? (
+              tips.map((t) => (
+                <div key={t._id} className="flex items-start gap-2.5 rounded-lg bg-surface-container p-3">
+                  <Lightbulb className="mt-0.5 h-3.5 w-3.5 shrink-0 text-secondary" />
+                  <p className="text-[13px] leading-relaxed text-on-surface">{t.tipEnglish}</p>
+                </div>
+              ))
+            ) : (
+              <div className="text-[12px] text-on-surface-variant">No tips available right now.</div>
+            )}
+          </div>
+        </section>
       </div>
     </div>
   );
@@ -387,67 +478,5 @@ function DeltaPill({ value }: { value: number }) {
       {up ? <TrendingUp className="h-2.5 w-2.5" /> : down ? <TrendingDown className="h-2.5 w-2.5" /> : <Minus className="h-2.5 w-2.5" />}
       {value >= 0 ? "+" : ""}{value.toFixed(0)}% w/w
     </span>
-  );
-}
-
-function TodSlabs({ bills }: { bills: { dailyBill: Record<string, string | null | undefined> }[] }) {
-  if (!bills.length) {
-    return (
-      <section className="rounded-xl bg-surface-container-low p-6">
-        <div className="text-[10px] uppercase tracking-[0.24em] text-on-surface-variant">
-          Time-of-day slabs
-        </div>
-        <div className="mt-4 text-[11px] text-on-surface-variant">no bills yet.</div>
-      </section>
-    );
-  }
-  const latest = bills[0].dailyBill;
-  const slabs = Array.from({ length: 10 }, (_, i) => ({
-    label: `T${i + 1}`,
-    amount: parseFloat((latest[`tod_${i + 1}_ec_total`] as string) || "0"),
-  })).filter((s) => s.amount > 0);
-  const total = slabs.reduce((a, s) => a + s.amount, 0);
-
-  return (
-    <section className="rounded-xl bg-surface-container-low p-6">
-      <div className="mb-3 flex items-center justify-between">
-        <div className="text-[10px] uppercase tracking-[0.24em] text-on-surface-variant">
-          Time-of-day slabs
-        </div>
-        {total === 0 && (
-          <span className="rounded-full bg-surface-container-high px-2 py-0.5 font-mono text-[9px] uppercase tracking-[0.18em] text-on-surface-variant">
-            flat tariff
-          </span>
-        )}
-      </div>
-      {total === 0 ? (
-        <div className="mt-2 space-y-2 text-[11px] text-on-surface-variant">
-          <p>
-            All <span className="font-mono text-on-surface">tod_1..tod_10</span> fields are zero on your latest bill.
-            You&apos;re on a flat (non-TOD) tariff — no time-of-day splitting to report.
-          </p>
-          <p className="text-on-surface-variant/70">
-            If your tariff changes, this panel will populate automatically.
-          </p>
-        </div>
-      ) : (
-        <div className="space-y-2">
-          {slabs.map((s) => {
-            const pct = (s.amount / total) * 100;
-            return (
-              <div key={s.label} className="flex items-center gap-3">
-                <div className="w-8 font-mono text-[11px] text-on-surface-variant">{s.label}</div>
-                <div className="flex-1 overflow-hidden rounded-sm bg-surface-container">
-                  <div className="h-3 bg-primary-container" style={{ width: `${pct}%` }} />
-                </div>
-                <div className="w-12 text-right font-mono text-[11px] text-on-surface">
-                  {pct.toFixed(1)}%
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </section>
   );
 }

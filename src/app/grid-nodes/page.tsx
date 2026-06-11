@@ -9,14 +9,16 @@ import {
   useBalance,
   useOutstanding,
   usePayments,
+  useUsageStats,
 } from "@/lib/api";
 import { Donut } from "@/components/viz/Donut";
 import { CalendarHeatmap, CalendarCell } from "@/components/viz/CalendarHeatmap";
 import { LineChart } from "@/components/viz/LineChart";
-import { Tooltip } from "@/components/ui/Tooltip";
+import { RadialGauge, type GaugeAccent } from "@/components/viz/RadialGauge";
 import { mean, toNum } from "@/lib/stats";
 import { kwh } from "@/lib/utils";
 import { chart } from "@/lib/chartColors";
+import { Activity, Gauge } from "lucide-react";
 
 export default function GridNodesPage() {
   const { data: bills } = useBills(365);
@@ -26,9 +28,8 @@ export default function GridNodesPage() {
   const { data: balanceResp } = useBalance();
   const { data: outstandingResp } = useOutstanding();
   const { data: paymentsResp } = usePayments(5);
+  const { data: statsResp } = useUsageStats();
 
-  // MSI: prefer outstandingBalance (reliably returns it), fall back to latest
-  // payment record's msi, then whatever prepaidBalance might have given us.
   const msiNow =
     outstandingResp?.data?.msi ||
     paymentsResp?.data?.[0]?.msi ||
@@ -36,6 +37,8 @@ export default function GridNodesPage() {
     "—";
 
   const site = sitesResp?.data?.[0];
+  const isPostpaid = site?.connectionType === "postpaid";
+
   const billsAsc = useMemo(
     () =>
       [...(bills?.data ?? [])].sort(
@@ -44,7 +47,7 @@ export default function GridNodesPage() {
     [bills]
   );
 
-  // Reading-type distribution
+  // Reading-type distribution (prepaid daily bills only)
   const reading = useMemo(() => {
     const counts: Record<string, number> = {};
     for (const b of billsAsc) {
@@ -56,7 +59,6 @@ export default function GridNodesPage() {
   const totalReads = Object.values(reading).reduce((a, b) => a + b, 0);
   const actualPct = totalReads > 0 ? ((reading["Actual"] ?? 0) / totalReads) * 100 : 0;
 
-  // Integrity calendar — mark days with a bill row
   const cells: CalendarCell[] = useMemo(
     () =>
       billsAsc.flatMap((b) => {
@@ -65,15 +67,13 @@ export default function GridNodesPage() {
       }),
     [billsAsc]
   );
-
-  // Days-covered stat for integrity section
   const daysCovered = useMemo(() => {
     // eslint-disable-next-line react-hooks/purity -- Date.now() inside useMemo is intentional; value captured once per recompute
     const now = Date.now();
     return Math.round((now - new Date(cells[0]?.date ?? now).getTime()) / 86_400_000) || 1;
   }, [cells]);
 
-  // Stability matrix — peak power (kW) from consumption series + power factor from yearly
+  // Peak power (kW) from consumption series + power factor from yearly (both meter types).
   const consAsc = useMemo(
     () =>
       [...(cons?.data ?? [])].sort((a, b) =>
@@ -82,11 +82,7 @@ export default function GridNodesPage() {
     [cons]
   );
   const powerSeries = consAsc
-    .map((r, i) => ({
-      x: i,
-      y: toNum(r.power.value),
-      label: String(r.power.measureTime).slice(0, 10),
-    }))
+    .map((r, i) => ({ x: i, y: toNum(r.power.value), label: String(r.power.measureTime).slice(0, 10) }))
     .filter((p) => Number.isFinite(p.y));
 
   const pfSeries = useMemo(() => {
@@ -100,25 +96,41 @@ export default function GridNodesPage() {
     return rows.map((r, i) => ({ x: i, y: r.pf, label: r.month.slice(0, 7) }));
   }, [yearly]);
 
-  // Peak kW vs sanctioned load
-  const peakKw = powerSeries.length ? Math.max(...powerSeries.map((p) => p.y)) : 0;
+  // ── Power-quality summary ─────────────────────────────────────────
+  const pfLatest = pfSeries.length ? pfSeries[pfSeries.length - 1].y : null;
+  const pfAccent: GaugeAccent = pfLatest === null ? "default" : pfLatest >= 0.95 ? "good" : pfLatest >= 0.9 ? "default" : "warn";
+  const pfAdvice =
+    pfLatest === null ? "No power-factor history yet."
+    : pfLatest >= 0.95 ? "Excellent — no surcharge, and you may qualify for a PF incentive."
+    : pfLatest >= 0.9 ? "Healthy. Stay above 0.90 to avoid a power-factor surcharge."
+    : "Below 0.90 — UPPCL levies a PF surcharge. Check for lightly-loaded motors or idle inductive loads.";
+
+  const peakFromStats = toNum(statsResp?.data?.maximumPower);
+  const peakKw = peakFromStats || (powerSeries.length ? Math.max(...powerSeries.map((p) => p.y)) : 0);
   const avgKw = mean(powerSeries.map((p) => p.y));
   const sanctioned = toNum(site?.sanctionedLoad);
   const loadFactor = sanctioned > 0 ? peakKw / sanctioned : 0;
+  const demandPct = sanctioned > 0 && peakKw > 0 ? Math.round((peakKw / sanctioned) * 100) : null;
+  const demandAccent: GaugeAccent =
+    demandPct === null ? "default" : demandPct >= 100 ? "critical" : demandPct >= 85 ? "warn" : "default";
+  const demandAdvice =
+    demandPct === null ? "No demand data yet."
+    : demandPct >= 100 ? "Exceeding sanctioned load — overload trips and penalties likely. Apply for load enhancement."
+    : demandPct >= 85 ? "Near your sanctioned load. Frequent peaks risk MD penalties; consider load enhancement."
+    : demandPct >= 70 ? "Approaching sanctioned load — avoid running heavy appliances simultaneously."
+    : "Comfortable headroom under your sanctioned load.";
 
   return (
     <div className="mx-auto flex max-w-[1440px] flex-col gap-4">
       <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <div className="text-[10px] uppercase tracking-[0.24em] text-on-surface-variant">
-            Meter health
-          </div>
+          <div className="text-[10px] uppercase tracking-[0.24em] text-on-surface-variant">Meter health</div>
           <h1 className="mt-1 font-mono text-[28px] font-light tracking-tight text-on-surface sm:text-[32px]">
             Is your meter behaving?
           </h1>
           <p className="mt-1 max-w-[640px] text-[13px] text-on-surface-variant sm:text-[12px]">
-            Reading reliability (Actual vs Estimated), data-integrity calendar, peak-vs-sanctioned
-            load, and power-quality proxies for your meter.
+            Power quality (factor + peak demand), load headroom, and{isPostpaid ? "" : " reading reliability and"} data
+            integrity for your meter.
           </p>
         </div>
         <div className="text-left font-mono text-[11px] text-on-surface-variant sm:text-right">
@@ -127,121 +139,112 @@ export default function GridNodesPage() {
         </div>
       </header>
 
-      {/* Row 1: reliability donut + peak-vs-sanctioned gauge */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_1.4fr]">
-        <section className="rounded-xl bg-surface-container-low p-5 sm:p-6">
-          <div className="text-[10px] uppercase tracking-[0.24em] text-on-surface-variant">
-            Data reliability
-          </div>
-          <div className="mt-4 flex flex-col items-center gap-4 sm:flex-row sm:items-center sm:gap-6">
-            <Donut
-              size={180}
-              stroke={12}
-              centerValue={<>{actualPct.toFixed(0)}%</>}
-              centerLabel="actual"
-              segments={Object.entries(reading).map(([k, v], i) => ({
-                label: k,
-                value: v,
-                color: k === "Actual" ? chart.a : i === 1 ? chart.aSoft : chart.b,
-              }))}
-            />
-            <div className="flex-1 space-y-2 text-[11px]">
-              {Object.entries(reading).map(([k, v], i) => (
-                <div key={k} className="flex items-center gap-2">
-                  <span
-                    className="h-2 w-2 rounded-sm"
-                    style={{ background: k === "Actual" ? chart.a : i === 1 ? chart.aSoft : chart.b }}
-                  />
-                  <span className="text-on-surface-variant">{k}</span>
-                  <span className="ml-auto font-mono text-on-surface">{v}</span>
-                  <span className="w-10 text-right font-mono text-on-surface-variant">
-                    {((v / totalReads) * 100).toFixed(0)}%
-                  </span>
-                </div>
-              ))}
-              <div className="pt-2 text-[10px] text-on-surface-variant/70">
-                Higher &quot;Actual&quot; share = fewer estimated bills = more trustworthy data.
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section className="rounded-xl bg-surface-container-low p-5 sm:p-6">
-          <div className="mb-1 flex items-start justify-between">
-            <div>
-              <div className="text-[10px] uppercase tracking-[0.24em] text-on-surface-variant">
-                Peak load vs sanctioned
-              </div>
-              <div className="mt-2 font-mono text-[26px] font-light text-on-surface">
-                {peakKw.toFixed(2)} <span className="text-[14px] text-on-surface-variant">kW peak</span>
-              </div>
-            </div>
-            {loadFactor > 0 && (
-              <Tooltip
-                content={
-                  <div>
-                    <div className="font-mono text-on-surface">peak / sanctioned = {(loadFactor * 100).toFixed(1)}%</div>
-                    <div className="text-on-surface-variant">
-                      {loadFactor > 0.9 ? "⚠ near limit — breaching risks disconnection" :
-                       loadFactor > 0.7 ? "headroom shrinking" :
-                       "healthy headroom"}
-                    </div>
-                  </div>
-                }
-              >
-                <span
-                  className={
-                    "cursor-help rounded-sm px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] " +
-                    (loadFactor > 0.9
-                      ? "bg-secondary-container/30 text-secondary"
-                      : loadFactor > 0.7
-                      ? "bg-surface-container-high text-on-surface-variant"
-                      : "bg-surface-container-high text-primary-fixed-dim")
-                  }
-                >
-                  {(loadFactor * 100).toFixed(0)}% of limit
-                </span>
-              </Tooltip>
-            )}
-          </div>
-          <div className="mt-4">
-            <GaugeBar value={peakKw} sanctioned={sanctioned} />
-          </div>
-          <div className="mt-4 grid grid-cols-1 gap-3 text-[11px] text-on-surface-variant sm:grid-cols-3 sm:gap-4">
-            <MeterStat k="Peak"         v={`${peakKw.toFixed(2)} kW`} />
-            <MeterStat k="Avg"          v={`${avgKw.toFixed(2)} kW`} />
-            <MeterStat k="Sanctioned"   v={sanctioned > 0 ? `${sanctioned.toFixed(2)} kW` : "—"} />
-          </div>
-        </section>
-      </div>
-
-      {/* Row 2: data integrity 365-day calendar */}
+      {/* Power quality — PF + peak-demand gauges */}
       <section className="rounded-xl bg-surface-container-low p-5 sm:p-6">
-        <div className="mb-4 flex items-center justify-between">
-          <div>
-            <div className="text-[10px] uppercase tracking-[0.24em] text-on-surface-variant">
-              Annual data integrity
+        <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-[0.24em] text-on-surface-variant">
+          <Gauge className="h-3 w-3" /> Power quality
+        </div>
+        <div className="mt-5 grid grid-cols-1 gap-6 md:grid-cols-2">
+          <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-center">
+            <RadialGauge
+              value={pfLatest ?? 0}
+              max={1}
+              accent={pfAccent}
+              centerValue={pfLatest !== null ? pfLatest.toFixed(2) : "—"}
+              centerLabel="Power Factor"
+              size={172}
+            />
+            <div className="flex-1">
+              <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-[0.18em] text-on-surface-variant">
+                <Activity className="h-3 w-3" /> Power factor
+              </div>
+              <p className="mt-2 text-[13px] leading-relaxed text-on-surface">{pfAdvice}</p>
             </div>
-            <p className="mt-1 text-[11px] text-on-surface-variant">
-              Each cell = one day. Blue = bill received. Dark = missing (server didn&apos;t emit a daily row).
-            </p>
           </div>
-          <div className="text-right font-mono text-[11px] text-on-surface-variant">
-            {cells.length} / {daysCovered} days covered
+          <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-center">
+            <RadialGauge
+              value={peakKw}
+              max={sanctioned || 1}
+              accent={demandAccent}
+              centerValue={peakKw > 0 ? kwh(peakKw, 1) : "—"}
+              centerLabel="Peak kW"
+              sub={demandPct !== null ? `${demandPct}% of ${sanctioned} kW` : undefined}
+              size={172}
+            />
+            <div className="flex-1">
+              <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-[0.18em] text-on-surface-variant">
+                <Gauge className="h-3 w-3" /> Peak demand vs sanctioned load
+              </div>
+              <p className="mt-2 text-[13px] leading-relaxed text-on-surface">{demandAdvice}</p>
+              <div className="mt-3 grid grid-cols-3 gap-3 text-[11px] text-on-surface-variant">
+                <MeterStat k="Peak" v={`${peakKw.toFixed(2)} kW`} />
+                <MeterStat k="Avg" v={`${avgKw.toFixed(2)} kW`} />
+                <MeterStat k="Sanctioned" v={sanctioned > 0 ? `${sanctioned.toFixed(2)} kW` : "—"} />
+              </div>
+            </div>
           </div>
         </div>
-        <CalendarHeatmap cells={cells} unit="bill" />
       </section>
 
-      {/* Row 3: stability matrix — peak power line + PF line */}
+      {/* Reading reliability + data integrity — prepaid daily bills only */}
+      {!isPostpaid && (
+        <>
+          <section className="rounded-xl bg-surface-container-low p-5 sm:p-6">
+            <div className="text-[10px] uppercase tracking-[0.24em] text-on-surface-variant">Data reliability</div>
+            <div className="mt-4 flex flex-col items-center gap-4 sm:flex-row sm:items-center sm:gap-6">
+              <Donut
+                size={180}
+                stroke={12}
+                centerValue={<>{actualPct.toFixed(0)}%</>}
+                centerLabel="actual"
+                segments={Object.entries(reading).map(([k, v], i) => ({
+                  label: k,
+                  value: v,
+                  color: k === "Actual" ? chart.a : i === 1 ? chart.aSoft : chart.b,
+                }))}
+              />
+              <div className="flex-1 space-y-2 text-[11px]">
+                {Object.entries(reading).map(([k, v], i) => (
+                  <div key={k} className="flex items-center gap-2">
+                    <span className="h-2 w-2 rounded-sm" style={{ background: k === "Actual" ? chart.a : i === 1 ? chart.aSoft : chart.b }} />
+                    <span className="text-on-surface-variant">{k}</span>
+                    <span className="ml-auto font-mono text-on-surface">{v}</span>
+                    <span className="w-10 text-right font-mono text-on-surface-variant">
+                      {totalReads > 0 ? ((v / totalReads) * 100).toFixed(0) : 0}%
+                    </span>
+                  </div>
+                ))}
+                <div className="pt-2 text-[10px] text-on-surface-variant/70">
+                  Higher &quot;Actual&quot; share = fewer estimated bills = more trustworthy data.
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section className="rounded-xl bg-surface-container-low p-5 sm:p-6">
+            <div className="mb-4 flex items-center justify-between">
+              <div>
+                <div className="text-[10px] uppercase tracking-[0.24em] text-on-surface-variant">Annual data integrity</div>
+                <p className="mt-1 text-[11px] text-on-surface-variant">
+                  Each cell = one day. Blue = bill received. Dark = missing (server didn&apos;t emit a daily row).
+                </p>
+              </div>
+              <div className="text-right font-mono text-[11px] text-on-surface-variant">
+                {cells.length} / {daysCovered} days covered
+              </div>
+            </div>
+            <CalendarHeatmap cells={cells} unit="bill" />
+          </section>
+        </>
+      )}
+
+      {/* Stability trends — peak power + PF (both meter types) */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <section className="rounded-xl bg-surface-container-low p-5 sm:p-6">
           <div className="mb-3 flex items-center justify-between">
-            <div className="text-[10px] uppercase tracking-[0.24em] text-on-surface-variant">
-              Peak kW — 90-day trend
-            </div>
+            <div className="text-[10px] uppercase tracking-[0.24em] text-on-surface-variant">Peak kW — 90-day trend</div>
             <span className="font-mono text-[11px] text-on-surface-variant">
-              avg {avgKw.toFixed(2)} · σ {(powerSeries.length ? Math.sqrt(mean(powerSeries.map(p => (p.y - avgKw) ** 2))) : 0).toFixed(2)}
+              avg {avgKw.toFixed(2)} · σ {(powerSeries.length ? Math.sqrt(mean(powerSeries.map((p) => (p.y - avgKw) ** 2))) : 0).toFixed(2)}
             </span>
           </div>
           {powerSeries.length ? (
@@ -257,12 +260,8 @@ export default function GridNodesPage() {
         </section>
         <section className="rounded-xl bg-surface-container-low p-5 sm:p-6">
           <div className="mb-3 flex items-center justify-between">
-            <div className="text-[10px] uppercase tracking-[0.24em] text-on-surface-variant">
-              Power factor — monthly
-            </div>
-            <span className="font-mono text-[11px] text-on-surface-variant">
-              target ≥ 0.95
-            </span>
+            <div className="text-[10px] uppercase tracking-[0.24em] text-on-surface-variant">Power factor — monthly</div>
+            <span className="font-mono text-[11px] text-on-surface-variant">target ≥ 0.95</span>
           </div>
           {pfSeries.length ? (
             <LineChart
@@ -282,11 +281,9 @@ export default function GridNodesPage() {
         </section>
       </div>
 
-      {/* Row 4: meter metadata card */}
+      {/* Node identity */}
       <section className="rounded-xl bg-surface-container-low p-5 sm:p-6">
-        <div className="mb-4 text-[10px] uppercase tracking-[0.24em] text-on-surface-variant">
-          Node identity
-        </div>
+        <div className="mb-4 text-[10px] uppercase tracking-[0.24em] text-on-surface-variant">Node identity</div>
         <div className="grid grid-cols-1 gap-x-8 gap-y-3 font-mono text-[12px] sm:grid-cols-2 lg:grid-cols-3">
           <Kv k="connection"            v={site?.connectionId} />
           <Kv k="device"                v={site?.deviceId} />
@@ -303,19 +300,13 @@ export default function GridNodesPage() {
         </div>
       </section>
 
-      {/* Row 5: bottom stats */}
+      {/* Bottom stats */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <BottomStat k="Bills received"    v={String(totalReads)} hint="past year" />
-        <BottomStat k="Actual readings"   v={`${actualPct.toFixed(0)}%`} hint="vs estimated" />
+        {!isPostpaid && <BottomStat k="Bills received" v={String(totalReads)} hint="past year" />}
+        {!isPostpaid && <BottomStat k="Actual readings" v={`${actualPct.toFixed(0)}%`} hint="vs estimated" />}
         <BottomStat
           k="Total 90-day kWh"
-          v={kwh(
-            consAsc.reduce(
-              (a, r) => a + (Number.isFinite(toNum(r.energyImportKWH.value)) ? toNum(r.energyImportKWH.value) : 0),
-              0
-            ),
-            0
-          )}
+          v={kwh(consAsc.reduce((a, r) => a + (Number.isFinite(toNum(r.energyImportKWH.value)) ? toNum(r.energyImportKWH.value) : 0), 0), 0)}
           hint="imported"
         />
         <BottomStat
@@ -323,28 +314,9 @@ export default function GridNodesPage() {
           v={sanctioned > 0 ? `${(loadFactor * 100).toFixed(0)}%` : "—"}
           hint={sanctioned > 0 ? (loadFactor > 0.9 ? "near limit" : "healthy") : "no limit set"}
         />
-      </div>
-    </div>
-  );
-}
-
-function GaugeBar({ value, sanctioned }: { value: number; sanctioned: number }) {
-  const pct = sanctioned > 0 ? Math.min(1, value / sanctioned) : 0;
-  return (
-    <div className="space-y-2">
-      <div className="relative h-5 overflow-hidden rounded-md bg-surface-container">
-        <div
-          className="h-full rounded-md bg-gradient-to-r from-primary-container to-secondary transition-[width] duration-700"
-          style={{ width: `${pct * 100}%` }}
-        />
-        {/* 70% and 90% markers */}
-        <div className="absolute top-0 h-full w-px bg-white/20" style={{ left: "70%" }} />
-        <div className="absolute top-0 h-full w-px bg-white/30" style={{ left: "90%" }} />
-      </div>
-      <div className="flex justify-between font-mono text-[9px] text-on-surface-variant/60">
-        <span>0</span>
-        <span style={{ marginLeft: "70%" }}>70%</span>
-        <span>sanctioned</span>
+        {isPostpaid && pfLatest !== null && (
+          <BottomStat k="Power factor" v={pfLatest.toFixed(2)} hint={pfLatest >= 0.95 ? "efficient" : pfLatest < 0.9 ? "penalty risk" : "acceptable"} />
+        )}
       </div>
     </div>
   );
