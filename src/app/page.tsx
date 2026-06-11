@@ -442,7 +442,7 @@ function PrepaidHome({ dashboard: data }: { dashboard: DashboardResponse }) {
           <Row k="Connection"       v={data.site.connectionId} mono />
           <Row k="Device"           v={data.site.deviceId} mono />
           <Row k="DISCOM"           v={data.site.tenantId} mono />
-          <div className="mt-6 rounded-md bg-surface-container p-3 text-[11px] text-on-surface-variant">
+          <div className="mt-6 border-l-2 border-white/10 pl-3 text-[11px] text-on-surface-variant">
             <div className="mb-1 uppercase tracking-[0.18em] text-on-surface-variant/80">How this is computed</div>
             The proxy tries live <code>/site/prepaidBalance</code> first. When it returns empty (a known upstream quirk on some accounts),
             it falls back to the most recent daily bill&apos;s <code>closing_bal</code>, accurate to within 24 h.
@@ -458,7 +458,7 @@ function PrepaidHome({ dashboard: data }: { dashboard: DashboardResponse }) {
           <Row k="Avg daily spend"    v={`₹${data.runway.avg_daily_spend.toFixed(2)}`} />
           <Row k="Basis window"       v={`${data.runway.basis_days} days`} />
           <Row k="30-day σ"           v={`₹${rupees(sd30)}`} />
-          <div className="mt-6 rounded-md bg-surface-container p-3 text-[11px] text-on-surface-variant">
+          <div className="mt-6 border-l-2 border-white/10 pl-3 text-[11px] text-on-surface-variant">
             <div className="mb-1 uppercase tracking-[0.18em] text-on-surface-variant/80">Formula</div>
             runway ≈ balance ÷ mean(daily_chg over last 30 days).
             Assumes constant consumption — real runway will vary with weather and season.
@@ -474,7 +474,7 @@ function PrepaidHome({ dashboard: data }: { dashboard: DashboardResponse }) {
           <Row k="30-day std deviation"   v={`₹${rupees(sd30, { decimals: 2 })}`} />
           <Row k="z-score"                v={spike.toFixed(2)} />
           <Row k="Threshold for flag"     v="z ≥ 1.5" />
-          <div className="mt-6 rounded-md bg-surface-container p-3 text-[11px] text-on-surface-variant">
+          <div className="mt-6 border-l-2 border-white/10 pl-3 text-[11px] text-on-surface-variant">
             <div className="mb-1 uppercase tracking-[0.18em] text-on-surface-variant/80">Likely causes</div>
             Weather (heat wave raises AC load), appliance repair / replacement, guests, tariff slab crossing,
             or a meter-reading estimate being corrected after the fact.
@@ -656,8 +656,8 @@ function PostpaidHome({ dashboard: data }: { dashboard: DashboardResponse }) {
                 Amount Due
               </div>
               <div className="mt-3 flex items-baseline gap-2">
-                <span className="font-mono text-[18px] text-primary-fixed-dim sm:text-[20px]">₹</span>
-                <span className="font-mono text-[40px] font-light leading-none tracking-tight text-on-surface animate-count-up sm:text-[64px]">
+                <span className={`font-mono text-[18px] sm:text-[20px] ${hasDues ? "text-secondary" : "text-primary-fixed-dim"}`}>₹</span>
+                <span className={`font-mono text-[40px] font-light leading-none tracking-tight animate-count-up sm:text-[64px] ${hasDues ? "text-secondary" : "text-on-surface"}`}>
                   {rupees(outstandingAmt, { decimals: 0 })}
                 </span>
               </div>
@@ -831,7 +831,7 @@ function PostpaidHome({ dashboard: data }: { dashboard: DashboardResponse }) {
               <Download className="h-3 w-3" /> {downloading ? "Downloading…" : "Download official bill PDF"}
             </button>
           )}
-          <div className="mt-6 rounded-md bg-surface-container p-3 text-[11px] leading-relaxed text-on-surface-variant">
+          <div className="mt-6 border-l-2 border-white/10 pl-3 text-[11px] leading-relaxed text-on-surface-variant">
             <div className="mb-1 uppercase tracking-[0.18em] text-on-surface-variant/80">How your bill works</div>
             Your smart meter bills a month in arrears: this bill covers{" "}
             <span className="text-on-surface">{inv ? billingPeriod(inv.bill_dt).label : "the previous month"}</span>,
@@ -852,7 +852,7 @@ function PostpaidHome({ dashboard: data }: { dashboard: DashboardResponse }) {
           <Row k="Effective rate"      v={`₹${rupees(effectiveRate, { decimals: 2 })}/kWh`} />
           <Row k="vs last bill"        v={lastBillAmt > 0 ? `${projVsLast >= 0 ? "+" : ""}${projVsLast}%` : "—"} />
           {daysToDue !== null && <Row k="Days to due date" v={daysToDue < 0 ? `${Math.abs(daysToDue)} overdue` : String(daysToDue)} />}
-          <div className="mt-6 rounded-md bg-surface-container p-3 text-[11px] text-on-surface-variant">
+          <div className="mt-6 border-l-2 border-white/10 pl-3 text-[11px] text-on-surface-variant">
             <div className="mb-1 uppercase tracking-[0.18em] text-on-surface-variant/80">Formula</div>
             projection ≈ avg daily kWh × 30 × effective ₹/kWh, where the rate is the last bill amount
             divided by that month&apos;s metered kWh. A real bill also includes fixed charges, duty and FPPA.
