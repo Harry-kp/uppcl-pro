@@ -383,6 +383,49 @@ all 6 invoices (each ~1 MB PDF, incl. credit bills). Wired as `downloadBillPdf()
 - `self-bill-generation`, `self-bill-gen-net-meter` — generate a bill (net-meter/solar)
 - BillDesk SDK integration (`pay.billdesk.com`) — actually **pay the bill** in-app
 
+### Verified `/wss` endpoints (live, decrypted — data collected)
+
+Auth model: most read endpoints work with just the `appServiceKey` header (no login).
+**Param-name quirk:** field names vary per endpoint — account id is `kno` / `accountID`
+/ `accountId` / `kNumber`, and discom is `discomName` / `discom`. Match the SPA exactly.
+
+| Endpoint | Payload (verified) | Returns | Auth |
+|----------|--------------------|---------|------|
+| `v2/api/GetDiscom` | `{kno, discomName}` | `{DiscomName}` | public |
+| `v2/api/getConsumerDetails` | `{kno, discomName}` | full profile ↓ | public |
+| `v2/api/viewBillDownloadPDF` | `{kno, discomName(UPPER), billNo, category, flag:"BILL"}` | `{Response: base64 PDF}` | public |
+| `v2/lastOnlinePaymentReciept` | `{kno, discomName}` | `{bytecode: base64 PDF}` (payment receipt) | public |
+| `v2/InstaPayment/GetPayBillDetails` | `{kno, discomName}` | `{PayBillHomeDTO:{payableAmt, customerDetailsDTO}}` | public |
+| `v2/InstaPayment/getArrearAmountStatus` | `{accountID, discom}` | `{data:{amount, status}}` | public |
+| `v2/InstaPayment/viewArrear` | `{discomName, kno, reportName:"ARREAR"}` | `{byteCode: base64 PDF}` (arrears report) | public |
+| `v2/Utility/getMeterData` | `{kNumber, discom, sanctionedLoad, connectionType}` | meter data ↓ | public |
+| `v1/billSummary/getBillingSummary` | `{kno, discomName}` | — | **login** |
+| `v1/consumptionDetails/getConsumptionDetails` | `{kno, discomName}` | — | **login** |
+| `v1/api/onlinePaymentStatus`, `serviceRequestStatus` | `{kno, discomName}` | — | **login** |
+| `v1/solarRoof/*`, `validateCategoryChangeRequest`, `selfBillGeneration/*` | — | — | **login** |
+
+`getConsumerDetails.ConsumerDetails` (official, richer than jio): `kno`, `mobileNo`, `email`,
+`currentAddress` (carries a scheme-eligibility note, e.g. "Bijli Bill Rahat Yojna 2025"),
+`billingAddress`, `installationAddress`, `category` (`"10"`), `dueAmount` (`"1922"`),
+`dueDate` (`"24-06-2026"`), `billNo`, `dateOfBirth`, `onlineBillingStatus` (`"EMAIL"`),
+`division` (`"EUDD IV MEERUT"`), `subDivision`.
+
+`getMeterData.data`: `purposeOfSupply` (`"LMV1"` — tariff category name), `supplyType` (`"10"`),
+`badgeNumber`/`meterSerialNumber` (`"CA0466915"`), `manufacturerCode` (`"CPS"`),
+`meterConfigType` (`"SIMKW"`), `meterStatus` (`"ACTIVE"`), **`previousReadingKWH` (`"1256.62"`)**,
+`previousReadDateTime` (`"01-JUN-2026"`), `leftDigit`/`rightDigit` (meter face config).
+
+**PDFs available (all base64):** bill (`viewBillDownloadPDF`), payment receipt
+(`lastOnlinePaymentReciept`), arrears report (`viewArrear`).
+
+### `/wss` action endpoints (NOT probed — side effects; for future opt-in flows)
+Payments: `InstaPayment/{updateConsumerInputAmount, processPaymentRequest, processPaymentRequestWithPG}`,
+`SIPayment/CreateOrder`, `InstaPayment/getPaymentReciept`. Service requests:
+`nameChangeRequest`, `addressChangeRequest`, `connectionTransferRequest`, `connDisconnRequest`,
+`meterComplaintRequest`, `billCorrectionRequest`, `loadEnchancement/*`, `solarRoof/createCase`,
+`selfBillGeneration/submitMeterReadingDetails`. Account/OTP: `registerUser`, `generateOtp`,
+`sendOTP`/`verifyOTP`, `addSecondaryAccount`, `WAP/addWAPSubscription` (WhatsApp), `doKyc`.
+
 ---
 
 > **Derived metrics (no endpoint — compute client-side from `eventsummary` kWh):** carbon emission
