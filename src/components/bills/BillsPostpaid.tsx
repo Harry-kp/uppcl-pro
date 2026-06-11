@@ -17,7 +17,7 @@ import { Tooltip } from "@/components/ui/Tooltip";
 import { useToast } from "@/components/ui/Toast";
 import { toNum } from "@/lib/stats";
 import { rupees, kwh, billingPeriod } from "@/lib/utils";
-import { Receipt, ArrowUpRight, Download } from "lucide-react";
+import { Receipt, ArrowUpRight, Download, Info } from "lucide-react";
 
 /** Postpaid money hub: monthly invoices + official PDF download, tariff/slab,
  *  projected next bill, payment history, and a document vault. */
@@ -87,9 +87,9 @@ export function BillsPostpaid() {
       <header>
         <div className="text-[11px] uppercase tracking-[0.24em] text-on-surface-variant sm:text-[10px]">Bills &amp; payments</div>
         <h1 className="mt-1 font-mono text-[28px] font-light tracking-tight text-on-surface sm:text-[32px]">Your bills, explained</h1>
-        <p className="mt-1 max-w-[640px] text-[13px] text-on-surface-variant sm:text-[12px]">
-          Monthly invoices with one-tap official PDF download, your effective tariff and slab position,
-          a projected next bill, and full payment history.
+        <p className="mt-1 max-w-[680px] text-[13px] text-on-surface-variant sm:text-[12px]">
+          Your smart meter bills a month in arrears — each bill covers the <span className="text-on-surface">previous month&apos;s</span> usage,
+          and the amount payable is that month&apos;s charges minus any credit carried forward. Download any bill or receipt as an official PDF below.
         </p>
       </header>
 
@@ -111,7 +111,12 @@ export function BillsPostpaid() {
               <span className="text-[13px] text-on-surface-variant">/kWh</span>
             </div>
             <div className="mt-4 rounded-lg bg-surface-container p-3">
-              <div className="text-[10px] uppercase tracking-[0.18em] text-on-surface-variant">Projected next bill</div>
+              <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-[0.18em] text-on-surface-variant">
+                Projected next bill
+                <Tooltip content={<div className="space-y-1"><div className="font-mono text-on-surface">avg daily kWh × 30 × ₹/kWh</div><div className="text-on-surface-variant">Energy estimate only — your real bill also adds fixed charges, electricity duty and FPPA.</div></div>}>
+                  <Info className="h-3 w-3 cursor-help text-on-surface-variant/70" />
+                </Tooltip>
+              </div>
               <div className="mt-1 font-mono text-[20px] text-on-surface">~₹{rupees(projectedBill, { decimals: 0 })}</div>
               <div className="mt-1 text-[11px] text-on-surface-variant">
                 {kwh(avgDailyKwh)} kWh/day × 30 × ₹{rupees(effectiveRate, { decimals: 2 })} = {kwh(projectedKwh, 0)} kWh

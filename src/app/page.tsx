@@ -789,10 +789,9 @@ function PostpaidHome({ dashboard: data }: { dashboard: DashboardResponse }) {
             <div className="mt-1.5 text-[15px] text-on-surface">
               {inv ? (
                 <>
-                  ₹<span className="font-mono">{rupees(lastBillAmt, { decimals: 0 })}</span>
-                  {" "}for the cycle from{" "}
-                  <span className="text-on-surface">{new Date(inv.bill_from_dt).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}</span>
-                  {billPaid ? <> — <span className="text-primary-fixed-dim">paid</span></> : inv.due_dt ? <> — due <span className="text-secondary">{new Date(inv.due_dt).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}</span></> : null}
+                  {billingPeriod(inv.bill_dt).label} bill
+                  {billPaid ? <> · <span className="text-primary-fixed-dim">paid</span></> : inv.due_dt ? <> · due <span className="text-secondary">{new Date(inv.due_dt).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}</span></> : null}
+                  {" "}— get the PDF or pay below
                 </>
               ) : (
                 <>No monthly bill is available yet for this connection.</>

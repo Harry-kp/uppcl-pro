@@ -149,7 +149,7 @@ export default function AnalyticsPage() {
           <div className="mt-6">
             <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2 text-[11px] uppercase tracking-[0.24em] text-on-surface-variant sm:text-[10px]">
               <span>last {last30.length}-day consumption trend</span>
-              <span className="font-mono text-primary-fixed-dim">avg {kwh(avg30)} kWh/d</span>
+              <span className="font-mono text-primary-fixed-dim">peak {kwh(peak)} kWh</span>
             </div>
             <Sparkline
               values={last30.map((c) => c.value)}

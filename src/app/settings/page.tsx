@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useHealth, useSites, logout } from "@/lib/api";
+import { useHealth, useSites, useWssConsumer, logout } from "@/lib/api";
 import { useToast } from "@/components/ui/Toast";
 import { mutate as swrMutate } from "swr";
 import { ExternalLink, LogOut, Sun, Moon, Laptop, Info, Code2 } from "lucide-react";
@@ -11,6 +11,8 @@ export default function SettingsPage() {
   const { data: h } = useHealth();
   const { data: sites } = useSites();
   const s = sites?.data?.[0];
+  const { data: wssConsumer } = useWssConsumer();
+  const billingMode = wssConsumer?.ConsumerDetails?.onlineBillingStatus;
   const { push } = useToast();
 
   const [theme, setTheme] = useState<"dark" | "light" | "system">(
@@ -100,6 +102,7 @@ export default function SettingsPage() {
             <Row k="meter type"          v={s?.meterType ?? "—"} />
             <Row k="sanctioned load"     v={s?.sanctionedLoad ? `${s.sanctionedLoad} kW` : "—"} />
             <Row k="connection type"     v={s?.connectionType ?? "—"} />
+            <Row k="billing mode"        v={billingMode ? (billingMode.toUpperCase() === "EMAIL" ? "Paperless (email)" : billingMode) : "—"} />
           </div>
           <p className="mt-4 text-[10px] text-on-surface-variant/70">
             All user-specific IDs discovered at runtime from <code>/site/search</code>. Nothing hardcoded.

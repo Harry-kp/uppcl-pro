@@ -93,27 +93,37 @@ export default function SupportPage() {
         )}
       </section>
 
-      {/* UNIFIED EVENT FEED */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <FeedSection
-          icon={<Siren className="h-3 w-3" />}
-          title="Meter alarms"
-          rows={alarms?.data ?? []}
-          empty="No meter alarms — your connection is healthy."
-        />
-        <FeedSection
-          icon={<BellRing className="h-3 w-3" />}
-          title="Notifications"
-          rows={notifications?.data ?? []}
-          empty="No notifications right now."
-        />
-        <FeedSection
-          icon={<Ticket className="h-3 w-3" />}
-          title="Service tickets"
-          rows={tickets?.data ?? []}
-          empty="No open service tickets."
-        />
-      </div>
+      {/* METER EVENTS — alarms, notifications, tickets. Collapses to one
+          "all clear" card when there's nothing, instead of three empty columns. */}
+      {(() => {
+        const feeds = [
+          { key: "alarms", icon: <Siren className="h-3 w-3" />, title: "Meter alarms", rows: alarms?.data ?? [] },
+          { key: "notifications", icon: <BellRing className="h-3 w-3" />, title: "Notifications", rows: notifications?.data ?? [] },
+          { key: "tickets", icon: <Ticket className="h-3 w-3" />, title: "Service tickets", rows: tickets?.data ?? [] },
+        ];
+        const active = feeds.filter((f) => f.rows.length > 0);
+        if (active.length === 0) {
+          return (
+            <section className="rounded-xl bg-surface-container-low p-5 sm:p-6">
+              <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-[0.24em] text-on-surface-variant">
+                <BellRing className="h-3 w-3" /> Meter events
+              </div>
+              <div className="mt-3 flex items-center gap-3 text-[13px] text-on-surface">
+                <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-primary-fixed-dim glow-primary" />
+                All clear — no meter alarms, notifications, or open service tickets.
+              </div>
+            </section>
+          );
+        }
+        const cols = active.length === 3 ? "lg:grid-cols-3" : active.length === 2 ? "lg:grid-cols-2" : "";
+        return (
+          <div className={`grid grid-cols-1 gap-4 ${cols}`}>
+            {active.map((f) => (
+              <FeedSection key={f.key} icon={f.icon} title={f.title} rows={f.rows} empty="" />
+            ))}
+          </div>
+        );
+      })()}
 
       {/* 1912 COMPLAINTS */}
       <section className="rounded-xl bg-surface-container-low p-5 sm:p-6">
