@@ -8,7 +8,7 @@
  * plaintext JSON now. Only ALTCHA proof-of-work is still needed for login.
  */
 import useSWR, { mutate as globalMutate } from "swr";
-import { solveAltcha, type AltchaChallenge } from "./crypto";
+import { solveAltcha, wssEncrypt, wssDecrypt, type AltchaChallenge } from "./crypto";
 import {
   getSession,
   saveSession,
@@ -233,26 +233,53 @@ export async function logout(): Promise<void> {
 }
 
 /**
- * Resolve the official bill PDF download link for a monthly invoice.
- * Requires the `subtenantcode` header (= site.tenantCode) plus billNo + date + discom.
- * Returns a tokenized URL on UPPCL's consumer portal. See RE doc §7.
+ * Download the official bill PDF directly from UPPCL's /wss portal.
+ *
+ * The portal AES-encrypts request & response bodies (`_cdata`). We encrypt the
+ * payload, POST via the /api/wss proxy, decrypt the response, and save the
+ * base64-encoded PDF. Verified end-to-end. See docs/api-reverse-engineering.md §9.
+ *   payload: {kno: connectionId, discomName: <DISCOM upper>, billNo: invoice_id,
+ *             category: <accountType>, flag: "BILL"}  →  {Response: <base64 PDF>}
  */
-export async function billDownloadLink(invoice: { invoice_id: string; bill_dt: string }): Promise<string> {
+export async function downloadBillPdf(invoice: { invoice_id: string }): Promise<void> {
   const site = await primarySite();
-  const date = (invoice.bill_dt ?? "").split("T")[0]; // YYYY-MM-DD
-  const resp = (await uppcl_post(
-    "bill/download",
-    {
-      billNo: invoice.invoice_id,
-      connectionId: site.connectionId,
-      tenantId: site.tenantId,
-      date,
-      discom: site.discom,
-    },
-    { subtenantcode: site.tenantCode }
-  )) as { data?: string };
-  if (!resp.data) throw new ProxyError(404, "Bill download link unavailable");
-  return resp.data;
+  const payload = JSON.stringify({
+    kno: site.connectionId,
+    discomName: String(site.tenantId).toUpperCase(),
+    billNo: invoice.invoice_id,
+    category: String(site.accountType ?? "10"),
+    flag: "BILL",
+  });
+
+  const r = await fetch("/api/wss/v2/api/viewBillDownloadPDF", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ _cdata: await wssEncrypt(payload) }),
+    cache: "no-store",
+  });
+  if (!r.ok) throw new ProxyError(r.status, "Bill service unavailable");
+
+  const json = (await r.json()) as { _cdata?: string };
+  if (!json._cdata) throw new ProxyError(502, "Bill download failed");
+
+  const result = JSON.parse(await wssDecrypt(json._cdata)) as {
+    statusCode?: string;
+    Response?: string;
+    statusMsg?: string;
+  };
+  if (result.statusCode !== "VIEW_BILL_PDF_200" || !result.Response) {
+    throw new ProxyError(404, result.statusMsg || "Bill PDF not available for this connection");
+  }
+
+  const bytes = Uint8Array.from(atob(result.Response), (c) => c.charCodeAt(0));
+  const url = URL.createObjectURL(new Blob([bytes], { type: "application/pdf" }));
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `uppcl-bill-${invoice.invoice_id}.pdf`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 10_000);
 }
 
 // ─── Data fetchers (mirror the old Python proxy endpoints) ────────────────────

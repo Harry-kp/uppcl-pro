@@ -344,6 +344,47 @@ POST /accounts/api/savingTip/getOne {appliance:"fridge"}
 Valid appliance codes: `fridge`, `geyser`, `washing_machine`, `nightbaseload`, `others`.
 `savingTip/search {appliance}` returns a different/general tip set.
 
+---
+
+## 9. The `/wss` legacy bill portal (consumer.uppcl.org) — official bill PDF ✅
+
+The jio/uppclsmart `bill/download` deep-link is broken for jio-platform meters
+("No Bill Details Found"). The **real official bill PDF** comes from UPPCL's legacy
+portal at `https://consumer.uppcl.org/uppclwss`. **Cracked and wired end-to-end.**
+
+**Crypto.** Every request *and* response body is AES-encrypted as `_cdata`:
+```
+_cdata = saltHex(32 bytes) + ivHex(16 bytes) + base64( AES-256-CBC(plaintext) )
+key    = PBKDF2-SHA1(passphrase, salt, 1989 iterations, 32 bytes)
+passphrase    = "2b57ea4715h#2d6abf1360e8"   (responseEncryptionKey, constant in the SPA)
+appServiceKey = constant header, also from the SPA bundle (not user-specific)
+```
+Implemented in `src/lib/crypto.ts` (`wssEncrypt`/`wssDecrypt`, Web Crypto) + proxy
+`src/app/api/wss/[...path]/route.ts`. Decryption verified against live `_cdata`.
+
+**Direct PDF (one call):**
+```
+POST /uppclwss/v2/api/viewBillDownloadPDF   {_cdata: enc({
+  kno: <connectionId>, discomName: "PVVNL" (UPPERCASE!), billNo: <invoice_id>,
+  category: "10" (= site.accountType), flag: "BILL" })}
+→ {_cdata: enc({statusCode:"VIEW_BILL_PDF_200", Response: <base64 PDF>})}
+```
+Gotchas that cost time: `discomName` must be **UPPERCASE** (`"pvvnl"` → "not registered");
+`category` is `site.accountType` (`"10"`); request body **must be encrypted**. Verified for
+all 6 invoices (each ~1 MB PDF, incl. credit bills). Wired as `downloadBillPdf()` in `api.ts`.
+
+**More `/wss` endpoints (same crypto, mostly unauthenticated via appServiceKey) — feature ideas:**
+- `getConsumerDetails`, `getBillingSummary`, `GetDiscom` — official consumer + billing detail
+- `consumption_history`, `consumption-calculator` — official usage + a bill estimator
+- `bill-on-email` — register paperless/email bills from the app
+- `online-payment-status`, `v2/InstaPayment/{viewArrear,accountArrear}` — arrears + payment status
+- `service-request/*` — raise name/address correction, **load enhancement**, category change,
+  disconnection, connection transfer, **meter complaints**, **solar-roof** application in-app
+- `self-bill-generation`, `self-bill-gen-net-meter` — generate a bill (net-meter/solar)
+- BillDesk SDK integration (`pay.billdesk.com`) — actually **pay the bill** in-app
+
+---
+
 > **Derived metrics (no endpoint — compute client-side from `eventsummary` kWh):** carbon emission
 > (kWh × grid factor ~0.71 kg CO₂/kWh), solar-savings calculator, effective ₹/kWh tariff
 > (bill_amt ÷ units). These are how UPPCL implements `carbonEmission`/`solarCalculator`.
