@@ -26,7 +26,7 @@ import { SidePanel } from "@/components/ui/SidePanel";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { useToast } from "@/components/ui/Toast";
 import { mean, stddev, toNum } from "@/lib/stats";
-import { rupees, kwh, daysBetween, formatRelative } from "@/lib/utils";
+import { rupees, kwh, daysBetween, formatRelative, billingPeriod } from "@/lib/utils";
 import {
   History,
   FileText,
@@ -824,14 +824,28 @@ function PostpaidHome({ dashboard: data }: { dashboard: DashboardResponse }) {
         subtitle={inv?.bill_dt ? `generated ${new Date(inv.bill_dt).toLocaleDateString("en-IN")}` : undefined}>
         <div className="space-y-4">
           <Row k="Amount due now"   v={`₹${rupees(outstandingAmt)}`} big />
-          {inv && <>
-            <Row k="Latest bill"      v={`₹${rupees(lastBillAmt)}`} />
-            <Row k="Bill period from" v={new Date(inv.bill_from_dt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })} />
-            <Row k="Due date"         v={inv.due_dt ? new Date(inv.due_dt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "—"} />
-            <Row k="Status"           v={billPaid ? "Paid" : "Unpaid"} />
-            {inv.payment_dt && <Row k="Paid on" v={new Date(inv.payment_dt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })} />}
-            <Row k="Invoice no."      v={inv.invoice_id} mono />
-          </>}
+          {inv && (() => {
+            const fmt = (s: string) => s ? new Date(s).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "—";
+            const paidAmt = toNum(inv.payment_amt);
+            const rebate = billPaid && paidAmt > 0 ? lastBillAmt - paidAmt : 0;
+            const period = billingPeriod(inv.bill_dt);
+            return (
+              <>
+                <Row k="Billing period" v={`${period.label}`} />
+                <Row k="Amount payable" v={`₹${rupees(lastBillAmt)}`} />
+                <Row k="Bill generated" v={fmt(inv.bill_dt)} />
+                <Row k="Due date"       v={fmt(inv.due_dt)} />
+                <Row k="Status"         v={billPaid ? "Paid" : "Unpaid"} />
+                {billPaid && inv.payment_dt && (
+                  <Row k="Paid" v={`₹${rupees(paidAmt, { decimals: 0 })} on ${fmt(inv.payment_dt)}`} />
+                )}
+                {rebate > 0 && (
+                  <Row k="Rebate saved" v={`₹${rupees(rebate, { decimals: 0 })} (paid before due date)`} />
+                )}
+                <Row k="Invoice no."    v={inv.invoice_id} mono />
+              </>
+            );
+          })()}
           <Row k="Connection"       v={data.site.connectionId} mono />
           <Row k="DISCOM"           v={data.site.tenantId} mono />
           {inv && (
@@ -843,10 +857,14 @@ function PostpaidHome({ dashboard: data }: { dashboard: DashboardResponse }) {
               <Download className="h-3 w-3" /> {downloading ? "Downloading…" : "Download official bill PDF"}
             </button>
           )}
-          <div className="mt-6 rounded-md bg-surface-container p-3 text-[11px] text-on-surface-variant">
-            <div className="mb-1 uppercase tracking-[0.18em] text-on-surface-variant/80">Source</div>
-            Amount due from <code>/site/outstandingBalance</code>; bill from <code>/bill/billHistory</code>
-            (type monthlyBill). The PDF link is resolved via <code>/bill/download</code>.
+          <div className="mt-6 rounded-md bg-surface-container p-3 text-[11px] leading-relaxed text-on-surface-variant">
+            <div className="mb-1 uppercase tracking-[0.18em] text-on-surface-variant/80">How your bill works</div>
+            Your smart meter bills a month in arrears: this bill covers{" "}
+            <span className="text-on-surface">{inv ? billingPeriod(inv.bill_dt).label : "the previous month"}</span>,
+            even though it was generated on {inv ? new Date(inv.bill_dt).toLocaleDateString("en-IN", { day: "numeric", month: "short" }) : "—"}.
+            The <span className="text-on-surface">amount payable</span> is that month&apos;s charges minus any credit
+            carried forward (a negative bill means you&apos;re in credit). Paying before the due date keeps a small
+            prompt-payment rebate — that&apos;s why the paid amount can be a little under the bill.
           </div>
         </div>
       </SidePanel>

@@ -30,6 +30,20 @@ export function daysBetween(a: string | Date, b: string | Date): number {
   return Math.round((db.getTime() - da.getTime()) / 86_400_000);
 }
 
+/**
+ * UPPCL smart-meter billing period for a given bill date.
+ * Rule (from the official bill): the cycle is the FIRST→LAST day of the
+ * *previous* calendar month — i.e. the bill dated early June covers May.
+ * `bill_dt`/`bill_from_dt` from the API is the generation date, NOT the period.
+ */
+export function billingPeriod(billDt: string | Date): { label: string; from: Date; to: Date } {
+  const d = typeof billDt === "string" ? new Date(billDt) : billDt;
+  const to = new Date(d.getFullYear(), d.getMonth(), 1);        // 1st of the bill month
+  const from = new Date(d.getFullYear(), d.getMonth() - 1, 1);  // 1st of the previous month
+  const label = from.toLocaleDateString("en-IN", { month: "long", year: "numeric" });
+  return { label, from, to };
+}
+
 export function formatRelative(d: string | Date): string {
   const da = typeof d === "string" ? new Date(d) : d;
   const now = new Date();

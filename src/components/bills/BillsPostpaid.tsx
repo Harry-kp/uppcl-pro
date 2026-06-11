@@ -16,7 +16,7 @@ import { SlabBar, UP_DOMESTIC_SLABS } from "@/components/viz/SlabBar";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { useToast } from "@/components/ui/Toast";
 import { toNum } from "@/lib/stats";
-import { rupees, kwh } from "@/lib/utils";
+import { rupees, kwh, billingPeriod } from "@/lib/utils";
 import { Receipt, ArrowUpRight, Download } from "lucide-react";
 
 /** Postpaid money hub: monthly invoices + official PDF download, tariff/slab,
@@ -143,7 +143,7 @@ export function BillsPostpaid() {
           <div className="overflow-x-auto">
             <table className="w-full border-separate border-spacing-y-1 text-[12px]">
               <thead className="font-mono text-[10px] uppercase tracking-[0.18em] text-on-surface-variant">
-                <tr><Th>Bill date</Th><Th>Period from</Th><Th>Amount</Th><Th>Due</Th><Th>Status</Th><Th>Invoice</Th><Th> </Th></tr>
+                <tr><Th>Bill date</Th><Th>Period</Th><Th>Amount</Th><Th>Due</Th><Th>Status</Th><Th>Invoice</Th><Th> </Th></tr>
               </thead>
               <tbody className="font-mono">
                 {invoices.map((inv) => {
@@ -156,7 +156,7 @@ export function BillsPostpaid() {
                   return (
                     <tr key={inv.invoice_id}>
                       <td className={td + " rounded-l-md"}>{new Date(inv.bill_dt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</td>
-                      <td className={td}>{inv.bill_from_dt ? new Date(inv.bill_from_dt).toLocaleDateString("en-IN", { day: "numeric", month: "short" }) : "—"}</td>
+                      <td className={td}>{billingPeriod(inv.bill_dt).label}</td>
                       <td className={td + (credit ? " text-primary-fixed-dim" : "")}>{credit ? `+₹${rupees(Math.abs(amt), { decimals: 0 })}` : `₹${rupees(amt, { decimals: 0 })}`}</td>
                       <td className={td}>{inv.due_dt ? new Date(inv.due_dt).toLocaleDateString("en-IN", { day: "numeric", month: "short" }) : "—"}</td>
                       <td className={td}>
