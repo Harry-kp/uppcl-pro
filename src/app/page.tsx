@@ -20,7 +20,6 @@ import { Sparkline } from "@/components/viz/Sparkline";
 import { RunwayGauge } from "@/components/viz/RunwayGauge";
 import { BillCycleRing } from "@/components/viz/BillCycleRing";
 import { AnomalyBanner } from "@/components/AnomalyBanner";
-import { ComplaintsSection } from "@/components/ComplaintsSection";
 import { InsightStrip, type Insight } from "@/components/InsightStrip";
 import { SidePanel } from "@/components/ui/SidePanel";
 import { Tooltip } from "@/components/ui/Tooltip";
@@ -432,9 +431,6 @@ function PrepaidHome({ dashboard: data }: { dashboard: DashboardResponse }) {
           </a>
         </div>
       </div>
-
-      <ComplaintsSection />
-
       {/* DRILL-IN PANELS */}
       <SidePanel open={panel === "balance"} onClose={() => setPanel(null)} title="Balance detail"
         subtitle={data.balance.updated_at ? `as of ${new Date(data.balance.updated_at).toLocaleString("en-IN")}` : undefined}>
@@ -735,6 +731,14 @@ function PostpaidHome({ dashboard: data }: { dashboard: DashboardResponse }) {
               billPaid ? <>paid {inv.payment_dt ? formatRelative(inv.payment_dt) : ""}</> : <>due {inv.due_dt ? new Date(inv.due_dt).toLocaleDateString("en-IN", { day: "numeric", month: "short" }) : "—"}</>
             ) : <>no bill on file</>
           }
+          formula={
+            <div>
+              <div className="font-mono text-on-surface">Amount payable on your latest monthly invoice</div>
+              <div className="mt-0.5 text-on-surface-variant">
+                Already net of any carried-forward credit. Covers {inv ? billingPeriod(inv.bill_dt).label : "the previous month"}. Tap to open Bills.
+              </div>
+            </div>
+          }
           href="/ledger"
         />
         <Tile
@@ -816,9 +820,6 @@ function PostpaidHome({ dashboard: data }: { dashboard: DashboardResponse }) {
           </a>
         </div>
       </div>
-
-      <ComplaintsSection />
-
       {/* DRILL-IN PANELS */}
       <SidePanel open={panel === "bill"} onClose={() => setPanel(null)} title="Bill detail"
         subtitle={inv?.bill_dt ? `generated ${new Date(inv.bill_dt).toLocaleDateString("en-IN")}` : undefined}>

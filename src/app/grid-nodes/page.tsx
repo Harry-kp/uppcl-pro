@@ -40,7 +40,6 @@ export default function GridNodesPage() {
     "—";
 
   const site = sitesResp?.data?.[0];
-  const isPostpaid = site?.connectionType === "postpaid";
 
   const billsAsc = useMemo(
     () =>
@@ -112,7 +111,6 @@ export default function GridNodesPage() {
   const peakKw = peakFromStats || (powerSeries.length ? Math.max(...powerSeries.map((p) => p.y)) : 0);
   const avgKw = mean(powerSeries.map((p) => p.y));
   const sanctioned = toNum(site?.sanctionedLoad);
-  const loadFactor = sanctioned > 0 ? peakKw / sanctioned : 0;
   const demandPct = sanctioned > 0 && peakKw > 0 ? Math.round((peakKw / sanctioned) * 100) : null;
   const demandAccent: GaugeAccent =
     demandPct === null ? "default" : demandPct >= 100 ? "critical" : demandPct >= 85 ? "warn" : "default";
@@ -319,29 +317,10 @@ export default function GridNodesPage() {
           <Kv k="tariff tenant"         v={site?.tenantId} />
           <Kv k="tenant code"           v={site?.tenantCode} />
           <Kv k="pincode"               v={site?.pincode} />
-          <Kv k="current meter status"  v={balanceResp?.data?.meterStatus ?? (balanceResp?.source === "latest-daily-bill" ? "unreported (bills flowing)" : "—")} />
           <Kv k="last msi seen"         v={msiNow} />
         </div>
       </section>
 
-      {/* Bottom stats */}
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        {billsAsc.length > 0 && <BottomStat k="Bills received" v={String(totalReads)} hint="daily records" />}
-        {billsAsc.length > 0 && <BottomStat k="Actual readings" v={`${actualPct.toFixed(0)}%`} hint="vs estimated" />}
-        <BottomStat
-          k="Total 90-day kWh"
-          v={kwh(consAsc.reduce((a, r) => a + (Number.isFinite(toNum(r.energyImportKWH.value)) ? toNum(r.energyImportKWH.value) : 0), 0), 0)}
-          hint="imported"
-        />
-        <BottomStat
-          k="Peak / sanctioned"
-          v={sanctioned > 0 ? `${(loadFactor * 100).toFixed(0)}%` : "—"}
-          hint={sanctioned > 0 ? (loadFactor > 0.9 ? "near limit" : "healthy") : "no limit set"}
-        />
-        {isPostpaid && pfLatest !== null && (
-          <BottomStat k="Power factor" v={pfLatest.toFixed(2)} hint={pfLatest >= 0.95 ? "efficient" : pfLatest < 0.9 ? "penalty risk" : "acceptable"} />
-        )}
-      </div>
     </div>
   );
 }
