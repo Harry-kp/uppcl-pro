@@ -7,7 +7,7 @@ import {
   useApplianceData,
   useSavingTip,
 } from "@/lib/api";
-import { CalendarHeatmap, CalendarCell } from "@/components/viz/CalendarHeatmap";
+import { type CalendarCell } from "@/components/viz/CalendarHeatmap";
 import { DayOfWeekChart } from "@/components/viz/DayOfWeekChart";
 import { BaselineActive } from "@/components/viz/BaselineActive";
 import { LineChart } from "@/components/viz/LineChart";
@@ -169,79 +169,30 @@ export default function AnalyticsPage() {
         </section>
 
         <section className="rounded-xl bg-surface-container-low p-5 sm:p-6">
-          <div className="flex items-center justify-between">
-            <div className="text-[10px] uppercase tracking-[0.28em] text-on-surface-variant">
-              Baseline vs Active load
-            </div>
-            <Tooltip
-              content={
-                <div>
-                  <div className="font-mono text-on-surface">how baseline is computed</div>
-                  <div className="text-on-surface-variant">
-                    Baseline = the 25ᵗʰ-percentile daily kWh — a proxy for &quot;always-on&quot;
-                    load (fridge, router, standby). Active = avg daily kWh − baseline.
-                  </div>
-                </div>
-              }
-            >
-              <span className="cursor-help text-[10px] uppercase tracking-[0.18em] text-on-surface-variant/70 underline decoration-dotted">
-                how computed
-              </span>
-            </Tooltip>
+          <div className="text-[10px] uppercase tracking-[0.28em] text-on-surface-variant">
+            Always-on vs active use
           </div>
+          <p className="mt-1 text-[11px] leading-relaxed text-on-surface-variant">
+            How much power runs 24×7 (fridge, router, standby) vs what you actively switch on.
+            Trimming the always-on share lowers every bill.
+          </p>
           <BaselineActive dayValues={values} />
         </section>
       </div>
 
-      {/* PATTERNS ROW: calendar heatmap | day-of-week */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.8fr_1fr]">
-        <section className="rounded-xl bg-surface-container-low p-5 sm:p-6">
-          <div className="mb-4 flex items-center justify-between">
-            <div>
-              <div className="text-[10px] uppercase tracking-[0.24em] text-on-surface-variant">
-                Calendar heatmap
-              </div>
-              <p className="mt-1 text-[11px] text-on-surface-variant">
-                columns = ISO weeks · rows = Mon→Sun · brightness = kWh that day
-              </p>
-            </div>
-            <span className="font-mono text-[11px] text-on-surface-variant">
-              {cells.length} day{cells.length === 1 ? "" : "s"} mapped
-            </span>
-          </div>
-          <CalendarHeatmap cells={cells} />
-        </section>
-
-        <section className="rounded-xl bg-surface-container-low p-5 sm:p-6">
-          <div className="mb-4 flex items-center justify-between">
-            <div>
-              <div className="text-[10px] uppercase tracking-[0.24em] text-on-surface-variant">
-                Day of week
-              </div>
-              <h3 className="mt-1 font-mono text-[14px] text-on-surface">When do you use more?</h3>
-            </div>
-            <Tooltip
-              content={
-                <div className="space-y-1">
-                  <div className="font-mono text-on-surface">Daily granularity</div>
-                  <div className="text-on-surface-variant">
-                    Upstream returns daily kWh totals (measureTime always 00:00). This Mon-Sun
-                    breakdown is the tightest signal available.
-                  </div>
-                </div>
-              }
-            >
-              <span className="inline-flex cursor-help items-center gap-1 rounded-full bg-surface-container-high px-2 py-0.5 text-[9px] uppercase tracking-[0.18em] text-on-surface-variant">
-                <Info className="h-3 w-3" /> daily
-              </span>
-            </Tooltip>
-          </div>
+      {/* WEEKDAY PATTERN */}
+      <section className="rounded-xl bg-surface-container-low p-5 sm:p-6">
+        <div className="text-[10px] uppercase tracking-[0.24em] text-on-surface-variant">
+          Which days you use more
+        </div>
+        <p className="mt-1 text-[11px] text-on-surface-variant">
+          Average kWh by weekday — spot whether weekends or one day drive your bill.
+        </p>
+        <div className="mt-4">
           <DayOfWeekChart dayValues={sortedCells} />
-          <p className="mt-3 text-[10px] text-on-surface-variant/70">
-            Amber = peak weekday. Hover any bar for delta vs average.
-          </p>
-        </section>
-      </div>
+        </div>
+        <p className="mt-3 text-[10px] text-on-surface-variant/70">Amber = your heaviest weekday. Hover any bar for the delta vs average.</p>
+      </section>
 
       {/* TREND ROW: full-width daily line */}
       <section className="rounded-xl bg-surface-container-low p-5 sm:p-6">

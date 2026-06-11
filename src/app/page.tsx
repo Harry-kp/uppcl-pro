@@ -43,6 +43,7 @@ import {
   ScrollText,
   Calendar,
   Download,
+  Leaf,
 } from "lucide-react";
 
 // ── Dispatcher ────────────────────────────────────────────────────────────────
@@ -651,14 +652,14 @@ function PostpaidHome({ dashboard: data }: { dashboard: DashboardResponse }) {
           className="glow-hero group relative flex flex-col justify-between rounded-xl bg-surface-container-low p-5 text-left transition-colors hover:bg-surface-container sm:p-6"
         >
           <div className="flex items-start justify-between">
-            <div>
+            <div className="min-w-0 flex-1">
               <div className="text-[11px] uppercase tracking-[0.28em] text-on-surface-variant sm:text-[10px]">
-                Amount Due
+                {hasDues ? "Amount Due" : "Spent this cycle"}
               </div>
               <div className="mt-3 flex items-baseline gap-2">
                 <span className={`font-mono text-[18px] sm:text-[20px] ${hasDues ? "text-secondary" : "text-primary-fixed-dim"}`}>₹</span>
                 <span className={`font-mono text-[40px] font-light leading-none tracking-tight animate-count-up sm:text-[64px] ${hasDues ? "text-secondary" : "text-on-surface"}`}>
-                  {rupees(outstandingAmt, { decimals: 0 })}
+                  {rupees(hasDues ? outstandingAmt : cycleKwh * effectiveRate, { decimals: 0 })}
                 </span>
               </div>
               <div className="mt-2 flex flex-wrap items-center gap-2 text-[12px] text-on-surface-variant sm:text-[11px]">
@@ -669,22 +670,25 @@ function PostpaidHome({ dashboard: data }: { dashboard: DashboardResponse }) {
                 {hasDues
                   ? (inv?.due_dt && <>· due {new Date(inv.due_dt).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}</>)
                   : (inv && lastBillAmt > 0 && <>· last bill ₹{rupees(lastBillAmt, { decimals: 0 })} cleared{inv.payment_dt ? ` ${formatRelative(inv.payment_dt)}` : ""}</>)}
-                <span className="ml-auto flex items-center gap-1 text-on-surface-variant/70 opacity-0 transition-opacity group-hover:opacity-100">
-                  <Info className="h-3 w-3" /> click for bill
-                </span>
+              </div>
+              {/* dense fact row — fills the hero with the cycle story */}
+              <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-1.5 font-mono text-[12px] sm:text-[11px]">
+                <span><span className="text-on-surface">{kwh(cycleKwh, 0)}</span><span className="text-on-surface-variant"> kWh used</span></span>
+                <span><span className="text-on-surface">~₹{rupees(effectiveRate, { decimals: 1 })}</span><span className="text-on-surface-variant">/kWh</span></span>
+                {cycleProgress > 0 && <span className="text-on-surface-variant">day {Math.max(1, Math.round(cycleProgress * 30))} of ~30</span>}
               </div>
             </div>
-            <div className="rounded-md bg-surface-container p-2.5 text-on-surface-variant">
-              <Wallet className="h-4 w-4" strokeWidth={1.5} />
+            <div className={`rounded-md bg-surface-container p-2.5 ${hasDues ? "text-secondary" : "text-primary-fixed-dim"}`}>
+              {hasDues ? <Wallet className="h-4 w-4" strokeWidth={1.5} /> : <Check className="h-4 w-4" strokeWidth={1.5} />}
             </div>
           </div>
 
-          <div className="mt-8">
+          <div className="mt-5">
             <div className="mb-2 flex flex-wrap items-center justify-between gap-2 text-[11px] uppercase tracking-[0.24em] text-on-surface-variant sm:text-[10px]">
               <span>{Math.min(14, series.length)}-day usage trend</span>
-              <span className="font-mono text-primary-fixed-dim">avg {kwh(avgDailyKwh)} kWh/d</span>
+              <span className="flex items-center gap-1 text-on-surface-variant/70 opacity-0 transition-opacity group-hover:opacity-100"><Info className="h-3 w-3" /> bill detail</span>
             </div>
-            <Sparkline values={series.slice(-14)} labels={labels.slice(-14)} height={64} unit="kWh" />
+            <Sparkline values={series.slice(-14)} labels={labels.slice(-14)} height={56} unit="kWh" />
           </div>
         </button>
 
@@ -695,7 +699,7 @@ function PostpaidHome({ dashboard: data }: { dashboard: DashboardResponse }) {
         >
           <BillCycleRing projectedInr={projectedBill} daysToDue={daysToDue} cycleProgress={cycleProgress} />
           <div className="mt-4 text-[12px] text-on-surface-variant/80 sm:text-[11px]">
-            {kwh(cycleKwh)} kWh this cycle · ~₹{rupees(effectiveRate, { decimals: 1 })}/kWh
+            projected full-cycle bill · {Math.round(cycleProgress * 100)}% elapsed
           </div>
         </button>
       </div>
@@ -724,13 +728,13 @@ function PostpaidHome({ dashboard: data }: { dashboard: DashboardResponse }) {
           href="/ledger"
         />
         <Tile
-          icon={<Wallet className="h-3 w-3" />}
-          label="This cycle"
-          tag="so far"
-          value={<>₹{rupees(cycleKwh * effectiveRate, { decimals: 0 })}</>}
-          hint={<>{kwh(cycleKwh, 0)} kWh used · ~₹{rupees(avgDailyKwh * effectiveRate, { decimals: 0 })}/day</>}
-          formula={<>Running cost since your last bill — metered kWh × your effective ₹/kWh. Energy only (excl. fixed, duty &amp; FPPA). The ring shows the projected full-cycle total.</>}
-          href="/ledger"
+          icon={<Leaf className="h-3 w-3" />}
+          label="Carbon"
+          tag="this cycle"
+          value={<>{kwh(cycleKwh * 0.71, 0)} <span className="text-[14px] text-on-surface-variant">kg</span></>}
+          hint={<>CO₂ from {kwh(cycleKwh, 0)} kWh</>}
+          formula={<>Estimated CO₂ this cycle — kWh × 0.71 kg/kWh (CEA all-India grid factor). Full carbon trend &amp; equivalents on the Usage tab.</>}
+          href="/analytics"
         />
         <Tile
           icon={<TrendingUp className="h-3 w-3" />}
