@@ -6,6 +6,7 @@ import {
   usePayments,
   useYearlyHistory,
   useDashboard,
+  useConsumption,
   useWssMeter,
   useWssArrears,
   downloadBillPdf,
@@ -17,7 +18,7 @@ import { Tooltip } from "@/components/ui/Tooltip";
 import { useToast } from "@/components/ui/Toast";
 import { toNum } from "@/lib/stats";
 import { rupees, kwh, billingPeriod } from "@/lib/utils";
-import { Receipt, ArrowUpRight, Download, Info } from "lucide-react";
+import { Receipt, ArrowUpRight, Download, Info, CalendarDays } from "lucide-react";
 
 /** Postpaid money hub: monthly invoices + official PDF download, tariff/slab,
  *  projected next bill, payment history, and a document vault. */
@@ -26,6 +27,7 @@ export function BillsPostpaid() {
   const { data: payments } = usePayments(50);
   const { data: yearly } = useYearlyHistory();
   const { data: dashboard } = useDashboard();
+  const { data: consResp } = useConsumption(90);
   const { data: meterResp } = useWssMeter();
   const { data: arrearsResp } = useWssArrears();
   const { push } = useToast();
@@ -79,6 +81,47 @@ export function BillsPostpaid() {
   }, [yearly, dashboard, invoices]);
 
   const { thisMonthKwh, avgDailyKwh, effectiveRate, projectedKwh, projectedBill } = derived;
+
+  // Daily ledger — the granular per-day view postpaid lost, rebuilt from meter
+  // telemetry. Surfaces fields UPPCL never shows: apparent energy (kVAh) and a
+  // derived power factor (kWh ÷ kVAh, since the daily aggregate omits PF).
+  const daily = useMemo(() => {
+    const rows = [...(consResp?.data ?? [])]
+      .map((r) => {
+        const date = String(r.energyImportKWH?.measureTime ?? "").slice(0, 10);
+        const kWh = toNum(r.energyImportKWH?.value);
+        const kVAh = toNum(r.energyImportKVAH?.value);
+        const peakKw = toNum(r.power?.value);
+        const exportKwh = toNum(r.energyExportKWH?.value);
+        const reportedPf = toNum(r.powerFactor?.value);
+        const pf = reportedPf > 0 ? Math.min(1, reportedPf) : kVAh > 0 ? Math.min(1, kWh / kVAh) : null;
+        return { date, kWh, kVAh, peakKw, exportKwh, pf, cost: kWh * effectiveRate };
+      })
+      .filter((r) => r.date && r.kWh > 0)
+      .sort((a, b) => b.date.localeCompare(a.date));
+    const sumKwh = rows.reduce((s, r) => s + r.kWh, 0);
+    return {
+      rows,
+      sumKwh,
+      sumCost: rows.reduce((s, r) => s + r.cost, 0),
+      avgKwh: rows.length ? sumKwh / rows.length : 0,
+      hasExport: rows.some((r) => r.exportKwh > 0),
+    };
+  }, [consResp, effectiveRate]);
+
+  function exportDailyCsv() {
+    const head = ["date", "kwh", "peak_kw", "kvah", "power_factor", "est_cost_inr"];
+    const lines = daily.rows.map((r) =>
+      [r.date, r.kWh.toFixed(2), r.peakKw.toFixed(2), r.kVAh.toFixed(2), r.pf?.toFixed(3) ?? "", r.cost.toFixed(2)].join(",")
+    );
+    const blob = new Blob([[head.join(","), ...lines].join("\n")], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `uppcl-daily-usage-${daily.rows[0]?.date ?? "export"}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
 
   const pays = payments?.data ?? [];
 
@@ -139,6 +182,83 @@ export function BillsPostpaid() {
             </div>
           </div>
         </div>
+      </section>
+
+      {/* Daily usage & cost — the granular ledger postpaid lost, rebuilt from telemetry */}
+      <section className="rounded-xl bg-surface-container-low p-5 sm:p-6">
+        <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-[0.24em] text-on-surface-variant">
+            <CalendarDays className="h-3 w-3" /> Daily usage &amp; cost
+          </div>
+          {daily.rows.length > 0 && (
+            <button
+              onClick={exportDailyCsv}
+              className="inline-flex items-center gap-1 rounded-md bg-surface-container-high px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-on-surface transition hover:bg-surface-bright"
+            >
+              <Download className="h-3 w-3" /> CSV
+            </button>
+          )}
+        </div>
+        <p className="max-w-[680px] text-[11px] text-on-surface-variant">
+          Per-day energy, peak demand, apparent power (kVAh) and a derived power factor — detail UPPCL&apos;s postpaid view hides.
+          Estimated cost ≈ each day&apos;s kWh × your ₹{rupees(effectiveRate, { decimals: 2 })}/kWh effective rate.
+        </p>
+        {daily.rows.length ? (
+          <>
+            <div className="mt-3 flex flex-wrap gap-x-6 gap-y-1 font-mono text-[11px] text-on-surface-variant">
+              <span><span className="text-on-surface">{daily.rows.length}</span> days</span>
+              <span><span className="text-on-surface">{kwh(daily.sumKwh, 0)}</span> kWh</span>
+              <span>~<span className="text-on-surface">₹{rupees(daily.sumCost, { decimals: 0 })}</span> est. energy cost</span>
+              <span>avg <span className="text-on-surface">{kwh(daily.avgKwh)}</span> kWh/day</span>
+            </div>
+            <div className="mt-3 max-h-[440px] overflow-auto">
+              <table className="w-full border-separate border-spacing-y-1 text-[12px]">
+                <thead className="font-mono text-[10px] uppercase tracking-[0.18em] text-on-surface-variant">
+                  <tr>
+                    <Th>Date</Th><Th>kWh</Th><Th>Peak kW</Th>
+                    <Th>
+                      <span className="inline-flex items-center gap-1">kVAh
+                        <Tooltip content={<div className="max-w-[220px]">Apparent energy. The gap between kVAh and kWh is reactive (wasted) energy — the bigger the gap, the lower your power factor.</div>}>
+                          <Info className="h-2.5 w-2.5 cursor-help text-on-surface-variant/60" />
+                        </Tooltip>
+                      </span>
+                    </Th>
+                    <Th>
+                      <span className="inline-flex items-center gap-1">PF
+                        <Tooltip content={<div className="max-w-[220px]">Power factor = kWh ÷ kVAh. Below 0.90 (amber) UPPCL levies a surcharge.</div>}>
+                          <Info className="h-2.5 w-2.5 cursor-help text-on-surface-variant/60" />
+                        </Tooltip>
+                      </span>
+                    </Th>
+                    {daily.hasExport && <Th>Export</Th>}
+                    <Th>Est. ₹</Th>
+                  </tr>
+                </thead>
+                <tbody className="font-mono">
+                  {daily.rows.map((r) => {
+                    const td = "px-3 py-1.5 bg-surface-container-lowest text-on-surface";
+                    const lowPf = r.pf !== null && r.pf < 0.9;
+                    return (
+                      <tr key={r.date}>
+                        <td className={td + " rounded-l-md"}>{new Date(r.date).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}</td>
+                        <td className={td}>{kwh(r.kWh)}</td>
+                        <td className={td + " text-on-surface-variant"}>{r.peakKw > 0 ? r.peakKw.toFixed(2) : "—"}</td>
+                        <td className={td + " text-on-surface-variant"}>{r.kVAh > 0 ? r.kVAh.toFixed(1) : "—"}</td>
+                        <td className={td + (lowPf ? " text-secondary" : " text-on-surface-variant")}>{r.pf !== null ? r.pf.toFixed(2) : "—"}</td>
+                        {daily.hasExport && <td className={td + " text-primary-fixed-dim"}>{r.exportKwh > 0 ? kwh(r.exportKwh) : "—"}</td>}
+                        <td className={td + " rounded-r-md"}>₹{rupees(r.cost, { decimals: 0 })}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </>
+        ) : (
+          <div className="py-10 text-center text-[11px] text-on-surface-variant">
+            No daily telemetry available — the meter aggregate serves roughly the last 150 days.
+          </div>
+        )}
       </section>
 
       {/* Invoice history */}
@@ -251,6 +371,6 @@ export function BillsPostpaid() {
 }
 
 function Th({ children }: { children: React.ReactNode }) {
-  return <th className="sticky top-0 border-b border-white/5 px-3 py-2 text-left font-normal">{children}</th>;
+  return <th className="sticky top-0 z-10 border-b border-white/5 bg-surface-container-low px-3 py-2 text-left font-normal">{children}</th>;
 }
 

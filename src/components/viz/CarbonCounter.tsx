@@ -6,16 +6,17 @@ import { TreePine, Car, Cloud } from "lucide-react";
 interface CarbonCounterProps {
   /** kWh consumed in the period being summarised. */
   periodKwh: number;
-  /** Grid emission factor (kg CO₂ per kWh). India grid ≈ 0.71. */
+  /** Grid emission factor (kg CO₂ per kWh). UPPCL's app uses 0.8 (verified: 88.56 kWh → 70.85 kg). */
   factor?: number;
   periodLabel?: string;
 }
 
 /**
- * Animated CO₂ figure plus relatable equivalences. The grid factor is the
- * CEA's all-India average; carbon = kWh × factor (no endpoint — derived).
+ * Animated CO₂ figure plus relatable equivalences. There is no carbon endpoint —
+ * UPPCL's own app derives it as kWh × 0.8, and we match that factor so our
+ * number equals the one on their Usage page and bill.
  */
-export function CarbonCounter({ periodKwh, factor = 0.71, periodLabel = "this cycle" }: CarbonCounterProps) {
+export function CarbonCounter({ periodKwh, factor = 0.8, periodLabel = "this cycle" }: CarbonCounterProps) {
   const kg = periodKwh * factor;
   // 1 mature tree sequesters ~21 kg CO₂/yr ≈ 1.75 kg/month.
   const trees = kg / 1.75;
@@ -39,7 +40,7 @@ export function CarbonCounter({ periodKwh, factor = 0.71, periodLabel = "this cy
         <Equiv icon={<Car className="h-3.5 w-3.5" />} value={kwh(km, 0)} unit="km of petrol driving" />
       </div>
       <div className="text-[10px] text-on-surface-variant/70">
-        {kwh(periodKwh, 0)} kWh × {factor} kg/kWh (CEA all-India grid factor)
+        {kwh(periodKwh, 0)} kWh × {factor} kg/kWh (UPPCL grid factor — matches your bill)
       </div>
     </div>
   );

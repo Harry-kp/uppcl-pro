@@ -39,7 +39,6 @@ import {
   Clock,
   AlertTriangle,
   Check,
-  TrendingUp,
   ScrollText,
   Calendar,
   Download,
@@ -617,11 +616,6 @@ function PostpaidHome({ dashboard: data }: { dashboard: DashboardResponse }) {
       title: <>₹{rupees(lastBillAmt, { decimals: 0 })} {daysToDue < 0 ? <>overdue by {Math.abs(daysToDue)} d</> : <>due in {daysToDue} d</>}</>,
       onClick: () => setPanel("bill"), cta: "View bill" });
   }
-  if (lastBillAmt > 0 && projVsLast > 15) {
-    insights.push({ id: "trending", tone: "warn", icon: <TrendingUp className="h-3 w-3" />,
-      title: <>Usage trending {projVsLast}% above last month</>, detail: <>projected ~₹{rupees(projectedBill, { decimals: 0 })} this cycle</>,
-      onClick: () => setPanel("projection"), cta: "Breakdown" });
-  }
   if (pfLatest !== null && pfLatest < 0.9) {
     insights.push({ id: "pf", tone: "warn", icon: <Activity className="h-3 w-3" />,
       title: <>Power factor {pfLatest.toFixed(2)} — penalty risk</>, href: "/grid-nodes", cta: "Details" });
@@ -637,7 +631,7 @@ function PostpaidHome({ dashboard: data }: { dashboard: DashboardResponse }) {
   if (insights.length === 0) {
     insights.push({ id: "ok", tone: "good", icon: <Check className="h-3 w-3" />,
       title: <>Paid up and on track</>,
-      detail: <>next bill ~₹{rupees(projectedBill, { decimals: 0 })}{dueDate ? ` by ${dueDate}` : ""}</> });
+      detail: dueDate ? <>next bill due {dueDate}</> : <>nothing needs your attention</> });
   }
 
   return (
@@ -669,13 +663,14 @@ function PostpaidHome({ dashboard: data }: { dashboard: DashboardResponse }) {
                 </span>
                 {hasDues
                   ? (inv?.due_dt && <>· due {new Date(inv.due_dt).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}</>)
-                  : (inv && lastBillAmt > 0 && <>· last bill ₹{rupees(lastBillAmt, { decimals: 0 })} cleared{inv.payment_dt ? ` ${formatRelative(inv.payment_dt)}` : ""}</>)}
+                  : (inv && lastBillAmt > 0 && <>· last bill cleared{inv.payment_dt ? ` ${formatRelative(inv.payment_dt)}` : ""}</>)}
               </div>
-              {/* dense fact row — fills the hero with the cycle story */}
+              {/* dense fact row — the kWh × rate that produces the number above */}
               <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-1.5 font-mono text-[12px] sm:text-[11px]">
-                <span><span className="text-on-surface">{kwh(cycleKwh, 0)}</span><span className="text-on-surface-variant"> kWh used</span></span>
-                <span><span className="text-on-surface">~₹{rupees(effectiveRate, { decimals: 1 })}</span><span className="text-on-surface-variant">/kWh</span></span>
-                {cycleProgress > 0 && <span className="text-on-surface-variant">day {Math.max(1, Math.round(cycleProgress * 30))} of ~30</span>}
+                <span><span className="text-on-surface">{kwh(cycleKwh, 1)}</span><span className="text-on-surface-variant"> kWh used</span></span>
+                <Tooltip content={<div className="max-w-[230px]">Your blended rate — last bill ÷ that month&apos;s metered kWh. Drives every projection here.</div>}>
+                  <span className="cursor-help"><span className="text-on-surface underline decoration-dotted decoration-on-surface-variant/40">~₹{rupees(effectiveRate, { decimals: 1 })}</span><span className="text-on-surface-variant">/kWh</span></span>
+                </Tooltip>
               </div>
             </div>
             <div className={`rounded-md bg-surface-container p-2.5 ${hasDues ? "text-secondary" : "text-primary-fixed-dim"}`}>
@@ -697,15 +692,16 @@ function PostpaidHome({ dashboard: data }: { dashboard: DashboardResponse }) {
           onClick={() => setPanel("projection")}
           className="flex flex-col items-center justify-center rounded-xl bg-surface-container-low p-5 text-center transition-colors hover:bg-surface-container sm:p-6"
         >
-          <BillCycleRing projectedInr={projectedBill} daysToDue={daysToDue} cycleProgress={cycleProgress} />
+          <BillCycleRing projectedInr={projectedBill} daysToDue={daysToDue} cycleProgress={cycleProgress} vsLastPct={lastBillAmt > 0 ? projVsLast : null} />
           <div className="mt-4 text-[12px] text-on-surface-variant/80 sm:text-[11px]">
-            projected full-cycle bill · {Math.round(cycleProgress * 100)}% elapsed
+            {Math.round(cycleProgress * 100)}% through this billing cycle
           </div>
         </button>
       </div>
 
-      {/* 4-TILE KPI GRID */}
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      {/* KPI GRID — three facts nothing else on this page already shows.
+          (Projection + "vs last month" live on the ring; the rate is in the hero.) */}
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
         <Tile
           icon={<ScrollText className="h-3 w-3" />}
           label="Last Bill"
@@ -728,38 +724,27 @@ function PostpaidHome({ dashboard: data }: { dashboard: DashboardResponse }) {
           href="/ledger"
         />
         <Tile
+          icon={<Activity className="h-3 w-3" />}
+          label="Power Factor"
+          tag="grid health"
+          accent={pfLatest !== null ? (pfLatest >= 0.95 ? "good" : pfLatest >= 0.9 ? "default" : "warn") : "default"}
+          value={pfLatest !== null ? pfLatest.toFixed(2) : "—"}
+          hint={
+            pfLatest !== null
+              ? <span className={pfLatest >= 0.9 ? "text-on-surface-variant" : "text-secondary"}>{pfLatest >= 0.95 ? "high efficiency" : pfLatest >= 0.9 ? "healthy" : "surcharge risk"}</span>
+              : <>no PF history</>
+          }
+          formula={<>Real ÷ apparent power. Below 0.90 UPPCL adds a surcharge. Tap for the full power-quality view on the Meter tab.</>}
+          href="/grid-nodes"
+        />
+        <Tile
           icon={<Leaf className="h-3 w-3" />}
           label="Carbon"
           tag="this cycle"
-          value={<>{kwh(cycleKwh * 0.71, 0)} <span className="text-[14px] text-on-surface-variant">kg</span></>}
-          hint={<>CO₂ from {kwh(cycleKwh, 0)} kWh</>}
-          formula={<>Estimated CO₂ this cycle — kWh × 0.71 kg/kWh (CEA all-India grid factor). Full carbon trend &amp; equivalents on the Usage tab.</>}
+          value={<>{kwh(cycleKwh * 0.8, 0)} <span className="text-[14px] text-on-surface-variant">kg</span></>}
+          hint={<>CO₂ from {kwh(cycleKwh, 1)} kWh</>}
+          formula={<>kWh × 0.8 kg/kWh — UPPCL&apos;s own grid factor, so this matches the carbon figure on their Usage page. (There&apos;s no carbon API; both apps derive it.) Full trend &amp; equivalents on the Usage tab.</>}
           href="/analytics"
-        />
-        <Tile
-          icon={<TrendingUp className="h-3 w-3" />}
-          label="vs last month"
-          tag="projected"
-          accent={lastBillAmt > 0 ? (projVsLast > 10 ? "warn" : projVsLast < -5 ? "good" : "default") : "default"}
-          value={
-            lastBillAmt > 0 ? (
-              <span className={projVsLast > 0 ? "text-secondary" : projVsLast < 0 ? "text-primary-fixed-dim" : "text-on-surface"}>
-                {projVsLast >= 0 ? "+" : ""}{projVsLast}%
-              </span>
-            ) : "—"
-          }
-          hint={lastBillAmt > 0 ? <>on track for ~₹{rupees(projectedBill, { decimals: 0 })}</> : <>no prior bill to compare</>}
-          formula={<>This cycle&apos;s projected bill against last month&apos;s. Positive = trending higher; tap for the usage that&apos;s driving it.</>}
-          href="/analytics"
-        />
-        <Tile
-          icon={<CreditCard className="h-3 w-3" />}
-          label="Effective rate"
-          tag="₹/kWh"
-          value={<>₹{rupees(effectiveRate, { decimals: 2 })}</>}
-          hint={<>your blended tariff</>}
-          formula={<>Last bill ÷ that month&apos;s metered kWh — the real per-unit rate that drives every projection here. Tap for the bill breakdown.</>}
-          href="/ledger"
         />
       </div>
 
@@ -862,7 +847,6 @@ function PostpaidHome({ dashboard: data }: { dashboard: DashboardResponse }) {
           <Row k="Avg daily usage"     v={`${kwh(avgDailyKwh)} kWh/day`} />
           <Row k="Effective rate"      v={`₹${rupees(effectiveRate, { decimals: 2 })}/kWh`} />
           <Row k="vs last bill"        v={lastBillAmt > 0 ? `${projVsLast >= 0 ? "+" : ""}${projVsLast}%` : "—"} />
-          {daysToDue !== null && <Row k="Days to due date" v={daysToDue < 0 ? `${Math.abs(daysToDue)} overdue` : String(daysToDue)} />}
           <div className="mt-6 border-l-2 border-white/10 pl-3 text-[11px] text-on-surface-variant">
             <div className="mb-1 uppercase tracking-[0.18em] text-on-surface-variant/80">Formula</div>
             projection ≈ avg daily kWh × 30 × effective ₹/kWh, where the rate is the last bill amount

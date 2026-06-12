@@ -9,6 +9,8 @@ interface BillCycleRingProps {
   daysToDue: number | null;
   /** Fraction of the billing cycle elapsed, 0–1 (drives the ring fill). */
   cycleProgress: number;
+  /** Projected bill vs last month, as a percentage (e.g. +37). Null hides it. */
+  vsLastPct?: number | null;
   className?: string;
 }
 
@@ -16,7 +18,7 @@ interface BillCycleRingProps {
  * Postpaid counterpart to RunwayGauge. Same fitness-ring vocabulary, but the
  * ring tracks billing-cycle progress and the colour reflects due-date urgency.
  */
-export function BillCycleRing({ projectedInr, daysToDue, cycleProgress, className }: BillCycleRingProps) {
+export function BillCycleRing({ projectedInr, daysToDue, cycleProgress, vsLastPct, className }: BillCycleRingProps) {
   const size = 260;
   const stroke = 12;
   const r = (size - stroke) / 2;
@@ -73,6 +75,14 @@ export function BillCycleRing({ projectedInr, daysToDue, cycleProgress, classNam
             {projectedInr === null || !Number.isFinite(projectedInr) ? "—" : rupees(projectedInr, { decimals: 0 })}
           </span>
         </div>
+        {vsLastPct !== null && vsLastPct !== undefined && Number.isFinite(vsLastPct) && (
+          <div className={cn(
+            "mt-1.5 font-mono text-[11px]",
+            vsLastPct > 5 ? "text-secondary" : vsLastPct < -5 ? "text-primary-fixed-dim" : "text-on-surface-variant"
+          )}>
+            {vsLastPct > 0 ? "▲" : vsLastPct < 0 ? "▼" : ""} {Math.abs(vsLastPct)}% vs last month
+          </div>
+        )}
         <div
           className={cn(
             "mt-2 text-[11px] font-medium",

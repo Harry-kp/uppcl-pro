@@ -429,7 +429,13 @@ Payments: `InstaPayment/{updateConsumerInputAmount, processPaymentRequest, proce
 ---
 
 > **Derived metrics (no endpoint — compute client-side from `eventsummary` kWh):** carbon emission
-> (kWh × grid factor ~0.71 kg CO₂/kWh), solar-savings calculator, effective ₹/kWh tariff
+> (kWh × grid factor **0.8** kg CO₂/kWh), solar-savings calculator, effective ₹/kWh tariff
 > (bill_amt ÷ units). These are how UPPCL implements `carbonEmission`/`solarCalculator`.
+>
+> **Carbon factor verified (June 2026).** UPPCL's Usage page shows 70.85 kg for 88.56 kWh →
+> factor = 70.85 ÷ 88.56 = **0.80** exactly. There is **no carbon API**: `consumptionAggregation`
+> returns only `{averageConsumption, maximumConsumption, maximumPower}` — no total, no carbon. The
+> "Total" (88.56) is the client-side **sum of daily `eventsummary/aggregate` rows**, and carbon is
+> that total × 0.8. Use 0.8 (not the CEA 0.71) so our numbers match UPPCL's app and bill.
 </content>
 </invoke>
