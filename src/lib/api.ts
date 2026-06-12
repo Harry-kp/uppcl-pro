@@ -8,7 +8,7 @@
  * plaintext JSON now. Only ALTCHA proof-of-work is still needed for login.
  */
 import useSWR, { mutate as globalMutate } from "swr";
-import { solveAltcha, type AltchaChallenge } from "./crypto";
+import { solveAltcha, wssEncrypt, wssDecrypt, type AltchaChallenge } from "./crypto";
 import {
   getSession,
   saveSession,
@@ -34,6 +34,18 @@ const IST_OFFSET = "+05:30";
 function ist(d: Date): string {
   return `${d.toISOString().split("T")[0]}T00:00:00${IST_OFFSET}`;
 }
+
+/** End-of-day IST timestamp — UPPCL's eventsummary `to` wants 23:59:59, not 00:00:00. */
+function istEnd(d: Date): string {
+  return `${d.toISOString().split("T")[0]}T23:59:59${IST_OFFSET}`;
+}
+
+/** Human date like "01 Jun 2025" — the format bill/billHistory expects for from/to. */
+function humanDate(d: Date): string {
+  return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+}
+
+const pad2 = (n: number) => String(n).padStart(2, "0");
 
 function tenantHeader(tenant: string): string {
   return JSON.stringify({ isMultiLevel: true, code: tenant });
@@ -77,13 +89,23 @@ function humanizeError(status: number, raw: string): string {
 // ─── Core: POST to UPPCL via our CORS-proxy route ────────────────────────────
 // UPPCL dropped encryption — all endpoints accept plaintext JSON now.
 
-async function uppcl_post(path: string, body: Record<string, unknown>): Promise<unknown> {
+/**
+ * POST to a UPPCL API base via our CORS-proxy route.
+ * `base` selects the upstream: "uppcl" → /accounts/api, "bootstrap" → /bootstrap/api.
+ * `extraHeaders` lets callers add e.g. `subtenantcode` (needed by bill/download, insight).
+ */
+async function proxy_post(
+  base: "uppcl" | "bootstrap",
+  path: string,
+  body: Record<string, unknown>,
+  extraHeaders?: Record<string, string>
+): Promise<unknown> {
   const jwt = getJwt();
   if (!jwt) throw new ProxyError(401, "No active session — sign in first");
 
   const session = getSession()!;
 
-  const r = await fetch(`/api/uppcl/${path}`, {
+  const r = await fetch(`/api/${base}/${path}`, {
     method: "POST",
     headers: {
       "content-type": "application/json",
@@ -91,6 +113,7 @@ async function uppcl_post(path: string, body: Record<string, unknown>): Promise<
       tenantid: tenantHeader(session.tenant),
       token: jwt,
       authorization: `Bearer ${jwt}`,
+      ...extraHeaders,
     },
     body: JSON.stringify(body),
     cache: "no-store",
@@ -114,6 +137,40 @@ async function uppcl_post(path: string, body: Record<string, unknown>): Promise<
     ? (parsed as { message: string }).message
     : text.slice(0, 200);
   throw new ProxyError(r.status, msg, parsed);
+}
+
+async function uppcl_post(
+  path: string,
+  body: Record<string, unknown>,
+  extraHeaders?: Record<string, string>
+): Promise<unknown> {
+  return proxy_post("uppcl", path, body, extraHeaders);
+}
+
+/** GET against /accounts/api (a few endpoints — e.g. downtime — are GET-only). */
+async function uppcl_get(path: string): Promise<unknown> {
+  const jwt = getJwt();
+  if (!jwt) throw new ProxyError(401, "No active session — sign in first");
+  const session = getSession()!;
+
+  const r = await fetch(`/api/uppcl/${path}`, {
+    headers: {
+      apikey: UPPCL_API_KEY,
+      tenantid: tenantHeader(session.tenant),
+      token: jwt,
+      authorization: `Bearer ${jwt}`,
+    },
+    cache: "no-store",
+  });
+
+  if (r.status === 200) return r.json();
+  if (r.status === 401 || r.status === 403) {
+    clearSession();
+    globalMutate("/health");
+    throw new ProxyError(401, "Session expired — sign in again");
+  }
+  const text = await r.text();
+  throw new ProxyError(r.status, text.slice(0, 200));
 }
 
 // ─── Auth ─────────────────────────────────────────────────────────────────────
@@ -173,6 +230,77 @@ export async function login(username: string, password: string): Promise<void> {
 
 export async function logout(): Promise<void> {
   clearSession();
+}
+
+// ─── UPPCL /wss legacy bill portal (official bills/receipts/meter data) ───────
+// The portal AES-encrypts request & response bodies (`_cdata`). wssPost encrypts
+// the payload, POSTs via the /api/wss proxy, and decrypts the response.
+// See docs/api-reverse-engineering.md §9.
+
+/** Account/discom identifiers in the shapes the /wss endpoints expect. */
+function wssDiscom(site: SiteRecord): string {
+  return String(site.tenantId).toUpperCase(); // e.g. "PVVNL"
+}
+
+async function wssPost<T = Record<string, unknown>>(path: string, payload: Record<string, unknown>): Promise<T> {
+  const r = await fetch(`/api/wss/${path}`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ _cdata: await wssEncrypt(JSON.stringify(payload)) }),
+    cache: "no-store",
+  });
+  if (!r.ok) throw new ProxyError(r.status, "Bill portal unavailable");
+  const json = (await r.json()) as { _cdata?: string };
+  if (!json._cdata) throw new ProxyError(502, "Bill portal returned no data");
+  return JSON.parse(await wssDecrypt(json._cdata)) as T;
+}
+
+/** Save a base64 PDF as a browser download. */
+function savePdfBase64(b64: string, filename: string): void {
+  const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+  const url = URL.createObjectURL(new Blob([bytes], { type: "application/pdf" }));
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 10_000);
+}
+
+/** Download the official bill PDF for a monthly invoice. */
+export async function downloadBillPdf(invoice: { invoice_id: string }): Promise<void> {
+  const site = await primarySite();
+  const res = await wssPost<{ statusCode?: string; Response?: string; statusMsg?: string }>(
+    "v2/api/viewBillDownloadPDF",
+    { kno: site.connectionId, discomName: wssDiscom(site), billNo: invoice.invoice_id, category: String(site.accountType ?? "10"), flag: "BILL" }
+  );
+  if (res.statusCode !== "VIEW_BILL_PDF_200" || !res.Response) {
+    throw new ProxyError(404, res.statusMsg || "Bill PDF not available for this connection");
+  }
+  savePdfBase64(res.Response, `uppcl-bill-${invoice.invoice_id}.pdf`);
+}
+
+/** Download the official PDF receipt for the most recent online payment. */
+export async function downloadReceiptPdf(): Promise<void> {
+  const site = await primarySite();
+  const res = await wssPost<{ statusCode?: string; bytecode?: string; statusMsg?: string }>(
+    "v2/lastOnlinePaymentReciept",
+    { kno: site.connectionId, discomName: wssDiscom(site) }
+  );
+  if (!res.bytecode) throw new ProxyError(404, res.statusMsg || "No payment receipt available");
+  savePdfBase64(res.bytecode, `uppcl-receipt-${site.connectionId}.pdf`);
+}
+
+/** Download the official arrears statement PDF. */
+export async function downloadArrearsPdf(): Promise<void> {
+  const site = await primarySite();
+  const res = await wssPost<{ byteCode?: string; statusMsg?: string }>(
+    "v2/InstaPayment/viewArrear",
+    { discomName: wssDiscom(site), kno: site.connectionId, reportName: "ARREAR" }
+  );
+  if (!res.byteCode) throw new ProxyError(404, res.statusMsg || "No arrears statement available");
+  savePdfBase64(res.byteCode, `uppcl-arrears-${site.connectionId}.pdf`);
 }
 
 // ─── Data fetchers (mirror the old Python proxy endpoints) ────────────────────
@@ -251,6 +379,24 @@ async function fetcher<T>(key: string): Promise<T> {
     return uppcl_post("bill/billHistory", { consumerId: cid, tenantId: tid, skip: 0, limit }) as Promise<T>;
   }
 
+  // Postpaid monthly invoices — MUST precede the generic /bills branch below,
+  // because "/bills/latest".startsWith("/bills") is true.
+  if (key.startsWith("/bills/latest")) {
+    // Single latest monthly invoice (fetchLatestBill:true → object, not array).
+    const from = humanDate(daysAgo(13 * 31));
+    const to = humanDate(today);
+    return uppcl_post("bill/billHistory", { type: "monthlyBill", from, to, tenantId: tid, fetchLatestBill: true, consumerId: cid }) as Promise<T>;
+  }
+
+  if (key.startsWith("/bills/invoices")) {
+    // Full monthly invoice history (no fetchLatestBill → array). See RE doc §7.
+    const monthsBack = parseInt(params.get("months") ?? "18");
+    const from = humanDate(daysAgo(monthsBack * 31));
+    const to = humanDate(today);
+    return uppcl_post("bill/billHistory", { type: "monthlyBill", from, to, tenantId: tid, consumerId: cid }) as Promise<T>;
+  }
+
+  // Generic daily-bill search (prepaid daily bills).
   if (key.startsWith("/bills")) {
     const days = parseInt(params.get("days") ?? "90");
     const limit = parseInt(params.get("limit") ?? String(days));
@@ -264,14 +410,70 @@ async function fetcher<T>(key: string): Promise<T> {
     return uppcl_post("payment/v2/search", { skip: 0, limit, tenantId: tid, consumer_id: cid }) as Promise<T>;
   }
 
+  if (key.startsWith("/consumption/stats")) {
+    // Avg / max consumption + peak power for a month (eventsummary/consumptionAggregation).
+    const month = params.get("month") ?? pad2(today.getMonth() + 1);
+    const year = params.get("year") ?? String(today.getFullYear());
+    return uppcl_post("eventsummary/consumptionAggregation", { deviceId: did, tenantId: tid, groupBy: "month", uom: "KWH", month, year }) as Promise<T>;
+  }
+
   if (key.startsWith("/consumption")) {
     const days = parseInt(params.get("days") ?? "30");
-    return uppcl_post("eventsummary/aggregate", { deviceId: did, tenantId: tid, from: ist(daysAgo(days)), to: ist(today) }) as Promise<T>;
+    const uom = params.get("uom") ?? "KWH";
+    return uppcl_post("eventsummary/aggregate", { deviceId: did, tenantId: tid, from: ist(daysAgo(days)), to: istEnd(today), uom }) as Promise<T>;
   }
 
   if (key.startsWith("/history/yearly")) {
     const year = parseInt(params.get("year") ?? String(today.getFullYear()));
-    return uppcl_post("eventsummary/search", { deviceId: did, tenantId: tid, groupBy: "year", year }) as Promise<T>;
+    return uppcl_post("eventsummary/search", { deviceId: did, tenantId: tid, groupBy: "year", year: String(year), uom: "KWH" }) as Promise<T>;
+  }
+
+  // ── Power-quality / usage stats, alarms, alerts, native tickets ────
+  if (key.startsWith("/alarms")) {
+    return uppcl_post("alarms/search", { connectionId: cid, tenantId: tid, startDate: daysAgo(30).toISOString(), endDate: today.toISOString() }) as Promise<T>;
+  }
+
+  if (key.startsWith("/alerts")) {
+    return uppcl_post("alert/search", { userId: String(site.userId ?? ""), startDate: daysAgo(30).toISOString(), endDate: today.toISOString() }) as Promise<T>;
+  }
+
+  if (key.startsWith("/tickets")) {
+    const status = params.get("status") ?? "open";
+    return uppcl_post("ticket/search", { status, userId: String(site.userId ?? "") }) as Promise<T>;
+  }
+
+  if (key.startsWith("/tips")) {
+    const appliance = params.get("appliance") ?? "others";
+    return uppcl_post("savingTip/getOne", { appliance }) as Promise<T>;
+  }
+
+  if (key === "/tenant-preferences") {
+    return proxy_post("bootstrap", "tenant/searchPreference", { tenantId: tid }) as Promise<T>;
+  }
+
+  if (key === "/downtime") {
+    return uppcl_get("announcements/activeDowntimeAnnouncement") as Promise<T>;
+  }
+
+  // ── Official data from the /wss bill portal (AES-encrypted) ────────
+  if (key === "/wss/consumer") {
+    return wssPost("v2/api/getConsumerDetails", { kno: cid, discomName: wssDiscom(site) }) as Promise<T>;
+  }
+  if (key === "/wss/meter") {
+    return wssPost("v2/Utility/getMeterData", {
+      kNumber: cid, discom: wssDiscom(site),
+      sanctionedLoad: site.sanctionedLoad, connectionType: site.connectionType,
+    }) as Promise<T>;
+  }
+  if (key === "/wss/arrears") {
+    return wssPost("v2/InstaPayment/getArrearAmountStatus", { accountID: cid, discom: wssDiscom(site) }) as Promise<T>;
+  }
+
+  if (key.startsWith("/appliances")) {
+    // Appliance-level disaggregation ("DaData"). Empty until UPPCL's model has data.
+    const start = `${today.getFullYear()}-${pad2(today.getMonth() + 1)}-01`;
+    const end = today.toISOString().split("T")[0];
+    return uppcl_post("dadata/v2/search", { deviceId: did, compare: "month", fromDate: start, toDate: end, tenantId: tid }) as Promise<T>;
   }
 
   if (key.startsWith("/dadata")) {
@@ -464,12 +666,14 @@ export interface Site {
   deviceId: string;
   tenantId: string;
   tenantCode: string;
+  discom: string;
+  userId: string;
   name: string;
   customerName: string;
   address: string;
   pincode: string;
   sanctionedLoad: string;
-  connectionType: string;
+  connectionType: "prepaid" | "postpaid" | string;
   meterInstallationNumber: string;
   meterPhase: string;
   meterType: string;
@@ -629,6 +833,147 @@ export const useYearlyHistory = (year?: number) =>
   useSWR<UpstreamEnvelope<ConsumptionRow[]>>(
     year ? `/history/yearly?year=${year}` : "/history/yearly", fetcher, swrOpts
   );
+
+/* ── Postpaid + cross-meter feature hooks (reverse-engineered, see docs) ── */
+
+export interface MonthlyInvoice {
+  invoice_id: string;
+  bill_from_dt: string;
+  bill_amt: string;      // negative = credit / advance balance
+  due_dt: string;
+  bill_dt: string;
+  payment_dt: string;
+  payment_amt: string;
+}
+
+export interface UsageStats {
+  averageConsumption: string;
+  maximumConsumption: string;
+  maximumPower: string;
+}
+
+export interface MeterAlarm { [k: string]: unknown }
+export interface Notification { [k: string]: unknown }
+export interface Ticket { [k: string]: unknown }
+export interface SavingTip { _id: string; tipEnglish?: string; tipHindi?: string; appliance?: string }
+
+/** Latest monthly invoice (postpaid). Single object, not an array. */
+export const useLatestInvoice = () =>
+  useSWR<UpstreamEnvelope<MonthlyInvoice>>("/bills/latest", fetcher, swrOpts);
+
+/** Full monthly invoice history (postpaid). */
+export const useInvoices = (months = 18) =>
+  useSWR<UpstreamEnvelope<MonthlyInvoice[]>>(`/bills/invoices?months=${months}`, fetcher, swrOpts);
+
+/** Avg/max consumption + peak power for a month. */
+export const useUsageStats = (month?: string, year?: string) =>
+  useSWR<UpstreamEnvelope<UsageStats>>(
+    `/consumption/stats${month && year ? `?month=${month}&year=${year}` : ""}`, fetcher, swrOpts
+  );
+
+export const useMeterAlarms = () =>
+  useSWR<UpstreamEnvelope<MeterAlarm[]>>("/alarms", fetcher, swrOpts);
+
+export const useNotifications = () =>
+  useSWR<UpstreamEnvelope<Notification[]>>("/alerts", fetcher, swrOpts);
+
+export const useTickets = (status: "open" | "closed" | "all" = "open") =>
+  useSWR<UpstreamEnvelope<Ticket[]>>(`/tickets?status=${status}`, fetcher, swrOpts);
+
+/** Localized energy-saving tips for an appliance (fridge|geyser|washing_machine|nightbaseload|others). */
+export const useSavingTip = (appliance: string) =>
+  useSWR<UpstreamEnvelope<SavingTip[]>>(appliance ? `/tips?appliance=${appliance}` : null, fetcher, swrOpts);
+
+export interface DiscomDetails {
+  address?: string;
+  customerCareNumber?: string;
+  helplineNumber?: string;
+  whatsappNumber?: string;
+  email?: string;
+  alias?: string;
+  title?: string;
+  logo?: string;
+  playStoreLink?: string;
+}
+
+export interface TenantPreferences {
+  discomDetails?: DiscomDetails;
+  [k: string]: unknown;
+}
+
+export interface DowntimeAnnouncement {
+  body?: string;
+  title?: string;
+  [k: string]: unknown;
+}
+
+export interface ApplianceRow { [k: string]: unknown }
+
+/** UPPCL's feature-flag + discom config tree (bootstrap API). */
+export const useTenantPreferences = () =>
+  useSWR<UpstreamEnvelope<TenantPreferences>>("/tenant-preferences", fetcher, swrOpts);
+
+/** Active maintenance / downtime announcement (null when none). */
+export const useDowntime = () =>
+  useSWR<UpstreamEnvelope<DowntimeAnnouncement | null>>("/downtime", fetcher, swrOpts);
+
+/** Appliance-level disaggregation (empty until UPPCL's model has enough data). */
+export const useApplianceData = () =>
+  useSWR<UpstreamEnvelope<ApplianceRow[]>>("/appliances", fetcher, swrOpts);
+
+/* ── Official /wss bill-portal data (richer than the jio platform) ── */
+
+export interface WssConsumer {
+  status?: string;
+  ConsumerDetails?: {
+    kno?: string;
+    mobileNo?: string;
+    email?: string;
+    currentAddress?: string;   // may carry a scheme-eligibility note
+    billingAddress?: string;
+    installationAddress?: string;
+    category?: string;
+    dueAmount?: string;
+    dueDate?: string;
+    billNo?: string;
+    onlineBillingStatus?: string;
+    division?: string;
+    subDivision?: string;
+    dateOfBirth?: string;
+  };
+}
+
+export interface WssMeter {
+  status?: string;
+  data?: {
+    purposeOfSupply?: string;   // e.g. "LMV1" — official tariff category
+    supplyType?: string;
+    meterStatus?: string;
+    manufacturerCode?: string;
+    meterConfigType?: string;
+    meterSerialNumber?: string;
+    badgeNumber?: string;
+    previousReadingKWH?: string;
+    previousReadDateTime?: string;
+  };
+}
+
+export interface WssArrears {
+  status?: string;
+  data?: { amount?: string; status?: string };
+}
+
+/** Official consumer profile (division, due date, billing mode, scheme flag). */
+export const useWssConsumer = () =>
+  useSWR<WssConsumer>("/wss/consumer", fetcher, swrOpts);
+
+/** Official meter data (tariff category, meter status, last cumulative reading). */
+export const useWssMeter = () =>
+  useSWR<WssMeter>("/wss/meter", fetcher, swrOpts);
+
+/** Official arrears amount. */
+export const useWssArrears = () =>
+  useSWR<WssArrears>("/wss/arrears", fetcher, swrOpts);
 
 /* ── Complaint hooks (same signatures, different backend route) ── */
 

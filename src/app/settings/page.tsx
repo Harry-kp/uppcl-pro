@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useHealth, useSites, logout } from "@/lib/api";
+import { useHealth, useSites, useWssConsumer, logout } from "@/lib/api";
 import { useToast } from "@/components/ui/Toast";
 import { mutate as swrMutate } from "swr";
 import { ExternalLink, LogOut, Sun, Moon, Laptop, Info, Code2 } from "lucide-react";
@@ -11,6 +11,16 @@ export default function SettingsPage() {
   const { data: h } = useHealth();
   const { data: sites } = useSites();
   const s = sites?.data?.[0];
+  const { data: wssConsumer } = useWssConsumer();
+  const cd = wssConsumer?.ConsumerDetails;
+  const billingMode = cd?.onlineBillingStatus;
+  // The official profile embeds a govt-scheme flag inside currentAddress, e.g.
+  // "$True…eligible for Bijli Bill Rahat Yojna 2025". Pull the name when active.
+  const schemeMatch = (cd?.currentAddress ?? "").match(/\$(True|False)[^,]*?[Ee]ligible [Ff]or ([^,]+)/);
+  const schemeName = schemeMatch && schemeMatch[1].toLowerCase() === "true" ? schemeMatch[2].trim() : null;
+  const dob = cd?.dateOfBirth
+    ? (() => { const d = new Date(cd.dateOfBirth!.replace(/-/g, " ")); return isNaN(d.getTime()) ? cd.dateOfBirth : d.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }); })()
+    : null;
   const { push } = useToast();
 
   const [theme, setTheme] = useState<"dark" | "light" | "system">(
@@ -73,9 +83,8 @@ export default function SettingsPage() {
             <Tooltip
               content={
                 <div className="space-y-1">
-                  <div>Signing out clears your local session.</div>
-                  <div>To fully revoke access, change your UPPCL password.</div>
-                  <div>To force-invalidate, change your UPPCL password.</div>
+                  <div>Signing out clears your local session on this device.</div>
+                  <div>To fully revoke access everywhere, change your UPPCL password.</div>
                 </div>
               }
             >
@@ -100,9 +109,25 @@ export default function SettingsPage() {
             <Row k="meter type"          v={s?.meterType ?? "—"} />
             <Row k="sanctioned load"     v={s?.sanctionedLoad ? `${s.sanctionedLoad} kW` : "—"} />
             <Row k="connection type"     v={s?.connectionType ?? "—"} />
+            <Row k="billing mode"        v={billingMode ? (billingMode.toUpperCase() === "EMAIL" ? "Paperless (email)" : billingMode) : "—"} />
+          </div>
+
+          {/* Billing office & scheme — from the official /wss getConsumerDetails profile */}
+          <div className="mt-5 text-[10px] uppercase tracking-[0.18em] text-on-surface-variant/80">Billing office</div>
+          <div className="mt-3 space-y-3 font-mono text-[13px]">
+            <Row k="division"            v={cd?.division ?? "—"} />
+            <Row k="sub-division"        v={cd?.subDivision ?? "—"} />
+            <Row k="latest bill no"      v={cd?.billNo ?? "—"} />
+            {dob && <Row k="account holder dob" v={dob} small />}
+            <Row k="govt scheme"         v={
+              schemeName
+                ? <span className="text-primary-fixed-dim">{schemeName}</span>
+                : <span className="text-on-surface-variant">none active</span>
+            } />
           </div>
           <p className="mt-4 text-[10px] text-on-surface-variant/70">
-            All user-specific IDs discovered at runtime from <code>/site/search</code>. Nothing hardcoded.
+            Connection IDs from <code>/site/search</code>; billing office &amp; scheme from the official
+            UPPCL <code>getConsumerDetails</code> profile. Nothing hardcoded.
           </p>
         </section>
 

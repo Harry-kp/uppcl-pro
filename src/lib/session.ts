@@ -23,6 +23,8 @@ export interface SiteRecord {
   deviceId: string;
   tenantId: string;
   tenantCode: string;
+  discom: string;
+  userId: string;
   name: string;
   customerName: string;
   address: string;

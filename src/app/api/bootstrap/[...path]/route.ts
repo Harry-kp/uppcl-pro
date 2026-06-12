@@ -1,31 +1,27 @@
 /**
- * Stateless CORS-bypass proxy for UPPCL SMART API.
+ * Stateless CORS-bypass proxy for UPPCL's *bootstrap* API base.
  *
- * This route is a dumb pipe. It forwards requests from the browser
- * to uppcl.sem.jio.com and returns the response as-is.
+ * UPPCL's SPA talks to two bases:
+ *   - /accounts/api   → handled by src/app/api/uppcl/[...path]/route.ts
+ *   - /bootstrap/api  → handled here (tenant preferences, offline centers)
  *
- * Special paths:
- *   "pubkey" → fetches the RSA public key PEM (GET, no body)
- *   Everything else → forwarded to UPPCL API
+ * Same dumb-pipe contract: forward the request as-is, return the response as-is.
+ * See docs/api-reverse-engineering.md §8.
  */
 import { NextRequest, NextResponse } from "next/server";
 
 const BASE_URL = process.env.UPPCL_BASE_URL ?? "https://uppcl.sem.jio.com";
-const API_BASE = `${BASE_URL}/accounts/api`;
-const PUBKEY_URL = `${BASE_URL}/uppclsmart/assets/cert/prod/server_public.pem`;
+const API_BASE = `${BASE_URL}/bootstrap/api`;
 
-// NOT a secret — this is a public client ID baked into UPPCL's own JavaScript
-// bundle at uppcl.sem.jio.com. Every user of the official website sends this
-// same key. Override via UPPCL_API_KEY env var if UPPCL ever rotates it.
-const DEFAULT_API_KEY = "5ab6ef2e-5051-4923-aa65-dc82883af26b";
-const API_KEY = process.env.UPPCL_API_KEY ?? DEFAULT_API_KEY;
+// The browser always forwards the public `apikey` header (see proxy_post in
+// src/lib/api.ts); this env var is only a server-side fallback.
+const API_KEY = process.env.UPPCL_API_KEY;
 
 const FORWARD_HEADERS = [
   "apikey",
   "tenantid",
   "token",
   "authorization",
-  "captchatoken",
   "subtenantcode",
   "content-type",
 ];
@@ -45,7 +41,7 @@ function upstreamHeaders(req: NextRequest): Record<string, string> {
     if (val) h[name] = val;
   }
 
-  if (!h.apikey) h.apikey = API_KEY;
+  if (!h.apikey && API_KEY) h.apikey = API_KEY;
   return h;
 }
 
@@ -54,17 +50,7 @@ export async function GET(
   { params }: { params: Promise<{ path: string[] }> }
 ) {
   const { path } = await params;
-  const joined = path.join("/");
-
-  if (joined === "pubkey") {
-    const r = await fetch(PUBKEY_URL, { headers: upstreamHeaders(req), cache: "no-store" });
-    return new NextResponse(await r.text(), {
-      status: r.status,
-      headers: { "content-type": "text/plain", "cache-control": "public, max-age=86400" },
-    });
-  }
-
-  const url = `${API_BASE}/${joined}${req.nextUrl.search}`;
+  const url = `${API_BASE}/${path.join("/")}${req.nextUrl.search}`;
   const r = await fetch(url, { headers: upstreamHeaders(req), cache: "no-store" });
   return new NextResponse(await r.text(), {
     status: r.status,
