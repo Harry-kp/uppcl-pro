@@ -9,7 +9,7 @@ unless noted. Headers: `apikey`, `tenantid` (JSON `{isMultiLevel:true, code:<ten
 `token` + `authorization: Bearer <jwt>`. Our proxy at `src/app/api/uppcl/[...path]/route.ts`
 forwards these as-is.
 
-> Capture context: device `CA0466915`, connection `6577496430`, `tenantId:"pvvnl"`,
+> Capture context: device `<deviceId>`, connection `<connectionId>`, `tenantId:"pvvnl"`,
 > `connectionType:"postpaid"`, `dataSource:"jeu"`, app version 2.7.4.
 
 ---
@@ -41,8 +41,8 @@ From `site/search` `data[0]`:
 
 | Field | Value (this account) | Use |
 |-------|----------------------|-----|
-| `connectionId` / `name` / `code` | `6577496430` | body `connectionId` / `consumerId` / `consumer_id` |
-| `deviceId` | `CA0466915` | body `deviceId` (eventsummary, solar, dadata) |
+| `connectionId` / `name` / `code` | `<connectionId>` | body `connectionId` / `consumerId` / `consumer_id` |
+| `deviceId` | `<deviceId>` | body `deviceId` (eventsummary, solar, dadata) |
 | `tenantId` | `pvvnl` (discom string, **not** a UUID) | body `tenantId` |
 | `tenantCode` | `21337975-…` (UUID) | `tenantid` header `code`, `subTenantCode` |
 | `discom` | `b3ba0ab0-…` (UUID = `DEFAULT_TENANT`) | — |
@@ -411,7 +411,7 @@ Auth model: most read endpoints work with just the `appServiceKey` header (no lo
 `division` (`"EUDD IV MEERUT"`), `subDivision`.
 
 `getMeterData.data`: `purposeOfSupply` (`"LMV1"` — tariff category name), `supplyType` (`"10"`),
-`badgeNumber`/`meterSerialNumber` (`"CA0466915"`), `manufacturerCode` (`"CPS"`),
+`badgeNumber`/`meterSerialNumber` (`"<deviceId>"`), `manufacturerCode` (`"CPS"`),
 `meterConfigType` (`"SIMKW"`), `meterStatus` (`"ACTIVE"`), **`previousReadingKWH` (`"1256.62"`)**,
 `previousReadDateTime` (`"01-JUN-2026"`), `leftDigit`/`rightDigit` (meter face config).
 
