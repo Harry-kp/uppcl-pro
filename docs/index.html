@@ -4,10 +4,10 @@
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>UPPCL Pro — Kinetic Vault</title>
-  <meta name="description" content="Open-source analytics dashboard for UPPCL SMART prepaid smart meters. Your credentials are never stored or logged."/>
+  <meta name="description" content="Open-source analytics dashboard for UPPCL SMART prepaid &amp; postpaid smart meters. Your credentials are never stored or logged."/>
   <meta name="theme-color" content="#0b0b0b"/>
   <meta property="og:title" content="UPPCL Pro — Kinetic Vault"/>
-  <meta property="og:description" content="Self-hosted analytics dashboard for UPPCL SMART prepaid smart meters."/>
+  <meta property="og:description" content="Self-hosted analytics dashboard for UPPCL SMART prepaid &amp; postpaid smart meters."/>
   <meta property="og:type" content="website"/>
   <meta property="og:url" content="https://harry-kp.github.io/uppcl-pro/"/>
   <meta property="og:image" content="https://harry-kp.github.io/uppcl-pro/screenshots/home-dark.png"/>
@@ -186,9 +186,9 @@
         <span style="width:6px;height:6px;border-radius:50%;background:var(--success);display:inline-block"></span>
         Tested end-to-end on PVVNL
       </div>
-      <h1>Your prepaid meter,<br><span>finally making sense.</span></h1>
+      <h1>Your UPPCL meter,<br><span>finally making sense.</span></h1>
       <p>
-        Open-source analytics for <strong>UPPCL SMART</strong> prepaid meters.
+        Open-source analytics for <strong>UPPCL SMART</strong> meters — prepaid <em>and</em> postpaid.
         Your credentials are never stored or logged. The entire codebase is open — read every line yourself.
       </p>
       <div class="hero-ctas">
@@ -207,37 +207,37 @@
     <!-- Features -->
     <section id="features">
       <h2>What it does</h2>
-      <p class="sub">The official UPPCL SMART portal stops at "today's balance." This goes further.</p>
+      <p class="sub">The official UPPCL SMART portal stops at "today's balance." This goes further — and reshapes by meter type.</p>
       <div class="features">
         <div class="feature">
           <div class="feature-icon">⚡</div>
-          <h3>Live balance + runway</h3>
-          <p>Auto-fallback chain ensures a trustworthy number. Fitness-ring gauge shows days remaining at current burn, with ETA date.</p>
+          <h3>Balance &amp; bills</h3>
+          <p>Prepaid: live balance, a days-until-empty runway gauge, and a recharge recommender. Postpaid: amount due, a bill-cycle ring, and a next-bill projection from your real effective ₹/kWh.</p>
+        </div>
+        <div class="feature">
+          <div class="feature-icon">📄</div>
+          <h3>Official PDFs, in-app</h3>
+          <p>Download your actual UPPCL bill, payment receipt, and arrears statement straight from the dashboard — no portal hop.</p>
         </div>
         <div class="feature">
           <div class="feature-icon">📊</div>
+          <h3>Daily usage &amp; cost</h3>
+          <p>Per-day kWh, peak demand, apparent energy (kVAh), a derived power factor, estimated cost, and carbon — with CSV export.</p>
+        </div>
+        <div class="feature">
+          <div class="feature-icon">📈</div>
           <h3>Anomaly detection</h3>
           <p>Flags days where consumption is &gt;1.5σ above the 30-day average, with a side panel explaining the math.</p>
         </div>
         <div class="feature">
-          <div class="feature-icon">💰</div>
-          <h3>Cost breakdown</h3>
-          <p>Effective ₹/unit trend, stacked charge composition (energy / fixed / duty / FPPA / subsidy), tariff slab usage, subsidy YTD.</p>
-        </div>
-        <div class="feature">
-          <div class="feature-icon">🔋</div>
-          <h3>Recharge sweet-spot</h3>
-          <p>Sliders recommend amount × frequency for a target runway, based on your actual historical burn rate and lifespan analytics.</p>
-        </div>
-        <div class="feature">
           <div class="feature-icon">🛡️</div>
-          <h3>Meter health</h3>
-          <p>Reading reliability donut, 365-day data-gap calendar, peak-vs-sanctioned load gauge, power-factor trend over 12 months.</p>
+          <h3>Power quality &amp; meter health</h3>
+          <p>Power-factor and peak-vs-sanctioned-load gauges that flag surcharge / max-demand penalty risk, plus the official meter reading and identity.</p>
         </div>
         <div class="feature">
           <div class="feature-icon">📞</div>
-          <h3>1912 complaints</h3>
-          <p>Live status of every complaint from your phone, full JE/AE/XEN officer chain, one-tap call, and a "Report outage" panel.</p>
+          <h3>Support &amp; 1912</h3>
+          <p>Live status of every complaint from your phone, the full JE/AE/XEN officer chain, billing-office details, and a "Report outage" panel. English + हिन्दी.</p>
         </div>
       </div>
     </section>
@@ -263,7 +263,7 @@
             <source media="(prefers-color-scheme: light)" srcset="screenshots/analytics-light.png">
             <img src="screenshots/analytics-dark.png" alt="Usage analytics">
           </picture>
-          <div class="gallery-caption">Usage analytics <span>· Calendar heatmap · Day-of-week pattern · Rolling means</span></div>
+          <div class="gallery-caption">Usage analytics <span>· Day-of-week pattern · Always-on vs active · Annual profile</span></div>
         </div>
 
         <!-- Ledger -->
@@ -272,7 +272,7 @@
             <source media="(prefers-color-scheme: light)" srcset="screenshots/ledger-light.png">
             <img src="screenshots/ledger-dark.png" alt="Bills & cost ledger">
           </picture>
-          <div class="gallery-caption">Bills &amp; cost <span>· ₹/unit trend · Charge composition · Event timeline</span></div>
+          <div class="gallery-caption">Bills &amp; cost <span>· Official bill PDFs · Daily usage &amp; cost ledger · ₹/unit trend</span></div>
         </div>
 
         <!-- Recharges -->
@@ -290,7 +290,7 @@
             <source media="(prefers-color-scheme: light)" srcset="screenshots/meter-light.png">
             <img src="screenshots/meter-dark.png" alt="Meter health">
           </picture>
-          <div class="gallery-caption">Meter health <span>· Data-gap calendar · Peak vs sanctioned load · Power factor</span></div>
+          <div class="gallery-caption">Meter health <span>· Power factor · Peak vs sanctioned load · Official reading</span></div>
         </div>
 
         <!-- Complaints -->

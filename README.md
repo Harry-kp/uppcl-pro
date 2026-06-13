@@ -2,10 +2,10 @@
 
 # UPPCL Pro
 
-**Your prepaid meter, finally making sense.**
+**Your UPPCL smart meter, finally making sense.**
 
-Analytics dashboard for UPPCL SMART prepaid electricity meters.<br>
-Live balance, runway forecast, anomaly detection, complaint tracking.
+Analytics dashboard for UPPCL SMART electricity meters — prepaid *and* postpaid.<br>
+Balance &amp; runway, monthly bills with one-tap official PDFs, daily usage &amp; cost, power-quality and carbon insights.
 
 <br>
 
@@ -27,15 +27,18 @@ Live balance, runway forecast, anomaly detection, complaint tracking.
 </picture>
 ## What you get
 
+The dashboard reshapes by meter type — prepaid keeps the balance + runway view; postpaid swaps in amount-due, bill-cycle and projection.
+
 | | |
 |---|---|
-| **Balance & Runway** | Live balance with fallback chain. Days-until-empty gauge. Recharge recommendation. |
-| **Anomaly Detection** | Flags days >1.5 standard deviations above your 30-day average. |
-| **Usage Analytics** | Calendar heatmap, day-of-week patterns, annual consumption profile. |
-| **Cost Breakdown** | Effective rate/unit, charge composition, tariff slab usage, subsidy tracking. |
-| **Recharge Planner** | Sweet-spot recommender with lifespan analytics for past recharges. |
-| **Meter Health** | Data reliability, peak-vs-sanctioned load, power factor trend, 365-day gap calendar. |
-| **1912 Complaints** | Full complaint history, JE/AE/XEN officer chain with phone numbers. |
+| **Balance & bills** | Prepaid: live balance, days-until-empty runway, and a recharge recommender. Postpaid: amount due, bill-cycle ring, and a next-bill projection from your real effective ₹/kWh. |
+| **Official PDFs, in-app** | Download your actual UPPCL bill, payment receipt, and arrears statement without leaving the dashboard. |
+| **Daily usage & cost** | Per-day kWh, peak demand, apparent energy (kVAh), a derived power factor, and estimated cost — with CSV export. |
+| **Usage analytics** | Daily and day-of-week patterns, annual consumption profile, always-on vs active load split. |
+| **Anomaly detection** | Flags days >1.5 standard deviations above your 30-day average. |
+| **Power quality & meter health** | Power-factor and peak-vs-sanctioned-load gauges that flag surcharge / max-demand penalty risk, plus the official meter reading & identity. |
+| **Carbon** | CO₂ from your usage, using UPPCL's own grid factor so the figure matches your bill. |
+| **Support** | 1912 complaint history with the JE/AE/XEN officer chain, billing-office details, and outage reporting. English + हिन्दी. |
 
 <br>
 
@@ -127,7 +130,8 @@ You                         This app                      UPPCL
 
 The server has two routes:
 
-- `/api/uppcl/*` -- CORS proxy to `uppcl.sem.jio.com` (your data passes through, never stored)
+- `/api/uppcl/*` & `/api/bootstrap/*` -- CORS proxy to `uppcl.sem.jio.com` (your data passes through, never stored)
+- `/api/wss/*` -- fetches your official bill / receipt / arrears PDFs from UPPCL's bill portal
 - `/api/complaints` -- queries the public 1912 complaint portal (no credentials involved)
 
 <br>
