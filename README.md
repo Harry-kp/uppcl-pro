@@ -102,7 +102,7 @@ bun run dev
 
 Open [localhost:3000](http://localhost:3000) and sign in with your UPPCL SMART credentials.
 
-Requires Node 20+ or Bun 1.1+.
+Requires [Bun](https://bun.sh) 1.1+.
 
 <br>
 
@@ -112,7 +112,7 @@ Your credentials pass through the server over HTTPS to reach UPPCL's API. **They
 
 For complete privacy, [self-host](#self-host) -- your credentials never leave your machine.
 
-The entire codebase is open-source. [Read the proxy route](src/app/api/uppcl/%5B...path%5D/route.ts) yourself.
+The entire codebase is open-source. [Read the proxy](src/lib/proxy.ts) yourself.
 
 <br>
 
@@ -128,7 +128,7 @@ You                         This app                      UPPCL
  JWT stored in your browser   Server forgets immediately
 ```
 
-The server has two routes:
+The server has these API routes:
 
 - `/api/uppcl/*` & `/api/bootstrap/*` -- CORS proxy to `uppcl.sem.jio.com` (your data passes through, never stored)
 - `/api/wss/*` -- fetches your official bill / receipt / arrears PDFs from UPPCL's bill portal

@@ -6,8 +6,8 @@ Source of truth for the full UPPCL backend API surface, derived from:
 
 All endpoints are `POST https://uppcl.sem.jio.com/accounts/api/<path>` with plaintext JSON
 unless noted. Headers: `apikey`, `tenantid` (JSON `{isMultiLevel:true, code:<tenantCode UUID>}`),
-`token` + `authorization: Bearer <jwt>`. Our proxy at `src/app/api/uppcl/[...path]/route.ts`
-forwards these as-is.
+`token` + `authorization: Bearer <jwt>`. Our proxy (`src/lib/proxy.ts`, mounted at
+`/api/uppcl/*`) forwards these as-is.
 
 > Capture context: device `<deviceId>`, connection `<connectionId>`, `tenantId:"pvvnl"`,
 > `connectionType:"postpaid"`, `dataSource:"jeu"`, app version 2.7.4.
@@ -306,11 +306,10 @@ Use the working equivalents (`dadata/v2/search`, `alert/search`, `announcements/
 
 ---
 
-## 8. Second API base: `/bootstrap/api` (NEW — proxy doesn't route this yet)
+## 8. Second API base: `/bootstrap/api`
 
 `bootstrap = window.location.origin + "/bootstrap/api"` (vs `jps = origin + "/accounts/api"`).
-Our proxy `src/app/api/uppcl/[...path]/route.ts` only forwards `/accounts/api`. **To use these,
-add a `/bootstrap/api` forward** (same headers).
+Proxied at `/api/bootstrap/*` by the same `src/lib/proxy.ts` handler (same headers).
 
 ### `tenant/searchPreference` — UPPCL's entire feature catalog + discom config
 ```
