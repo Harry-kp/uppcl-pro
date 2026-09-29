@@ -249,7 +249,7 @@ export async function downloadBillPdf(invoice: { invoice_id: string }): Promise<
   const site = await primarySite();
   const res = await wssPost<{ statusCode?: string; Response?: string; statusMsg?: string }>(
     "v2/api/viewBillDownloadPDF",
-    { kno: site.connectionId, discomName: wssDiscom(site), billNo: invoice.invoice_id, category: String(site.accountType ?? "10"), flag: "BILL" }
+    { kno: site.connectionId, discomName: wssDiscom(site), billNo: invoice.invoice_id, category: String(site.accountType ?? "10"), identifierType: "UNMASKED" }
   );
   if (res.statusCode !== "VIEW_BILL_PDF_200" || !res.Response) {
     throw new ProxyError(404, res.statusMsg || "Bill PDF not available for this connection");
