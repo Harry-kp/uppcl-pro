@@ -118,24 +118,6 @@ export function LoginGate({ proxyUnreachable }: { proxyUnreachable?: string }) {
               </p>
             </div>
 
-            {/* Trust banner */}
-            <div className="rounded-lg border border-primary-fixed-dim/20 bg-primary-container/10 px-4 py-3">
-              <div className="flex items-center gap-2 text-[12px] font-semibold text-primary-fixed-dim">
-                <ShieldCheck className="h-4 w-4" strokeWidth={2} />
-                {t("trust_banner")}
-              </div>
-              <p className="mt-1.5 text-[11px] leading-relaxed text-on-surface-variant">
-                {t("trust_sub")}
-              </p>
-              <Link
-                href="https://github.com/Harry-kp/uppcl-pro#security--privacy"
-                target="_blank"
-                className="mt-2 inline-flex items-center gap-1 text-[11px] font-semibold text-primary-fixed-dim hover:underline"
-              >
-                {t("trust_link")} <ExternalLink className="h-3 w-3" />
-              </Link>
-            </div>
-
             <ul className="space-y-3">
               <Pitch icon={<LockKeyhole className="h-3.5 w-3.5" strokeWidth={2.25} />}>
                 {t.rich("pitch_1", { b: (chunks) => <strong>{chunks}</strong> })}
@@ -147,10 +129,6 @@ export function LoginGate({ proxyUnreachable }: { proxyUnreachable?: string }) {
                 {t.rich("pitch_3", { code: (chunks) => <code className="rounded bg-surface-container-low px-1 font-mono text-[11px]">{chunks}</code> })}
               </Pitch>
             </ul>
-
-            <div className="mt-2 border-t border-white/[0.04] pt-4 font-mono text-[11px] text-on-surface-variant/70">
-              {t("footer_line")}
-            </div>
           </div>
 
           {/* ── Form side ────────────────────────────────────────────── */}
