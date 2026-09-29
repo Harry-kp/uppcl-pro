@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
 import { useHealth, useSites, useWssConsumer, logout } from "@/lib/api";
 import { useToast } from "@/components/ui/Toast";
 import { mutate as swrMutate } from "swr";
 import { ExternalLink, LogOut, Sun, Moon, Laptop, Info, Code2 } from "lucide-react";
 import { Tooltip } from "@/components/ui/Tooltip";
+import { useTheme, getThemeChoice, setTheme, type ThemeChoice } from "@/lib/theme";
 
 export default function SettingsPage() {
   const { data: h } = useHealth();
@@ -23,18 +23,11 @@ export default function SettingsPage() {
     : null;
   const { push } = useToast();
 
-  const [theme, setTheme] = useState<"dark" | "light" | "system">(
-    typeof window !== "undefined"
-      ? ((localStorage.getItem("theme") as "dark" | "light") || "dark")
-      : "dark"
-  );
+  useTheme(); // re-render when the theme changes anywhere (e.g. Topbar toggle)
+  const theme: ThemeChoice = typeof window !== "undefined" ? getThemeChoice() : "system";
 
-  const applyTheme = (t: "dark" | "light" | "system") => {
+  const applyTheme = (t: ThemeChoice) => {
     setTheme(t);
-    const resolved = t === "system" ? (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light") : t;
-    localStorage.setItem("theme", resolved);
-    document.documentElement.classList.toggle("dark", resolved === "dark");
-    document.documentElement.classList.toggle("light", resolved === "light");
     push(`Theme: ${t}`, { kind: "info" });
   };
 
