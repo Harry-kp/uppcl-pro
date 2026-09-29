@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { Bell, Command, Moon, Search, Sun, LogOut, User, Menu } from "lucide-react";
 import { mutate as swrMutate } from "swr";
-import { useHealth, logout } from "@/lib/api";
+import { useHealth, useMe, logout } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { useToast } from "@/components/ui/Toast";
@@ -30,6 +30,9 @@ export function Topbar({
   onToggleTheme: () => void;
 }) {
   const { data: h, error } = useHealth();
+  const { data: meResp } = useMe();
+  const me = meResp?.data?.[0];
+  const displayName = me?.name?.trim() || me?.username || "UPPCL user";
   const { push } = useToast();
   const pathname = usePathname();
   const router = useRouter();
@@ -45,8 +48,13 @@ export function Topbar({
       if (profileRef.current && !profileRef.current.contains(target)) setProfileOpen(false);
       if (notifRef.current && !notifRef.current.contains(target)) setNotifOpen(false);
     };
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") { setProfileOpen(false); setNotifOpen(false); } };
     document.addEventListener("mousedown", onDoc);
-    return () => document.removeEventListener("mousedown", onDoc);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDoc);
+      document.removeEventListener("keydown", onKey);
+    };
   }, []);
 
   const page = PAGE_LABELS[pathname] ?? { title: "UPPCL Pro", crumb: "" };
@@ -145,10 +153,16 @@ export function Topbar({
                 />
               )}
               <NotifRow
-                tone="info"
-                title="System nominal"
-                body={`System ${proxyOk ? "connected" : "offline"}`}
+                tone={proxyOk ? "info" : "error"}
+                title={proxyOk ? "Connected to UPPCL" : "Can't reach UPPCL"}
+                body={proxyOk ? "Your data is up to date." : "Retrying in the background — check back shortly."}
               />
+              <button
+                onClick={() => { setNotifOpen(false); router.push("/support"); }}
+                className="mt-1 w-full rounded-md px-3 py-2 text-left text-[11px] text-primary-fixed-dim hover:bg-surface-container"
+              >
+                Meter alarms &amp; service tickets →
+              </button>
             </div>
           )}
         </div>
@@ -163,18 +177,18 @@ export function Topbar({
             )}
             aria-label="Account menu"
           >
-            U
+            {displayName.charAt(0).toUpperCase()}
           </button>
           {profileOpen && (
             <div className="absolute right-0 top-10 z-50 w-[min(260px,calc(100vw-2rem))] overflow-hidden rounded-xl bg-surface-container-low shadow-ambient">
               <div className="border-b border-white/5 px-4 py-3">
                 <div className="text-[11px] text-on-surface-variant">signed in</div>
                 <div className="font-mono text-[13px] text-on-surface">
-                  {authed ? "UPPCL user" : "not authenticated"}
+                  {authed ? displayName : "not authenticated"}
                 </div>
                 {authed && (
                   <div className="mt-1 font-mono text-[10px] text-on-surface-variant/80">
-                    jwt · {h?.jwt_expires_in_days?.toFixed(0)}d remaining
+                    session · {h?.jwt_expires_in_days?.toFixed(0)} days left
                   </div>
                 )}
               </div>
