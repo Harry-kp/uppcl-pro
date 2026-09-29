@@ -23,11 +23,11 @@ import { Receipt, ArrowUpRight, Download, Info, CalendarDays } from "lucide-reac
 /** Postpaid money hub: monthly invoices + official PDF download, tariff/slab,
  *  projected next bill, payment history, and a document vault. */
 export function BillsPostpaid() {
-  const { data: invoicesResp } = useInvoices(24);
-  const { data: payments } = usePayments(50);
+  const { data: invoicesResp, isLoading: invoicesLoading } = useInvoices(24);
+  const { data: payments, isLoading: paymentsLoading } = usePayments(50);
   const { data: yearly } = useYearlyHistory();
   const { data: dashboard } = useDashboard();
-  const { data: consResp } = useConsumption(90);
+  const { data: consResp, isLoading: consLoading } = useConsumption(90);
   const { data: meterResp } = useWssMeter();
   const { data: arrearsResp } = useWssArrears();
   const { push } = useToast();
@@ -256,7 +256,9 @@ export function BillsPostpaid() {
           </>
         ) : (
           <div className="py-10 text-center text-[11px] text-on-surface-variant">
-            No daily telemetry available — the meter aggregate serves roughly the last 150 days.
+            {consLoading
+              ? "Loading daily usage…"
+              : "No daily telemetry available — the meter aggregate serves roughly the last 150 days."}
           </div>
         )}
       </section>
@@ -306,7 +308,7 @@ export function BillsPostpaid() {
             </table>
           </div>
         ) : (
-          <div className="py-10 text-center text-[11px] text-on-surface-variant">No monthly bills on file yet.</div>
+          <div className="py-10 text-center text-[11px] text-on-surface-variant">{invoicesLoading ? "Loading bills…" : "No monthly bills on file yet."}</div>
         )}
       </section>
 
@@ -363,7 +365,7 @@ export function BillsPostpaid() {
             </table>
           </div>
         ) : (
-          <div className="py-10 text-center text-[11px] text-on-surface-variant">No payments on file yet.</div>
+          <div className="py-10 text-center text-[11px] text-on-surface-variant">{paymentsLoading ? "Loading payments…" : "No payments on file yet."}</div>
         )}
       </section>
     </div>
