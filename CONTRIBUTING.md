@@ -22,7 +22,7 @@ No CLA, no squash-only rule, no ceremony.
 ```bash
 git clone https://github.com/Harry-kp/uppcl-pro.git
 cd uppcl-pro/web
-bun install          # or: npm install
+bun install
 bun run dev          # starts on http://localhost:3000
 ```
 
