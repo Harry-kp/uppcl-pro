@@ -441,7 +441,7 @@ function PrepaidHome({ dashboard: data }: { dashboard: DashboardResponse }) {
           <Row k="Meter status"     v={data.balance.meter_status === "A" ? "Active" : data.balance.meter_status ?? "unreported (bills flowing)"} />
           <Row k="Connection"       v={data.site.connectionId} mono />
           <Row k="Device"           v={data.site.deviceId} mono />
-          <Row k="DISCOM"           v={data.site.tenantId} mono />
+          <Row k="DISCOM"           v={String(data.site.tenantId).toUpperCase()} mono />
           <div className="mt-6 border-l-2 border-white/10 pl-3 text-[11px] text-on-surface-variant">
             <div className="mb-1 uppercase tracking-[0.18em] text-on-surface-variant/80">How this is computed</div>
             The proxy tries live <code>/site/prepaidBalance</code>{" "}first. When it returns empty (a known upstream quirk on some accounts),
@@ -785,10 +785,9 @@ function PostpaidHome({ dashboard: data }: { dashboard: DashboardResponse }) {
         </div>
       </div>
       {/* DRILL-IN PANELS */}
-      <SidePanel open={panel === "bill"} onClose={() => setPanel(null)} title="Bill detail"
-        subtitle={inv?.bill_dt ? `generated ${new Date(inv.bill_dt).toLocaleDateString("en-IN")}` : undefined}>
+      <SidePanel open={panel === "bill"} onClose={() => setPanel(null)} title="Bill detail">
         <div className="space-y-4">
-          <Row k="Amount due now"   v={`₹${rupees(outstandingAmt)}`} big />
+          <Row k="Amount due now"   v={outstandingAmt >= 1 ? `₹${rupees(outstandingAmt)}` : outstandingAmt <= -1 ? `₹${rupees(-outstandingAmt)} credit` : "Nothing due"} big />
           {inv && (() => {
             const fmt = (s: string) => s ? new Date(s).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "—";
             const paidAmt = toNum(inv.payment_amt);
@@ -812,7 +811,7 @@ function PostpaidHome({ dashboard: data }: { dashboard: DashboardResponse }) {
             );
           })()}
           <Row k="Connection"       v={data.site.connectionId} mono />
-          <Row k="DISCOM"           v={data.site.tenantId} mono />
+          <Row k="DISCOM"           v={String(data.site.tenantId).toUpperCase()} mono />
           {inv && (
             <button
               onClick={downloadBill}

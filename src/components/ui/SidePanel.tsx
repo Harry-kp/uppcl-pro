@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -20,12 +20,23 @@ interface SidePanelProps {
  * Designed for inspecting a single entity (a bill, a payment, a tile's formula).
  */
 export function SidePanel({ open, onClose, title, subtitle, children, width = 480, className }: SidePanelProps) {
+  const closeRef = useRef<HTMLButtonElement>(null);
+  const onCloseRef = useRef(onClose);
+  useEffect(() => { onCloseRef.current = onClose; });
+
+  // Keyed on `open` only (callers pass inline onClose): move focus into the
+  // panel, and hand it back to whatever opened it on close.
   useEffect(() => {
     if (!open) return;
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    const opener = document.activeElement as HTMLElement | null;
+    closeRef.current?.focus();
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onCloseRef.current(); };
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [open, onClose]);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      opener?.focus();
+    };
+  }, [open]);
 
   if (typeof document === "undefined" || !open) return null;
 
@@ -51,6 +62,7 @@ export function SidePanel({ open, onClose, title, subtitle, children, width = 48
             )}
           </div>
           <button
+            ref={closeRef}
             onClick={onClose}
             className="rounded-md p-2 text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface"
             aria-label="Close panel"
