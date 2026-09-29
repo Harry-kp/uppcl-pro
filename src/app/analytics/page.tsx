@@ -34,10 +34,10 @@ export default function AnalyticsPage() {
   // cap, verified live — older `from` dates return []). The full-year view comes
   // from the monthly groupBy:year rollup below, not from daily data.
   const { data: daily } = useConsumption(150);
-  const { data: yearly } = useYearlyHistory();
+  const { data: yearly, isLoading: yearlyLoading } = useYearlyHistory();
   const { data: applianceResp } = useApplianceData();
   const [tipAppliance, setTipAppliance] = useState<string>("fridge");
-  const { data: tipsResp } = useSavingTip(tipAppliance);
+  const { data: tipsResp, isLoading: tipsLoading } = useSavingTip(tipAppliance);
 
   // One cell per day, from eventsummary energyImportKWH.
   const cells: CalendarCell[] = useMemo(
@@ -64,6 +64,7 @@ export default function AnalyticsPage() {
   const last7 = sortedCells.slice(-7);
   const total30 = last30.reduce((a, c) => a + c.value, 0);
   const avg30 = last30.length ? total30 / last30.length : 0;
+  const peak30 = last30.length ? Math.max(...last30.map((c) => c.value)) : 0;
   const avgPrev7 =
     sortedCells.length >= 14 ? mean(sortedCells.slice(-14, -7).map((c) => c.value)) : 0;
   const last7Avg = mean(last7.map((c) => c.value));
@@ -126,7 +127,7 @@ export default function AnalyticsPage() {
               </div>
               <div className="mt-2 flex flex-wrap items-center gap-3 text-[12px] text-on-surface-variant sm:text-[11px]">
                 <span>
-                  avg <span className="font-mono text-on-surface">{kwh(avg30, 2)}</span>{" "}kWh/day
+                  30-day avg <span className="font-mono text-on-surface">{kwh(avg30, 2)}</span>{" "}kWh/day
                 </span>
                 <DeltaPill value={wowDelta} />
                 <Tooltip
@@ -147,9 +148,9 @@ export default function AnalyticsPage() {
             </div>
 
             <div className="hidden gap-6 md:flex">
-              <Stat label="Avg"   value={`${kwh(avg)}`} sub="kWh/day" />
-              <Stat label="σ"     value={`${kwh(sd)}`} sub="kWh/day" />
-              <Stat label="Peak"  value={`${kwh(peak)}`} sub="kWh/day" />
+              <Stat label="All-time avg" value={`${kwh(avg)}`} sub="kWh/day" />
+              <Stat label="Spread" value={`±${kwh(sd)}`} sub="kWh/day" />
+              <Stat label="Peak day" value={`${kwh(peak)}`} sub="kWh" />
               <Stat label="Days"  value={String(sortedCells.length)} sub="on record" />
             </div>
           </div>
@@ -157,7 +158,7 @@ export default function AnalyticsPage() {
           <div className="mt-6">
             <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2 text-[11px] uppercase tracking-[0.24em] text-on-surface-variant sm:text-[10px]">
               <span>last {last30.length}-day consumption trend</span>
-              <span className="font-mono text-primary-fixed-dim">peak {kwh(peak)} kWh</span>
+              <span className="font-mono text-primary-fixed-dim">peak {kwh(peak30)} kWh</span>
             </div>
             <Sparkline
               values={last30.map((c) => c.value)}
@@ -270,7 +271,7 @@ export default function AnalyticsPage() {
             </div>
           ) : (
             <div className="flex h-[180px] items-center justify-center text-[11px] text-on-surface-variant">
-              no yearly rollups yet
+              {yearlyLoading ? "loading monthly totals…" : "no yearly rollups yet"}
             </div>
           )}
         </section>
@@ -353,7 +354,7 @@ export default function AnalyticsPage() {
                 </div>
               ))
             ) : (
-              <div className="text-[12px] text-on-surface-variant">No tips available right now.</div>
+              <div className="text-[12px] text-on-surface-variant">{tipsLoading ? "Loading tips…" : "No tips available right now."}</div>
             )}
           </div>
         </section>
