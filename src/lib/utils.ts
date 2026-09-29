@@ -46,16 +46,14 @@ export function billingPeriod(billDt: string | Date): { label: string; from: Dat
 
 export function formatRelative(d: string | Date): string {
   const da = typeof d === "string" ? new Date(d) : d;
-  const now = new Date();
-  const diffMs = now.getTime() - da.getTime();
-  const days = Math.floor(diffMs / 86_400_000);
-  if (days < 1) {
-    const hrs = Math.floor(diffMs / 3_600_000);
-    if (hrs < 1) return "just now";
-    return `${hrs} h ago`;
-  }
+  const mins = Math.floor((Date.now() - da.getTime()) / 60_000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins} min ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs} h ago`;
+  const days = Math.floor(hrs / 24);
   if (days === 1) return "yesterday";
   if (days < 30) return `${days} d ago`;
   const months = Math.floor(days / 30);
-  return `${months} mo ago`;
+  return months === 1 ? "a month ago" : `${months} mo ago`;
 }
