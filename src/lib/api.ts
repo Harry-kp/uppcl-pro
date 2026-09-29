@@ -13,6 +13,7 @@ import {
   getSession,
   saveSession,
   clearSession,
+  expireSession,
   isAuthenticated,
   getJwt,
 
@@ -128,7 +129,7 @@ async function proxy(
   }
 
   if (r.status === 401 || r.status === 403) {
-    clearSession();
+    expireSession();
     // Immediately tell Shell to show the login gate (don't wait for 60s poll)
     globalMutate("/health");
     throw new ProxyError(401, "Session expired — sign in again");

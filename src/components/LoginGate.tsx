@@ -21,6 +21,7 @@ import { useToast } from "@/components/ui/Toast";
 import { useTranslations } from "next-intl";
 import { useLocale } from "@/components/I18nProvider";
 import { useTheme } from "@/lib/theme";
+import { sessionWasExpired } from "@/lib/session";
 
 /**
  * Full-bleed auth gate. Rendered by <Shell> when the proxy reports
@@ -36,7 +37,8 @@ export function LoginGate({ proxyUnreachable }: { proxyUnreachable?: string }) {
   const [password, setPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
+  // Landed here because UPPCL rejected the session → say so, once.
+  const [err, setErr] = useState<string | null>(() => (sessionWasExpired() ? "Your session expired. Please sign in again." : null));
   const { theme, toggle: toggleTheme } = useTheme();
   const dark = theme === "dark";
 

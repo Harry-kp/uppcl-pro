@@ -7,6 +7,7 @@ import { mutate as swrMutate } from "swr";
 import { Home, Activity, ScrollText, Radio, Settings, Zap, Download, Clock, RefreshCw, LogOut, ExternalLink, AlertTriangle, LifeBuoy } from "lucide-react";
 import { useToast } from "@/components/ui/Toast";
 import { logout } from "@/lib/api";
+import { isAuthenticated } from "@/lib/session";
 
 export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenChange: (v: boolean) => void }) {
   const router = useRouter();
@@ -89,6 +90,7 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
                   throw new Error("You're offline — reconnect to refresh.");
                 }
                 await swrMutate(() => true);
+                if (!isAuthenticated()) throw new Error("Session expired — sign in again.");
               })} icon={<RefreshCw className="h-4 w-4" />}>
                 Refresh all data
               </PItem>
