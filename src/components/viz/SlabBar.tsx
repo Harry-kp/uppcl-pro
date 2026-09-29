@@ -51,7 +51,7 @@ export function SlabBar({ units, slabs = UP_DOMESTIC_SLABS, className }: SlabBar
   return (
     <div className={cn("flex flex-col gap-3", className)}>
       <div className="relative">
-        <div className="flex h-8 overflow-hidden rounded-md">
+        <div className="flex h-5 overflow-hidden rounded-md">
           {segments.map((s, i) => {
             const w = ((s.to - s.from) / ceiling) * 100;
             const isCurrent = s === current;
@@ -60,19 +60,29 @@ export function SlabBar({ units, slabs = UP_DOMESTIC_SLABS, className }: SlabBar
                 key={i}
                 style={{ width: `${w}%` }}
                 className={cn(
-                  "flex items-center justify-center text-[9px] font-medium transition-colors",
-                  isCurrent ? "bg-primary-container text-on-primary-fixed" : i % 2 === 0 ? "bg-surface-container-high text-on-surface-variant" : "bg-surface-container text-on-surface-variant"
+                  "transition-colors",
+                  isCurrent ? "bg-primary-container" : i % 2 === 0 ? "bg-surface-container-high" : "bg-surface-container"
                 )}
                 title={`${s.label} units · ₹${s.rate}/kWh`}
-              >
-                ₹{s.rate}
-              </div>
+              />
             );
           })}
         </div>
+        {/* rate labels under the bar, so the usage marker never covers them */}
+        <div className="mt-1.5 flex">
+          {segments.map((s, i) => (
+            <div
+              key={i}
+              style={{ width: `${((s.to - s.from) / ceiling) * 100}%` }}
+              className={cn("text-center font-mono text-[9px]", s === current ? "text-on-surface" : "text-on-surface-variant")}
+            >
+              ₹{s.rate}
+            </div>
+          ))}
+        </div>
         {/* current-usage marker */}
         <div
-          className="absolute -top-1 bottom-[-4px] w-0.5 bg-on-surface"
+          className="absolute -top-1 h-7 w-0.5 bg-on-surface"
           style={{ left: `calc(${markerPct}% - 1px)` }}
         >
           <div className="absolute -top-4 left-1/2 -translate-x-1/2 whitespace-nowrap font-mono text-[9px] text-on-surface">
