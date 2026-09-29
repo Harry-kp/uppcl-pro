@@ -203,7 +203,7 @@ export function LoginGate({ proxyUnreachable }: { proxyUnreachable?: string }) {
                         type="button"
                         onClick={() => setShowPw((v) => !v)}
                         className="shrink-0 rounded p-1 text-on-surface-variant/70 transition hover:bg-surface-container-high hover:text-on-surface"
-                        aria-label={showPw ? "Hide password" : "Show password"}
+                        aria-label={showPw ? t("hide_password") : t("show_password")}
                         tabIndex={-1}
                       >
                         {showPw ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
@@ -214,6 +214,7 @@ export function LoginGate({ proxyUnreachable }: { proxyUnreachable?: string }) {
                       name="password"
                       type={showPw ? "text" : "password"}
                       autoComplete="current-password"
+                      aria-label={t("password")}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="••••••••"
@@ -222,7 +223,7 @@ export function LoginGate({ proxyUnreachable }: { proxyUnreachable?: string }) {
                   </Field>
 
                   {err && (
-                    <div className="flex items-start gap-2 rounded-md bg-error-container/15 px-3 py-2 text-[12px] text-secondary">
+                    <div role="alert" className="flex items-start gap-2 rounded-md bg-error-container/15 px-3 py-2 text-[12px] text-secondary">
                       <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" strokeWidth={2} />
                       <span className="font-mono leading-relaxed">{err}</span>
                     </div>

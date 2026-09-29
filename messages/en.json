@@ -24,7 +24,9 @@
     "how_it_works": "How it works",
     "source": "Source",
     "connection_error": "Connection error",
-    "connection_error_desc": "Could not reach the UPPCL API. This usually means the upstream server is down or your network is blocking the connection."
+    "connection_error_desc": "Could not reach the UPPCL API. This usually means the upstream server is down or your network is blocking the connection.",
+    "show_password": "Show password",
+    "hide_password": "Hide password"
   },
   "nav": {
     "home": "Home",

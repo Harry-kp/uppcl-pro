@@ -24,7 +24,9 @@
     "how_it_works": "कैसे काम करता है",
     "source": "सोर्स कोड",
     "connection_error": "कनेक्शन में गड़बड़ी",
-    "connection_error_desc": "UPPCL API से कनेक्ट नहीं हो पाया। शायद UPPCL का सर्वर डाउन है या आपका नेटवर्क कनेक्शन ब्लॉक कर रहा है।"
+    "connection_error_desc": "UPPCL API से कनेक्ट नहीं हो पाया। शायद UPPCL का सर्वर डाउन है या आपका नेटवर्क कनेक्शन ब्लॉक कर रहा है।",
+    "show_password": "पासवर्ड दिखाएँ",
+    "hide_password": "पासवर्ड छिपाएँ"
   },
   "nav": {
     "home": "होम",
