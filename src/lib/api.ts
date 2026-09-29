@@ -90,14 +90,15 @@ function humanizeError(status: number, raw: string): string {
 // UPPCL dropped encryption — all endpoints accept plaintext JSON now.
 
 /**
- * POST to a UPPCL API base via our CORS-proxy route.
+ * Call a UPPCL API base via our CORS-proxy route. POST with a JSON body, or
+ * GET when `body` is null (a few endpoints — e.g. downtime — are GET-only).
  * `base` selects the upstream: "uppcl" → /accounts/api, "bootstrap" → /bootstrap/api.
  * `extraHeaders` lets callers add e.g. `subtenantcode` (needed by bill/download, insight).
  */
-async function proxy_post(
+async function proxy(
   base: "uppcl" | "bootstrap",
   path: string,
-  body: Record<string, unknown>,
+  body: Record<string, unknown> | null,
   extraHeaders?: Record<string, string>
 ): Promise<unknown> {
   const jwt = getJwt();
@@ -106,16 +107,16 @@ async function proxy_post(
   const session = getSession()!;
 
   const r = await fetch(`/api/${base}/${path}`, {
-    method: "POST",
+    method: body ? "POST" : "GET",
     headers: {
-      "content-type": "application/json",
+      ...(body ? { "content-type": "application/json" } : {}),
       apikey: UPPCL_API_KEY,
       tenantid: tenantHeader(session.tenant),
       token: jwt,
       authorization: `Bearer ${jwt}`,
       ...extraHeaders,
     },
-    body: JSON.stringify(body),
+    body: body ? JSON.stringify(body) : undefined,
     cache: "no-store",
   });
 
@@ -144,33 +145,7 @@ async function uppcl_post(
   body: Record<string, unknown>,
   extraHeaders?: Record<string, string>
 ): Promise<unknown> {
-  return proxy_post("uppcl", path, body, extraHeaders);
-}
-
-/** GET against /accounts/api (a few endpoints — e.g. downtime — are GET-only). */
-async function uppcl_get(path: string): Promise<unknown> {
-  const jwt = getJwt();
-  if (!jwt) throw new ProxyError(401, "No active session — sign in first");
-  const session = getSession()!;
-
-  const r = await fetch(`/api/uppcl/${path}`, {
-    headers: {
-      apikey: UPPCL_API_KEY,
-      tenantid: tenantHeader(session.tenant),
-      token: jwt,
-      authorization: `Bearer ${jwt}`,
-    },
-    cache: "no-store",
-  });
-
-  if (r.status === 200) return r.json();
-  if (r.status === 401 || r.status === 403) {
-    clearSession();
-    globalMutate("/health");
-    throw new ProxyError(401, "Session expired — sign in again");
-  }
-  const text = await r.text();
-  throw new ProxyError(r.status, text.slice(0, 200));
+  return proxy("uppcl", path, body, extraHeaders);
 }
 
 // ─── Auth ─────────────────────────────────────────────────────────────────────
@@ -448,11 +423,11 @@ async function fetcher<T>(key: string): Promise<T> {
   }
 
   if (key === "/tenant-preferences") {
-    return proxy_post("bootstrap", "tenant/searchPreference", { tenantId: tid }) as Promise<T>;
+    return proxy("bootstrap", "tenant/searchPreference", { tenantId: tid }) as Promise<T>;
   }
 
   if (key === "/downtime") {
-    return uppcl_get("announcements/activeDowntimeAnnouncement") as Promise<T>;
+    return proxy("uppcl", "announcements/activeDowntimeAnnouncement", null) as Promise<T>;
   }
 
   // ── Official data from the /wss bill portal (AES-encrypted) ────────
