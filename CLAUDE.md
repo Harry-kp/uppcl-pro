@@ -36,6 +36,8 @@ log, or persist credentials. No database.
   `src/lib/api.ts` and `src/app/api/complaints/route.ts`. Don't copy them into new files —
   the gitleaks commit hook flags them as new secrets.
 - Appsavy AES: Web Crypto adds PKCS7 padding itself — never pad manually (double-padding bug).
+- Turbopack drops the space in `</span> text` when that text wraps to the next line — write `</span>{" "}text`.
+- Empty states must check SWR `isLoading` first: some UPPCL calls take ~10 s, and "No data yet" meanwhile reads as data loss.
 
 ## Upstream quirks (UPPCL)
 - `/payment/v2/search` wants `consumer_id`; its 409 "connectionID missing" is a lie.
