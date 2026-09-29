@@ -99,7 +99,7 @@ export default function GridNodesPage() {
         <h1 className="text-[15px] text-on-surface">Meter</h1>
         <p className="mt-0.5 max-w-[680px] text-[12px] text-on-surface-variant">
           Two things that quietly affect your bill — <span className="text-on-surface">power factor</span> and{" "}
-          <span className="text-on-surface">peak demand vs your sanctioned load</span> — plus your meter&apos;s official reading and identity.
+          <span className="text-on-surface">peak demand vs your sanctioned load</span>{" "}— plus your meter&apos;s official reading and identity.
         </p>
       </div>
 

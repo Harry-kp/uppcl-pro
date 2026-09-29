@@ -105,7 +105,7 @@ export default function AnalyticsPage() {
       <div className="px-1">
         <h1 className="text-[15px] text-on-surface">Usage</h1>
         <p className="mt-0.5 max-w-[680px] text-[12px] text-on-surface-variant">
-          How much electricity you use and <span className="text-on-surface">when</span> — daily kWh, weekday patterns,
+          How much electricity you use and <span className="text-on-surface">when</span>{" "}— daily kWh, weekday patterns,
           the year at a glance, and where it goes. Power factor and demand live on the Meter tab.
         </p>
       </div>
@@ -126,7 +126,7 @@ export default function AnalyticsPage() {
               </div>
               <div className="mt-2 flex flex-wrap items-center gap-3 text-[12px] text-on-surface-variant sm:text-[11px]">
                 <span>
-                  avg <span className="font-mono text-on-surface">{kwh(avg30, 2)}</span> kWh/day
+                  avg <span className="font-mono text-on-surface">{kwh(avg30, 2)}</span>{" "}kWh/day
                 </span>
                 <DeltaPill value={wowDelta} />
                 <Tooltip
@@ -311,7 +311,7 @@ export default function AnalyticsPage() {
             <div className="mt-4 flex items-start gap-3 rounded-lg bg-surface-container p-4">
               <span className="h-1.5 w-1.5 shrink-0 translate-y-2 rounded-full bg-primary-fixed-dim glow-primary" />
               <p className="text-[13px] leading-relaxed text-on-surface-variant">
-                <span className="text-on-surface">Learning your usage.</span> UPPCL&apos;s appliance model needs a few
+                <span className="text-on-surface">Learning your usage.</span>{" "}UPPCL&apos;s appliance model needs a few
                 more weeks of metered data before it can split your consumption by appliance. This panel lights up
                 automatically once it&apos;s ready.
               </p>

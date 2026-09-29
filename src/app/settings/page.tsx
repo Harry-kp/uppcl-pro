@@ -120,7 +120,7 @@ export default function SettingsPage() {
           </div>
           <p className="mt-4 text-[10px] text-on-surface-variant/70">
             Connection IDs from <code>/site/search</code>; billing office &amp; scheme from the official
-            UPPCL <code>getConsumerDetails</code> profile. Nothing hardcoded.
+            UPPCL <code>getConsumerDetails</code>{" "}profile. Nothing hardcoded.
           </p>
         </section>
 
@@ -154,7 +154,7 @@ export default function SettingsPage() {
             })}
           </div>
           <p className="mt-3 text-[10px] text-on-surface-variant/70">
-            Shortcut: <span className="font-mono">t</span> toggles dark ↔ light.
+            Shortcut: <span className="font-mono">t</span>{" "}toggles dark ↔ light.
           </p>
         </section>
 

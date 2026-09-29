@@ -131,7 +131,7 @@ export function BillsPostpaid() {
         <div className="text-[11px] uppercase tracking-[0.24em] text-on-surface-variant sm:text-[10px]">Bills &amp; payments</div>
         <h1 className="mt-1 font-mono text-[28px] font-light tracking-tight text-on-surface sm:text-[32px]">Your bills, explained</h1>
         <p className="mt-1 max-w-[680px] text-[13px] text-on-surface-variant sm:text-[12px]">
-          Your smart meter bills a month in arrears — each bill covers the <span className="text-on-surface">previous month&apos;s</span> usage,
+          Your smart meter bills a month in arrears — each bill covers the <span className="text-on-surface">previous month&apos;s</span>{" "}usage,
           and the amount payable is that month&apos;s charges minus any credit carried forward. Download any bill or receipt as an official PDF below.
         </p>
       </header>
@@ -162,7 +162,7 @@ export function BillsPostpaid() {
               </div>
               <div className="mt-1 font-mono text-[20px] text-on-surface">~₹{rupees(projectedBill, { decimals: 0 })}</div>
               <div className="mt-1 text-[11px] text-on-surface-variant">
-                {kwh(avgDailyKwh)} kWh/day × 30 × ₹{rupees(effectiveRate, { decimals: 2 })} = {kwh(projectedKwh, 0)} kWh
+                {kwh(avgDailyKwh)} kWh/day × 30 = {kwh(projectedKwh, 0)} kWh × ₹{rupees(effectiveRate, { decimals: 2 })}
               </div>
             </div>
           </div>

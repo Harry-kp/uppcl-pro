@@ -444,7 +444,7 @@ function PrepaidHome({ dashboard: data }: { dashboard: DashboardResponse }) {
           <Row k="DISCOM"           v={data.site.tenantId} mono />
           <div className="mt-6 border-l-2 border-white/10 pl-3 text-[11px] text-on-surface-variant">
             <div className="mb-1 uppercase tracking-[0.18em] text-on-surface-variant/80">How this is computed</div>
-            The proxy tries live <code>/site/prepaidBalance</code> first. When it returns empty (a known upstream quirk on some accounts),
+            The proxy tries live <code>/site/prepaidBalance</code>{" "}first. When it returns empty (a known upstream quirk on some accounts),
             it falls back to the most recent daily bill&apos;s <code>closing_bal</code>, accurate to within 24 h.
           </div>
         </div>
@@ -832,7 +832,7 @@ function PostpaidHome({ dashboard: data }: { dashboard: DashboardResponse }) {
             Your smart meter bills a month in arrears: this bill covers{" "}
             <span className="text-on-surface">{inv ? billingPeriod(inv.bill_dt).label : "the previous month"}</span>,
             even though it was generated on {inv ? new Date(inv.bill_dt).toLocaleDateString("en-IN", { day: "numeric", month: "short" }) : "—"}.
-            The <span className="text-on-surface">amount payable</span> is that month&apos;s charges minus any credit
+            The <span className="text-on-surface">amount payable</span>{" "}is that month&apos;s charges minus any credit
             carried forward (a negative bill means you&apos;re in credit). Paying before the due date keeps a small
             prompt-payment rebate — that&apos;s why the paid amount can be a little under the bill.
           </div>

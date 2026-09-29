@@ -86,7 +86,7 @@ export function OutagePanel({ open, onClose, site, context }: Props) {
         <div className="flex items-start gap-3 rounded-lg bg-surface-container p-4">
           <Info className="mt-0.5 h-4 w-4 shrink-0 text-on-surface-variant" />
           <div className="text-[12px] leading-relaxed text-on-surface-variant">
-            <span className="text-on-surface">Why no auto-detect?</span> UPPCL&apos;s
+            <span className="text-on-surface">Why no auto-detect?</span>{" "}UPPCL&apos;s
             upstream only exposes per-day totals with a 24–30 h lag and doesn&apos;t
             publish a meter-heartbeat endpoint. Any automatic &quot;outage&quot; banner
             would false-positive on vacation days or late bill updates. So this

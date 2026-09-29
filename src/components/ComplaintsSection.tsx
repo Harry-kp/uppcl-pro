@@ -397,7 +397,7 @@ function EmptyState({ phone }: { phone: string }) {
       <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary-fixed-dim" />
       <div>
         No 1912 complaints filed from <span className="font-mono text-on-surface">{phone}</span>.
-        If you need to report an outage, use the <span className="text-on-surface">Power out?</span> button above.
+        If you need to report an outage, use the <span className="text-on-surface">Power out?</span>{" "}button above.
       </div>
     </div>
   );
