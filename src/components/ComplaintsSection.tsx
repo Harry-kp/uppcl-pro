@@ -49,7 +49,7 @@ export function ComplaintsSection({ phone: override, hideHeader, hideFullPageLin
   const { data: me } = useMe();
   const autoPhone = me?.data?.[0]?.phone;
   const phone = override ?? autoPhone;
-  const { data, error, isLoading } = useMyComplaints(phone);
+  const { data, error, isLoading, isValidating, mutate } = useMyComplaints(phone);
 
   const [selected, setSelected] = useState<ComplaintDetail | null>(null);
 
@@ -99,8 +99,15 @@ export function ComplaintsSection({ phone: override, hideHeader, hideFullPageLin
 
       {/* States */}
       {error && (
-        <div className="rounded-lg bg-[rgba(255,90,90,0.10)] px-4 py-3 text-[12px] text-error">
-          Complaint portal unreachable: {(error as Error).message}
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-[rgba(255,90,90,0.10)] px-4 py-3 text-[12px] text-error">
+          <span>Complaint portal unreachable: {(error as Error).message}</span>
+          <button
+            onClick={() => mutate()}
+            disabled={isValidating}
+            className="rounded-md bg-surface-container-high px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-on-surface hover:bg-surface-bright disabled:opacity-50"
+          >
+            {isValidating ? "Retrying…" : "Retry"}
+          </button>
         </div>
       )}
       {isLoading && <SkeletonRows />}

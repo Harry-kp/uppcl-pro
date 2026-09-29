@@ -78,9 +78,11 @@ function humanizeError(status: number, raw: string): string {
   if (lower.includes("wrong captcha")) return "Verification failed. Please try again.";
   // UPPCL says "Incorrect Username or Password." (HTTP 409) on a bad login.
   if (/(invalid|incorrect) (credentials|username|password)/.test(lower)) return "Invalid username or password.";
+  // A 5xx gateway status means our proxy was reached and the *upstream* failed
+  // (its "fetch failed" text is server-side) — don't blame the user's internet.
+  if (status === 502 || status === 503 || status === 504) return "UPPCL servers are temporarily unavailable. Try again in a few minutes.";
   if (lower.includes("network") || lower.includes("fetch failed")) return "Network error — check your internet connection.";
   if (lower.includes("timeout")) return "Request timed out. UPPCL servers may be slow — try again.";
-  if (status === 502 || status === 503 || status === 504) return "UPPCL servers are temporarily unavailable. Try again in a few minutes.";
   if (status === 409) return "Request rejected by UPPCL. Try signing out and back in.";
   if (status === 429) return "Too many requests. Wait a moment and try again.";
   if (status >= 500) return "Something went wrong on UPPCL's end. Try again later.";
