@@ -83,7 +83,13 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
               >
                 Report power outage
               </PItem>
-              <PItem onSelect={act("Refreshed all data", () => swrMutate(() => true))} icon={<RefreshCw className="h-4 w-4" />}>
+              <PItem onSelect={act("Refreshed all data", async () => {
+                if (!navigator.onLine) {
+                  await swrMutate("/health"); // flip the sidebar to "Offline"
+                  throw new Error("You're offline — reconnect to refresh.");
+                }
+                await swrMutate(() => true);
+              })} icon={<RefreshCw className="h-4 w-4" />}>
                 Refresh all data
               </PItem>
               <PItem

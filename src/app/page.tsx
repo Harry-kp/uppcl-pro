@@ -51,7 +51,8 @@ import {
 export default function Home() {
   const { data, error, isLoading } = useDashboard();
 
-  if (error) return <ProxyErrorView message={(error as Error).message} />;
+  // A failed refresh keeps the last good data on screen (SWR retries on reconnect).
+  if (error && !data) return <ProxyErrorView message={(error as Error).message} />;
   if (isLoading || !data) return <Skeleton />;
 
   return data.site.connectionType === "postpaid" ? (
@@ -898,11 +899,18 @@ function ProxyErrorView({ message }: { message: string }) {
   return (
     <div className="mx-auto mt-20 max-w-md rounded-xl bg-surface-container-low p-8 text-center">
       <div className="font-mono text-[20px] text-secondary">Data unavailable</div>
-      <p className="mt-3 text-[13px] text-on-surface-variant">{message}</p>
-      <p className="mt-4 font-mono text-[11px] text-on-surface-variant/70">
-        This usually means the UPPCL upstream API is temporarily down,
-        or your session has expired. Try signing out and back in.
-      </p>
+      {typeof navigator !== "undefined" && !navigator.onLine ? (
+        <p className="mt-3 text-[13px] text-on-surface-variant">
+          You&apos;re offline. Reconnect and this page reloads on its own.
+        </p>
+      ) : (
+        <>
+          <p className="mt-3 text-[13px] text-on-surface-variant">{message}</p>
+          <p className="mt-4 font-mono text-[11px] text-on-surface-variant/70">
+            UPPCL&apos;s servers are probably having a moment. This page retries automatically.
+          </p>
+        </>
+      )}
     </div>
   );
 }

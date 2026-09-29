@@ -321,7 +321,7 @@ async function fetcher<T>(key: string): Promise<T> {
   // Health is client-side only
   if (key === "/health") {
     return {
-      ok: true,
+      ok: typeof navigator === "undefined" || navigator.onLine,
       authenticated: isAuthenticated(),
       tenant: getSession()?.tenant ?? DEFAULT_TENANT,
       jwt_expires_ms: getSession()?.jwtExpiresMs ?? 0,
