@@ -1,6 +1,5 @@
 "use client";
 
-import { forwardRef } from "react";
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -30,10 +29,9 @@ interface TileProps {
  * - Formula tooltip on the number (hover the number to see how it was computed)
  * - Loading state skeleton
  */
-export const Tile = forwardRef<HTMLElement, TileProps>(function Tile(
-  { label, value, hint, tag, icon, className, accent = "default", href, onInspect, formula, loading },
-  _ref
-) {
+export function Tile({
+  label, value, hint, tag, icon, className, accent = "default", href, onInspect, formula, loading,
+}: TileProps) {
   const content = (
     <article
       className={cn(
@@ -110,4 +108,4 @@ export const Tile = forwardRef<HTMLElement, TileProps>(function Tile(
       </button>
     );
   return content;
-});
+}
