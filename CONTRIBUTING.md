@@ -8,8 +8,7 @@ Thanks for showing up. This is a small project but we care about code quality.
 2. Make your change. Keep diffs focused — one concern per PR.
 3. Run the checks:
    ```bash
-   bun run lint        # eslint
-   bunx tsc --noEmit   # typecheck
+   make check          # lint + typecheck + build (what CI runs)
    bun run dev         # smoke-test locally at localhost:3000
    ```
 4. If you touched the UI, include before/after screenshots in the PR.
@@ -22,7 +21,7 @@ No CLA, no squash-only rule, no ceremony.
 ```bash
 git clone https://github.com/Harry-kp/uppcl-pro.git
 cd uppcl-pro/web
-bun install          # or: npm install
+bun install
 bun run dev          # starts on http://localhost:3000
 ```
 

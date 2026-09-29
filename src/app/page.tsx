@@ -25,7 +25,7 @@ import { SidePanel } from "@/components/ui/SidePanel";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { useToast } from "@/components/ui/Toast";
 import { mean, stddev, toNum } from "@/lib/stats";
-import { rupees, kwh, daysBetween, formatRelative, billingPeriod } from "@/lib/utils";
+import { rupees, kwh, daysBetween, formatRelative, billingPeriod, billedMonthKwh, FALLBACK_RATE } from "@/lib/utils";
 import {
   History,
   FileText,
@@ -51,7 +51,8 @@ import {
 export default function Home() {
   const { data, error, isLoading } = useDashboard();
 
-  if (error) return <ProxyErrorView message={(error as Error).message} />;
+  // A failed refresh keeps the last good data on screen (SWR retries on reconnect).
+  if (error && !data) return <ProxyErrorView message={(error as Error).message} />;
   if (isLoading || !data) return <Skeleton />;
 
   return data.site.connectionType === "postpaid" ? (
@@ -441,10 +442,10 @@ function PrepaidHome({ dashboard: data }: { dashboard: DashboardResponse }) {
           <Row k="Meter status"     v={data.balance.meter_status === "A" ? "Active" : data.balance.meter_status ?? "unreported (bills flowing)"} />
           <Row k="Connection"       v={data.site.connectionId} mono />
           <Row k="Device"           v={data.site.deviceId} mono />
-          <Row k="DISCOM"           v={data.site.tenantId} mono />
+          <Row k="DISCOM"           v={String(data.site.tenantId).toUpperCase()} mono />
           <div className="mt-6 border-l-2 border-white/10 pl-3 text-[11px] text-on-surface-variant">
             <div className="mb-1 uppercase tracking-[0.18em] text-on-surface-variant/80">How this is computed</div>
-            The proxy tries live <code>/site/prepaidBalance</code> first. When it returns empty (a known upstream quirk on some accounts),
+            The proxy tries live <code>/site/prepaidBalance</code>{" "}first. When it returns empty (a known upstream quirk on some accounts),
             it falls back to the most recent daily bill&apos;s <code>closing_bal</code>, accurate to within 24 h.
           </div>
         </div>
@@ -488,7 +489,7 @@ function PrepaidHome({ dashboard: data }: { dashboard: DashboardResponse }) {
 // ── Postpaid home (amount due + bill cycle + projection) ───────────────────────
 function PostpaidHome({ dashboard: data }: { dashboard: DashboardResponse }) {
   const { data: outstanding } = useOutstanding();
-  const { data: invoiceResp } = useLatestInvoice();
+  const { data: invoiceResp, isLoading: invoiceLoading } = useLatestInvoice();
   const { data: statsResp } = useUsageStats();
   const { data: yearly } = useYearlyHistory();
   const { data: wssConsumer } = useWssConsumer();
@@ -535,31 +536,23 @@ function PostpaidHome({ dashboard: data }: { dashboard: DashboardResponse }) {
     const billDt = inv?.bill_dt ? new Date(inv.bill_dt) : null;
     const dueDt = inv?.due_dt ? new Date(inv.due_dt) : null;
     const daysToDue = dueDt ? daysBetween(today, dueDt) : null;
-    const daysSinceBill = billDt ? daysBetween(billDt, today) : null;
-    const cycleLen = 30;
-    const cycleProgress = daysSinceBill !== null ? Math.min(Math.max(daysSinceBill, 0) / cycleLen, 1) : 0;
+    // The unbilled cycle is the current calendar month (a bill covers the previous month — see billingPeriod).
+    const cycleStart = new Date(today.getFullYear(), today.getMonth(), 1);
+    const cycleLen = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+    const cycleProgress = Math.min(today.getDate() / cycleLen, 1);
 
-    // kWh consumed this cycle (since the last bill date).
-    const cycleKwh = billDt
-      ? dailyRows
-          .filter((r) => new Date(r.energyImportKWH?.measureTime ?? "") >= billDt)
-          .reduce((s, r) => s + toNum(r.energyImportKWH?.value), 0)
-      : data.consumption_30d.kwh;
+    // kWh consumed this cycle (since the 1st of the month).
+    const cycleKwh = dailyRows
+      .filter((r) => new Date(r.energyImportKWH?.measureTime ?? "") >= cycleStart)
+      .reduce((s, r) => s + toNum(r.energyImportKWH?.value), 0);
 
     // Effective ₹/kWh: last bill amount ÷ that month's kWh (from yearly monthly rollups).
     const lastBillAmt = Math.abs(toNum(inv?.bill_amt));
     const monthlyRows = yearly?.data ?? [];
-    let billMonthKwh = 0;
-    if (billDt) {
-      const m = monthlyRows.find((r) => {
-        const t = r.energyImportKWH?.measureTime;
-        return t && new Date(t).getMonth() === billDt.getMonth();
-      });
-      billMonthKwh = toNum(m?.energyImportKWH?.value);
-    }
+    const billMonthKwh = billDt ? billedMonthKwh(monthlyRows, billDt) : 0;
     const effectiveRate = billMonthKwh > 0 && lastBillAmt > 0
       ? lastBillAmt / billMonthKwh
-      : (data.consumption_30d.effective_rate || 7.5);
+      : (data.consumption_30d.effective_rate || FALLBACK_RATE);
 
     const projectedKwh = avgDailyKwh * cycleLen;
     const projectedBill = projectedKwh * effectiveRate;
@@ -598,7 +591,10 @@ function PostpaidHome({ dashboard: data }: { dashboard: DashboardResponse }) {
   const addr = wssConsumer?.ConsumerDetails?.currentAddress ?? "";
   const schemeMatch = addr.match(/\$(True|False)[^,]*?[Ee]ligible [Ff]or ([^,]+)/);
   const schemeName = schemeMatch && schemeMatch[1].toLowerCase() === "true" ? schemeMatch[2].trim() : null;
-  const dueDate = inv?.due_dt ? new Date(inv.due_dt).toLocaleDateString("en-IN", { day: "numeric", month: "short" }) : null;
+  // Paid → the next bill is generated about a month after the last one.
+  const nextBillDate = inv?.bill_dt
+    ? (() => { const d = new Date(inv.bill_dt); d.setMonth(d.getMonth() + 1); return d.toLocaleDateString("en-IN", { day: "numeric", month: "short" }); })()
+    : null;
 
   // The strip carries ONLY things that need attention or action — not echoes of
   // the hero/ring. When nothing needs action, a single calm "all good" chip.
@@ -631,7 +627,7 @@ function PostpaidHome({ dashboard: data }: { dashboard: DashboardResponse }) {
   if (insights.length === 0) {
     insights.push({ id: "ok", tone: "good", icon: <Check className="h-3 w-3" />,
       title: <>Paid up and on track</>,
-      detail: dueDate ? <>next bill due {dueDate}</> : <>nothing needs your attention</> });
+      detail: nextBillDate ? <>next bill around {nextBillDate}</> : <>nothing needs your attention</> });
   }
 
   return (
@@ -692,7 +688,7 @@ function PostpaidHome({ dashboard: data }: { dashboard: DashboardResponse }) {
           onClick={() => setPanel("projection")}
           className="flex flex-col items-center justify-center rounded-xl bg-surface-container-low p-5 text-center transition-colors hover:bg-surface-container sm:p-6"
         >
-          <BillCycleRing projectedInr={projectedBill} daysToDue={daysToDue} cycleProgress={cycleProgress} vsLastPct={lastBillAmt > 0 ? projVsLast : null} />
+          <BillCycleRing projectedInr={projectedBill} daysToDue={billPaid ? null : daysToDue} cycleProgress={cycleProgress} vsLastPct={lastBillAmt > 0 ? projVsLast : null} />
           <div className="mt-4 text-[12px] text-on-surface-variant/80 sm:text-[11px]">
             {Math.round(cycleProgress * 100)}% through this billing cycle
           </div>
@@ -764,7 +760,7 @@ function PostpaidHome({ dashboard: data }: { dashboard: DashboardResponse }) {
                   {" "}— get the PDF or pay below
                 </>
               ) : (
-                <>No monthly bill is available yet for this connection.</>
+                <>{invoiceLoading ? "Loading your latest bill…" : "No monthly bill is available yet for this connection."}</>
               )}
             </div>
           </div>
@@ -790,10 +786,9 @@ function PostpaidHome({ dashboard: data }: { dashboard: DashboardResponse }) {
         </div>
       </div>
       {/* DRILL-IN PANELS */}
-      <SidePanel open={panel === "bill"} onClose={() => setPanel(null)} title="Bill detail"
-        subtitle={inv?.bill_dt ? `generated ${new Date(inv.bill_dt).toLocaleDateString("en-IN")}` : undefined}>
+      <SidePanel open={panel === "bill"} onClose={() => setPanel(null)} title="Bill detail">
         <div className="space-y-4">
-          <Row k="Amount due now"   v={`₹${rupees(outstandingAmt)}`} big />
+          <Row k="Amount due now"   v={outstandingAmt >= 1 ? `₹${rupees(outstandingAmt)}` : outstandingAmt <= -1 ? `₹${rupees(-outstandingAmt)} credit` : "Nothing due"} big />
           {inv && (() => {
             const fmt = (s: string) => s ? new Date(s).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "—";
             const paidAmt = toNum(inv.payment_amt);
@@ -817,7 +812,7 @@ function PostpaidHome({ dashboard: data }: { dashboard: DashboardResponse }) {
             );
           })()}
           <Row k="Connection"       v={data.site.connectionId} mono />
-          <Row k="DISCOM"           v={data.site.tenantId} mono />
+          <Row k="DISCOM"           v={String(data.site.tenantId).toUpperCase()} mono />
           {inv && (
             <button
               onClick={downloadBill}
@@ -832,7 +827,7 @@ function PostpaidHome({ dashboard: data }: { dashboard: DashboardResponse }) {
             Your smart meter bills a month in arrears: this bill covers{" "}
             <span className="text-on-surface">{inv ? billingPeriod(inv.bill_dt).label : "the previous month"}</span>,
             even though it was generated on {inv ? new Date(inv.bill_dt).toLocaleDateString("en-IN", { day: "numeric", month: "short" }) : "—"}.
-            The <span className="text-on-surface">amount payable</span> is that month&apos;s charges minus any credit
+            The <span className="text-on-surface">amount payable</span>{" "}is that month&apos;s charges minus any credit
             carried forward (a negative bill means you&apos;re in credit). Paying before the due date keeps a small
             prompt-payment rebate — that&apos;s why the paid amount can be a little under the bill.
           </div>
@@ -904,11 +899,18 @@ function ProxyErrorView({ message }: { message: string }) {
   return (
     <div className="mx-auto mt-20 max-w-md rounded-xl bg-surface-container-low p-8 text-center">
       <div className="font-mono text-[20px] text-secondary">Data unavailable</div>
-      <p className="mt-3 text-[13px] text-on-surface-variant">{message}</p>
-      <p className="mt-4 font-mono text-[11px] text-on-surface-variant/70">
-        This usually means the UPPCL upstream API is temporarily down,
-        or your session has expired. Try signing out and back in.
-      </p>
+      {typeof navigator !== "undefined" && !navigator.onLine ? (
+        <p className="mt-3 text-[13px] text-on-surface-variant">
+          You&apos;re offline. Reconnect and this page reloads on its own.
+        </p>
+      ) : (
+        <>
+          <p className="mt-3 text-[13px] text-on-surface-variant">{message}</p>
+          <p className="mt-4 font-mono text-[11px] text-on-surface-variant/70">
+            UPPCL&apos;s servers are probably having a moment. This page retries automatically.
+          </p>
+        </>
+      )}
     </div>
   );
 }

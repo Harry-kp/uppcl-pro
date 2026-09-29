@@ -36,7 +36,7 @@ export function CarbonCounter({ periodKwh, factor = 0.8, periodLabel = "this cyc
         <span className="mb-1 text-[11px] text-on-surface-variant/80">{periodLabel}</span>
       </div>
       <div className="grid grid-cols-2 gap-3">
-        <Equiv icon={<TreePine className="h-3.5 w-3.5" />} value={kwh(trees, 1)} unit="trees / mo to offset" />
+        <Equiv icon={<TreePine className="h-3.5 w-3.5" />} value={kwh(trees, 0)} unit="trees to offset a month" />
         <Equiv icon={<Car className="h-3.5 w-3.5" />} value={kwh(km, 0)} unit="km of petrol driving" />
       </div>
       <div className="text-[10px] text-on-surface-variant/70">

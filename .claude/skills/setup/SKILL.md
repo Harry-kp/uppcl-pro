@@ -14,7 +14,7 @@ Run in parallel:
 ## Install
 
 ```bash
-bun install   # or: npm install
+bun install
 ```
 
 ## Start

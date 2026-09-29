@@ -17,17 +17,17 @@ import { SlabBar, UP_DOMESTIC_SLABS } from "@/components/viz/SlabBar";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { useToast } from "@/components/ui/Toast";
 import { toNum } from "@/lib/stats";
-import { rupees, kwh, billingPeriod } from "@/lib/utils";
+import { rupees, kwh, billingPeriod, billedMonthKwh, FALLBACK_RATE } from "@/lib/utils";
 import { Receipt, ArrowUpRight, Download, Info, CalendarDays } from "lucide-react";
 
 /** Postpaid money hub: monthly invoices + official PDF download, tariff/slab,
  *  projected next bill, payment history, and a document vault. */
 export function BillsPostpaid() {
-  const { data: invoicesResp } = useInvoices(24);
-  const { data: payments } = usePayments(50);
+  const { data: invoicesResp, isLoading: invoicesLoading } = useInvoices(24);
+  const { data: payments, isLoading: paymentsLoading } = usePayments(50);
   const { data: yearly } = useYearlyHistory();
   const { data: dashboard } = useDashboard();
-  const { data: consResp } = useConsumption(90);
+  const { data: consResp, isLoading: consLoading } = useConsumption(90);
   const { data: meterResp } = useWssMeter();
   const { data: arrearsResp } = useWssArrears();
   const { push } = useToast();
@@ -63,24 +63,27 @@ export function BillsPostpaid() {
       t: String(r.energyImportKWH?.measureTime ?? ""),
       kwhVal: toNum(r.energyImportKWH?.value),
     }));
-    const thisMonthKwh = monthly.at(-1)?.kwhVal ?? dashboard?.consumption_30d.kwh ?? 0;
+    // Latest complete month in the rollup (the current month appears only once it closes).
+    const lastMonthKwh = monthly.at(-1)?.kwhVal ?? dashboard?.consumption_30d.kwh ?? 0;
+    const lastMonthLabel = monthly.at(-1)?.t
+      ? new Date(monthly.at(-1)!.t).toLocaleDateString("en-IN", { month: "long" })
+      : "the last 30 days";
     const avgDailyKwh = dashboard?.consumption_30d.avg_daily_kwh ?? 0;
 
     const lastInvoice = invoices.find((b) => Math.abs(toNum(b.bill_amt)) > 0);
     let effectiveRate = dashboard?.consumption_30d.effective_rate || 0;
     if (lastInvoice) {
-      const m = monthly.find((r) => r.t && new Date(r.t).getMonth() === new Date(lastInvoice.bill_dt).getMonth());
-      const billKwh = toNum(m?.kwhVal);
+      const billKwh = billedMonthKwh(yearly?.data ?? [], lastInvoice.bill_dt);
       if (billKwh > 0) effectiveRate = Math.abs(toNum(lastInvoice.bill_amt)) / billKwh;
     }
-    if (!effectiveRate || !Number.isFinite(effectiveRate)) effectiveRate = 6.5;
+    if (!effectiveRate || !Number.isFinite(effectiveRate)) effectiveRate = FALLBACK_RATE;
 
     const projectedKwh = avgDailyKwh * 30;
     const projectedBill = projectedKwh * effectiveRate;
-    return { thisMonthKwh, avgDailyKwh, effectiveRate, projectedKwh, projectedBill };
+    return { lastMonthKwh, lastMonthLabel, avgDailyKwh, effectiveRate, projectedKwh, projectedBill };
   }, [yearly, dashboard, invoices]);
 
-  const { thisMonthKwh, avgDailyKwh, effectiveRate, projectedKwh, projectedBill } = derived;
+  const { lastMonthKwh, lastMonthLabel, avgDailyKwh, effectiveRate, projectedKwh, projectedBill } = derived;
 
   // Daily ledger — the granular per-day view postpaid lost, rebuilt from meter
   // telemetry. Surfaces fields UPPCL never shows: apparent energy (kVAh) and a
@@ -131,7 +134,7 @@ export function BillsPostpaid() {
         <div className="text-[11px] uppercase tracking-[0.24em] text-on-surface-variant sm:text-[10px]">Bills &amp; payments</div>
         <h1 className="mt-1 font-mono text-[28px] font-light tracking-tight text-on-surface sm:text-[32px]">Your bills, explained</h1>
         <p className="mt-1 max-w-[680px] text-[13px] text-on-surface-variant sm:text-[12px]">
-          Your smart meter bills a month in arrears — each bill covers the <span className="text-on-surface">previous month&apos;s</span> usage,
+          Your smart meter bills a month in arrears — each bill covers the <span className="text-on-surface">previous month&apos;s</span>{" "}usage,
           and the amount payable is that month&apos;s charges minus any credit carried forward. Download any bill or receipt as an official PDF below.
         </p>
       </header>
@@ -162,7 +165,7 @@ export function BillsPostpaid() {
               </div>
               <div className="mt-1 font-mono text-[20px] text-on-surface">~₹{rupees(projectedBill, { decimals: 0 })}</div>
               <div className="mt-1 text-[11px] text-on-surface-variant">
-                {kwh(avgDailyKwh)} kWh/day × 30 × ₹{rupees(effectiveRate, { decimals: 2 })} = {kwh(projectedKwh, 0)} kWh
+                {kwh(avgDailyKwh)} kWh/day × 30 = {kwh(projectedKwh, 0)} kWh × ₹{rupees(effectiveRate, { decimals: 2 })}
               </div>
             </div>
           </div>
@@ -172,9 +175,9 @@ export function BillsPostpaid() {
                 Tariff slab position
                 {tariffCategory && <span className="ml-2 rounded-full bg-surface-container-high px-2 py-0.5 font-mono text-[10px] text-primary-fixed-dim">{tariffCategory}</span>}
               </span>
-              <span className="font-mono">{kwh(thisMonthKwh, 0)} units this month</span>
+              <span className="font-mono">{kwh(lastMonthKwh, 0)} units in {lastMonthLabel}</span>
             </div>
-            <SlabBar units={thisMonthKwh} slabs={UP_DOMESTIC_SLABS} />
+            <SlabBar units={lastMonthKwh} slabs={UP_DOMESTIC_SLABS} />
             <div className="text-[10px] text-on-surface-variant/70">
               {tariffCategory
                 ? <>Official tariff category <span className="text-on-surface">{tariffCategory}</span> (UP domestic). Slab rates are indicative; your effective ₹/kWh above is derived from your actual bills.</>
@@ -256,7 +259,9 @@ export function BillsPostpaid() {
           </>
         ) : (
           <div className="py-10 text-center text-[11px] text-on-surface-variant">
-            No daily telemetry available — the meter aggregate serves roughly the last 150 days.
+            {consLoading
+              ? "Loading daily usage…"
+              : "No daily telemetry available — the meter aggregate serves roughly the last 150 days."}
           </div>
         )}
       </section>
@@ -306,7 +311,7 @@ export function BillsPostpaid() {
             </table>
           </div>
         ) : (
-          <div className="py-10 text-center text-[11px] text-on-surface-variant">No monthly bills on file yet.</div>
+          <div className="py-10 text-center text-[11px] text-on-surface-variant">{invoicesLoading ? "Loading bills…" : "No monthly bills on file yet."}</div>
         )}
       </section>
 
@@ -363,7 +368,7 @@ export function BillsPostpaid() {
             </table>
           </div>
         ) : (
-          <div className="py-10 text-center text-[11px] text-on-surface-variant">No payments on file yet.</div>
+          <div className="py-10 text-center text-[11px] text-on-surface-variant">{paymentsLoading ? "Loading payments…" : "No payments on file yet."}</div>
         )}
       </section>
     </div>

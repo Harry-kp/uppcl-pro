@@ -12,7 +12,7 @@ export default function LedgerPage() {
   const { data, error, isLoading } = useSites();
   const site = data?.data?.[0];
 
-  if (error) return <BillsError message={(error as Error).message} />;
+  if (error && !site) return <BillsError message={(error as Error).message} />;
   if (isLoading || !site) return <BillsSkeleton />;
 
   return site.connectionType === "postpaid" ? <BillsPostpaid /> : <BillsPrepaid />;
@@ -40,9 +40,10 @@ function BillsError({ message }: { message: string }) {
   return (
     <div className="mx-auto mt-20 max-w-md rounded-xl bg-surface-container-low p-8 text-center">
       <div className="font-mono text-[20px] text-secondary">Bills unavailable</div>
-      <p className="mt-3 text-[13px] text-on-surface-variant">{message}</p>
-      <p className="mt-4 font-mono text-[11px] text-on-surface-variant/70">
-        Try signing out and back in if this persists.
+      <p className="mt-3 text-[13px] text-on-surface-variant">
+        {typeof navigator !== "undefined" && !navigator.onLine
+          ? "You're offline. Reconnect and this page reloads on its own."
+          : message}
       </p>
     </div>
   );

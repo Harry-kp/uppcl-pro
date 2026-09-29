@@ -13,6 +13,7 @@ import {
   getSession,
   saveSession,
   clearSession,
+  expireSession,
   isAuthenticated,
   getJwt,
 
@@ -76,10 +77,13 @@ function humanizeError(status: number, raw: string): string {
   if (lower.includes("tenant id is missing")) return "Could not load your data. Try signing out and back in.";
   if (lower.includes("missing login params")) return "Login failed. Please check your credentials.";
   if (lower.includes("wrong captcha")) return "Verification failed. Please try again.";
-  if (lower.includes("invalid credentials") || lower.includes("invalid username")) return "Invalid username or password.";
+  // UPPCL says "Incorrect Username or Password." (HTTP 409) on a bad login.
+  if (/(invalid|incorrect) (credentials|username|password)/.test(lower)) return "Invalid username or password.";
+  // A 5xx gateway status means our proxy was reached and the *upstream* failed
+  // (its "fetch failed" text is server-side) — don't blame the user's internet.
+  if (status === 502 || status === 503 || status === 504) return "UPPCL servers are temporarily unavailable. Try again in a few minutes.";
   if (lower.includes("network") || lower.includes("fetch failed")) return "Network error — check your internet connection.";
   if (lower.includes("timeout")) return "Request timed out. UPPCL servers may be slow — try again.";
-  if (status === 502 || status === 503 || status === 504) return "UPPCL servers are temporarily unavailable. Try again in a few minutes.";
   if (status === 409) return "Request rejected by UPPCL. Try signing out and back in.";
   if (status === 429) return "Too many requests. Wait a moment and try again.";
   if (status >= 500) return "Something went wrong on UPPCL's end. Try again later.";
@@ -90,14 +94,15 @@ function humanizeError(status: number, raw: string): string {
 // UPPCL dropped encryption — all endpoints accept plaintext JSON now.
 
 /**
- * POST to a UPPCL API base via our CORS-proxy route.
+ * Call a UPPCL API base via our CORS-proxy route. POST with a JSON body, or
+ * GET when `body` is null (a few endpoints — e.g. downtime — are GET-only).
  * `base` selects the upstream: "uppcl" → /accounts/api, "bootstrap" → /bootstrap/api.
  * `extraHeaders` lets callers add e.g. `subtenantcode` (needed by bill/download, insight).
  */
-async function proxy_post(
+async function proxy(
   base: "uppcl" | "bootstrap",
   path: string,
-  body: Record<string, unknown>,
+  body: Record<string, unknown> | null,
   extraHeaders?: Record<string, string>
 ): Promise<unknown> {
   const jwt = getJwt();
@@ -106,16 +111,16 @@ async function proxy_post(
   const session = getSession()!;
 
   const r = await fetch(`/api/${base}/${path}`, {
-    method: "POST",
+    method: body ? "POST" : "GET",
     headers: {
-      "content-type": "application/json",
+      ...(body ? { "content-type": "application/json" } : {}),
       apikey: UPPCL_API_KEY,
       tenantid: tenantHeader(session.tenant),
       token: jwt,
       authorization: `Bearer ${jwt}`,
       ...extraHeaders,
     },
-    body: JSON.stringify(body),
+    body: body ? JSON.stringify(body) : undefined,
     cache: "no-store",
   });
 
@@ -124,7 +129,7 @@ async function proxy_post(
   }
 
   if (r.status === 401 || r.status === 403) {
-    clearSession();
+    expireSession();
     // Immediately tell Shell to show the login gate (don't wait for 60s poll)
     globalMutate("/health");
     throw new ProxyError(401, "Session expired — sign in again");
@@ -144,33 +149,7 @@ async function uppcl_post(
   body: Record<string, unknown>,
   extraHeaders?: Record<string, string>
 ): Promise<unknown> {
-  return proxy_post("uppcl", path, body, extraHeaders);
-}
-
-/** GET against /accounts/api (a few endpoints — e.g. downtime — are GET-only). */
-async function uppcl_get(path: string): Promise<unknown> {
-  const jwt = getJwt();
-  if (!jwt) throw new ProxyError(401, "No active session — sign in first");
-  const session = getSession()!;
-
-  const r = await fetch(`/api/uppcl/${path}`, {
-    headers: {
-      apikey: UPPCL_API_KEY,
-      tenantid: tenantHeader(session.tenant),
-      token: jwt,
-      authorization: `Bearer ${jwt}`,
-    },
-    cache: "no-store",
-  });
-
-  if (r.status === 200) return r.json();
-  if (r.status === 401 || r.status === 403) {
-    clearSession();
-    globalMutate("/health");
-    throw new ProxyError(401, "Session expired — sign in again");
-  }
-  const text = await r.text();
-  throw new ProxyError(r.status, text.slice(0, 200));
+  return proxy("uppcl", path, body, extraHeaders);
 }
 
 // ─── Auth ─────────────────────────────────────────────────────────────────────
@@ -273,7 +252,7 @@ export async function downloadBillPdf(invoice: { invoice_id: string }): Promise<
   const site = await primarySite();
   const res = await wssPost<{ statusCode?: string; Response?: string; statusMsg?: string }>(
     "v2/api/viewBillDownloadPDF",
-    { kno: site.connectionId, discomName: wssDiscom(site), billNo: invoice.invoice_id, category: String(site.accountType ?? "10"), flag: "BILL" }
+    { kno: site.connectionId, discomName: wssDiscom(site), billNo: invoice.invoice_id, category: String(site.accountType ?? "10"), identifierType: "UNMASKED" }
   );
   if (res.statusCode !== "VIEW_BILL_PDF_200" || !res.Response) {
     throw new ProxyError(404, res.statusMsg || "Bill PDF not available for this connection");
@@ -343,7 +322,7 @@ async function fetcher<T>(key: string): Promise<T> {
   // Health is client-side only
   if (key === "/health") {
     return {
-      ok: true,
+      ok: typeof navigator === "undefined" || navigator.onLine,
       authenticated: isAuthenticated(),
       tenant: getSession()?.tenant ?? DEFAULT_TENANT,
       jwt_expires_ms: getSession()?.jwtExpiresMs ?? 0,
@@ -448,11 +427,11 @@ async function fetcher<T>(key: string): Promise<T> {
   }
 
   if (key === "/tenant-preferences") {
-    return proxy_post("bootstrap", "tenant/searchPreference", { tenantId: tid }) as Promise<T>;
+    return proxy("bootstrap", "tenant/searchPreference", { tenantId: tid }) as Promise<T>;
   }
 
   if (key === "/downtime") {
-    return uppcl_get("announcements/activeDowntimeAnnouncement") as Promise<T>;
+    return proxy("uppcl", "announcements/activeDowntimeAnnouncement", null) as Promise<T>;
   }
 
   // ── Official data from the /wss bill portal (AES-encrypted) ────────
@@ -977,16 +956,6 @@ export const useWssArrears = () =>
 
 /* ── Complaint hooks (same signatures, different backend route) ── */
 
-export interface ComplaintSummary {
-  data_id: string;
-  complaint_no: string;
-  type: string;
-  sub_type: string;
-  mobile_no: string;
-  status: string;
-  is_open: boolean;
-}
-
 export interface ComplaintDetail {
   data_id: string;
   complaint_no: string;
@@ -1018,26 +987,9 @@ export interface ComplaintDetail {
   raw_fields: Record<string, string>;
 }
 
-export const useComplaintList = (phone: string | null) =>
-  useSWR<{ phone: string; complaints: ComplaintSummary[] }>(
-    phone ? `/complaints?phone=${phone}` : null,
-    fetcher,
-    { ...swrOpts, revalidateOnFocus: true }
-  );
-
 export const useMyComplaints = (phone: string | null | undefined) =>
   useSWR<{ phone: string; complaints: ComplaintDetail[] }>(
     phone ? `/complaints?action=my&phone=${phone}` : null,
     fetcher,
     { ...swrOpts, revalidateOnFocus: true }
   );
-
-export const useComplaintDetail = (dataId: string | null) =>
-  useSWR<ComplaintDetail>(
-    dataId ? `/complaints?action=detail&data_id=${dataId}` : null,
-    fetcher,
-    swrOpts
-  );
-
-// Re-export API_BASE for backward compat (LoginGate uses it for display)
-export const API_BASE = typeof window !== "undefined" ? window.location.origin : "";

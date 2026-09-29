@@ -6,8 +6,8 @@ Source of truth for the full UPPCL backend API surface, derived from:
 
 All endpoints are `POST https://uppcl.sem.jio.com/accounts/api/<path>` with plaintext JSON
 unless noted. Headers: `apikey`, `tenantid` (JSON `{isMultiLevel:true, code:<tenantCode UUID>}`),
-`token` + `authorization: Bearer <jwt>`. Our proxy at `src/app/api/uppcl/[...path]/route.ts`
-forwards these as-is.
+`token` + `authorization: Bearer <jwt>`. Our proxy (`src/lib/proxy.ts`, mounted at
+`/api/uppcl/*`) forwards these as-is.
 
 > Capture context: device `<deviceId>`, connection `<connectionId>`, `tenantId:"pvvnl"`,
 > `connectionType:"postpaid"`, `dataSource:"jeu"`, app version 2.7.4.
@@ -306,11 +306,10 @@ Use the working equivalents (`dadata/v2/search`, `alert/search`, `announcements/
 
 ---
 
-## 8. Second API base: `/bootstrap/api` (NEW — proxy doesn't route this yet)
+## 8. Second API base: `/bootstrap/api`
 
 `bootstrap = window.location.origin + "/bootstrap/api"` (vs `jps = origin + "/accounts/api"`).
-Our proxy `src/app/api/uppcl/[...path]/route.ts` only forwards `/accounts/api`. **To use these,
-add a `/bootstrap/api` forward** (same headers).
+Proxied at `/api/bootstrap/*` by the same `src/lib/proxy.ts` handler (same headers).
 
 ### `tenant/searchPreference` — UPPCL's entire feature catalog + discom config
 ```
@@ -366,11 +365,13 @@ Implemented in `src/lib/crypto.ts` (`wssEncrypt`/`wssDecrypt`, Web Crypto) + pro
 ```
 POST /uppclwss/v2/api/viewBillDownloadPDF   {_cdata: enc({
   kno: <connectionId>, discomName: "PVVNL" (UPPERCASE!), billNo: <invoice_id>,
-  category: "10" (= site.accountType), flag: "BILL" })}
+  category: "10" (= site.accountType), identifierType: "UNMASKED" })}
 → {_cdata: enc({statusCode:"VIEW_BILL_PDF_200", Response: <base64 PDF>})}
 ```
 Gotchas that cost time: `discomName` must be **UPPERCASE** (`"pvvnl"` → "not registered");
-`category` is `site.accountType` (`"10"`); request body **must be encrypted**. Verified for
+`category` is `site.accountType` (`"10"`); request body **must be encrypted**. Since ~Sep 2026
+the portal ignores the old `flag: "BILL"` and returns `VIEW_BILL_PDF_200` with an **empty**
+`Response` — send `identifierType: "UNMASKED"` (what the official SPA sends). Verified for
 all 6 invoices (each ~1 MB PDF, incl. credit bills). Wired as `downloadBillPdf()` in `api.ts`.
 
 **More `/wss` endpoints (same crypto, mostly unauthenticated via appServiceKey) — feature ideas:**
@@ -393,7 +394,7 @@ Auth model: most read endpoints work with just the `appServiceKey` header (no lo
 |----------|--------------------|---------|------|
 | `v2/api/GetDiscom` | `{kno, discomName}` | `{DiscomName}` | public |
 | `v2/api/getConsumerDetails` | `{kno, discomName}` | full profile ↓ | public |
-| `v2/api/viewBillDownloadPDF` | `{kno, discomName(UPPER), billNo, category, flag:"BILL"}` | `{Response: base64 PDF}` | public |
+| `v2/api/viewBillDownloadPDF` | `{kno, discomName(UPPER), billNo, category, identifierType:"UNMASKED"}` | `{Response: base64 PDF}` | public |
 | `v2/lastOnlinePaymentReciept` | `{kno, discomName}` | `{bytecode: base64 PDF}` (payment receipt) | public |
 | `v2/InstaPayment/GetPayBillDetails` | `{kno, discomName}` | `{PayBillHomeDTO:{payableAmt, customerDetailsDTO}}` | public |
 | `v2/InstaPayment/getArrearAmountStatus` | `{accountID, discom}` | `{data:{amount, status}}` | public |

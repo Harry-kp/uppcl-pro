@@ -15,6 +15,7 @@ import { SidePanel } from "@/components/ui/SidePanel";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { useToast } from "@/components/ui/Toast";
 import { cn } from "@/lib/utils";
+import { FILE_COMPLAINT_URL } from "@/components/ComplaintsSection";
 import type { OutageContext } from "@/lib/outage";
 
 interface Props {
@@ -35,7 +36,6 @@ interface Props {
 const HELPLINE_TEL = "1912";                // 24×7 toll-free
 const TOLL_FREE = "1800-180-0440";          // alternative toll-free
 const COMPLAINT_SMS_NUMBER = "5616195";     // SMS shortcode
-const WEB_COMPLAINT_PORTAL = "https://appsavy.com/coreapps/UI/Form?FormId=6444";
 
 export function OutagePanel({ open, onClose, site, context }: Props) {
   const { push } = useToast();
@@ -46,7 +46,7 @@ export function OutagePanel({ open, onClose, site, context }: Props) {
     ``,
     `Connection ID: ${site.connectionId}`,
     `Installation / meter: ${site.deviceId}`,
-    `DISCOM: ${site.tenantId}`,
+    `DISCOM: ${site.tenantId?.toUpperCase()}`,
     site.address ? `Address: ${site.address}` : undefined,
     site.pincode ? `PIN: ${site.pincode}` : undefined,
     site.phone ? `Phone: ${site.phone}` : undefined,
@@ -86,7 +86,7 @@ export function OutagePanel({ open, onClose, site, context }: Props) {
         <div className="flex items-start gap-3 rounded-lg bg-surface-container p-4">
           <Info className="mt-0.5 h-4 w-4 shrink-0 text-on-surface-variant" />
           <div className="text-[12px] leading-relaxed text-on-surface-variant">
-            <span className="text-on-surface">Why no auto-detect?</span> UPPCL&apos;s
+            <span className="text-on-surface">Why no auto-detect?</span>{" "}UPPCL&apos;s
             upstream only exposes per-day totals with a 24–30 h lag and doesn&apos;t
             publish a meter-heartbeat endpoint. Any automatic &quot;outage&quot; banner
             would false-positive on vacation days or late bill updates. So this
@@ -142,11 +142,11 @@ export function OutagePanel({ open, onClose, site, context }: Props) {
             cta="Compose"
           />
           <ActionRow
-            href={WEB_COMPLAINT_PORTAL}
+            href={FILE_COMPLAINT_URL}
             accent="muted"
             icon={<Globe className="h-5 w-5" />}
             title="Online complaint portal"
-            body={<>uppclonline.com · enter the consumer details below manually.</>}
+            body={<>UPPCL 1912 web form · paste the complaint text below.</>}
             cta="Open"
           />
           <ActionRow
@@ -188,19 +188,12 @@ export function OutagePanel({ open, onClose, site, context }: Props) {
           <ol className="list-decimal space-y-1.5 pl-4 text-[12px] text-on-surface-variant marker:text-primary-fixed-dim">
             <li>&quot;Power supply not available at my connection.&quot;</li>
             <li>Give consumer ID: <span className="font-mono text-on-surface">{site.connectionId}</span></li>
-            <li>Mention DISCOM: <span className="font-mono text-on-surface">{site.tenantId}</span></li>
+            <li>Mention DISCOM: <span className="font-mono text-on-surface">{site.tenantId?.toUpperCase()}</span></li>
             <li>Give approximate outage start time + address / pincode.</li>
             <li>Note the complaint number they issue — you&apos;ll need it to follow up.</li>
           </ol>
         </div>
 
-        {/* Coming-soon footer */}
-        <div className="rounded-lg border border-dashed border-white/10 p-3 text-[11px] text-on-surface-variant/80">
-          <span className="text-primary-fixed-dim">Coming soon:</span>{" "}
-          one-click online complaint submission once we reverse-engineer the
-          complaint portal&apos;s API. Share a HAR of
-          https://uppclonline.com/ and we&apos;ll wire it up.
-        </div>
       </div>
     </SidePanel>
   );

@@ -20,6 +20,8 @@ import { login, ProxyError } from "@/lib/api";
 import { useToast } from "@/components/ui/Toast";
 import { useTranslations } from "next-intl";
 import { useLocale } from "@/components/I18nProvider";
+import { useTheme } from "@/lib/theme";
+import { sessionWasExpired } from "@/lib/session";
 
 /**
  * Full-bleed auth gate. Rendered by <Shell> when the proxy reports
@@ -35,22 +37,10 @@ export function LoginGate({ proxyUnreachable }: { proxyUnreachable?: string }) {
   const [password, setPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
-  const [dark, setDark] = useState(() => {
-    if (typeof window === "undefined") return true;
-    const stored = localStorage.getItem("theme");
-    if (stored) return stored === "dark";
-    // No preference saved — follow system
-    return window.matchMedia("(prefers-color-scheme: dark)").matches;
-  });
-
-  function toggleTheme() {
-    const next = !dark;
-    setDark(next);
-    localStorage.setItem("theme", next ? "dark" : "light");
-    document.documentElement.classList.toggle("dark", next);
-    document.documentElement.classList.toggle("light", !next);
-  }
+  // Landed here because UPPCL rejected the session → say so, once.
+  const [err, setErr] = useState<string | null>(() => (sessionWasExpired() ? "Your session expired. Please sign in again." : null));
+  const { theme, toggle: toggleTheme } = useTheme();
+  const dark = theme === "dark";
 
   const canSubmit = username.trim().length > 0 && password.length > 0 && !busy;
 
@@ -130,24 +120,6 @@ export function LoginGate({ proxyUnreachable }: { proxyUnreachable?: string }) {
               </p>
             </div>
 
-            {/* Trust banner */}
-            <div className="rounded-lg border border-primary-fixed-dim/20 bg-primary-container/10 px-4 py-3">
-              <div className="flex items-center gap-2 text-[12px] font-semibold text-primary-fixed-dim">
-                <ShieldCheck className="h-4 w-4" strokeWidth={2} />
-                {t("trust_banner")}
-              </div>
-              <p className="mt-1.5 text-[11px] leading-relaxed text-on-surface-variant">
-                {t("trust_sub")}
-              </p>
-              <Link
-                href="https://github.com/Harry-kp/uppcl-pro#security--privacy"
-                target="_blank"
-                className="mt-2 inline-flex items-center gap-1 text-[11px] font-semibold text-primary-fixed-dim hover:underline"
-              >
-                {t("trust_link")} <ExternalLink className="h-3 w-3" />
-              </Link>
-            </div>
-
             <ul className="space-y-3">
               <Pitch icon={<LockKeyhole className="h-3.5 w-3.5" strokeWidth={2.25} />}>
                 {t.rich("pitch_1", { b: (chunks) => <strong>{chunks}</strong> })}
@@ -159,10 +131,6 @@ export function LoginGate({ proxyUnreachable }: { proxyUnreachable?: string }) {
                 {t.rich("pitch_3", { code: (chunks) => <code className="rounded bg-surface-container-low px-1 font-mono text-[11px]">{chunks}</code> })}
               </Pitch>
             </ul>
-
-            <div className="mt-2 border-t border-white/[0.04] pt-4 font-mono text-[11px] text-on-surface-variant/70">
-              {t("footer_line")}
-            </div>
           </div>
 
           {/* ── Form side ────────────────────────────────────────────── */}
@@ -215,7 +183,7 @@ export function LoginGate({ proxyUnreachable }: { proxyUnreachable?: string }) {
                         type="button"
                         onClick={() => setShowPw((v) => !v)}
                         className="shrink-0 rounded p-1 text-on-surface-variant/70 transition hover:bg-surface-container-high hover:text-on-surface"
-                        aria-label={showPw ? "Hide password" : "Show password"}
+                        aria-label={showPw ? t("hide_password") : t("show_password")}
                         tabIndex={-1}
                       >
                         {showPw ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
@@ -226,6 +194,7 @@ export function LoginGate({ proxyUnreachable }: { proxyUnreachable?: string }) {
                       name="password"
                       type={showPw ? "text" : "password"}
                       autoComplete="current-password"
+                      aria-label={t("password")}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="••••••••"
@@ -234,7 +203,7 @@ export function LoginGate({ proxyUnreachable }: { proxyUnreachable?: string }) {
                   </Field>
 
                   {err && (
-                    <div className="flex items-start gap-2 rounded-md bg-error-container/15 px-3 py-2 text-[12px] text-secondary">
+                    <div role="alert" className="flex items-start gap-2 rounded-md bg-error-container/15 px-3 py-2 text-[12px] text-secondary">
                       <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" strokeWidth={2} />
                       <span className="font-mono leading-relaxed">{err}</span>
                     </div>

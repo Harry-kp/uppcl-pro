@@ -43,7 +43,7 @@ export function BillCycleRing({ projectedInr, daysToDue, cycleProgress, vsLastPc
 
   const dueLabel =
     daysToDue === null
-      ? "no due date"
+      ? "not billed yet"
       : overdue
       ? `overdue by ${Math.abs(daysToDue)} d`
       : daysToDue === 0

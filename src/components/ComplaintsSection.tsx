@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useMe, useMyComplaints, ComplaintDetail } from "@/lib/api";
 import { SidePanel } from "@/components/ui/SidePanel";
 import { Tooltip } from "@/components/ui/Tooltip";
-import { cn } from "@/lib/utils";
+import { cn, formatRelative } from "@/lib/utils";
 import {
   AlertCircle,
   CheckCircle2,
@@ -49,7 +49,7 @@ export function ComplaintsSection({ phone: override, hideHeader, hideFullPageLin
   const { data: me } = useMe();
   const autoPhone = me?.data?.[0]?.phone;
   const phone = override ?? autoPhone;
-  const { data, error, isLoading } = useMyComplaints(phone);
+  const { data, error, isLoading, isValidating, mutate } = useMyComplaints(phone);
 
   const [selected, setSelected] = useState<ComplaintDetail | null>(null);
 
@@ -99,8 +99,15 @@ export function ComplaintsSection({ phone: override, hideHeader, hideFullPageLin
 
       {/* States */}
       {error && (
-        <div className="rounded-lg bg-[rgba(255,90,90,0.10)] px-4 py-3 text-[12px] text-error">
-          Complaint portal unreachable: {(error as Error).message}
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-[rgba(255,90,90,0.10)] px-4 py-3 text-[12px] text-error">
+          <span>Complaint portal unreachable: {(error as Error).message}</span>
+          <button
+            onClick={() => mutate()}
+            disabled={isValidating}
+            className="rounded-md bg-surface-container-high px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-on-surface hover:bg-surface-bright disabled:opacity-50"
+          >
+            {isValidating ? "Retrying…" : "Retry"}
+          </button>
         </div>
       )}
       {isLoading && <SkeletonRows />}
@@ -397,7 +404,7 @@ function EmptyState({ phone }: { phone: string }) {
       <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary-fixed-dim" />
       <div>
         No 1912 complaints filed from <span className="font-mono text-on-surface">{phone}</span>.
-        If you need to report an outage, use the <span className="text-on-surface">Power out?</span> button above.
+        If you need to report an outage, use the <span className="text-on-surface">Power out?</span>{" "}button above.
       </div>
     </div>
   );
@@ -422,20 +429,6 @@ function parseAppsavyDate(s: string | null | undefined): Date | null {
     hh, Mi ? parseInt(Mi) : 0, Se ? parseInt(Se) : 0
   );
   return isNaN(dt.getTime()) ? null : dt;
-}
-
-function formatRelative(date: Date): string {
-  const diffMs = Date.now() - date.getTime();
-  const mins = Math.floor(diffMs / 60_000);
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins} min ago`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs} h ago`;
-  const days = Math.floor(hrs / 24);
-  if (days === 1) return "yesterday";
-  if (days < 30) return `${days} d ago`;
-  const months = Math.floor(days / 30);
-  return months === 1 ? "a month ago" : `${months} mo ago`;
 }
 
 function formatDuration(ms: number): string {

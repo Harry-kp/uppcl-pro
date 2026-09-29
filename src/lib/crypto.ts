@@ -4,15 +4,15 @@
  * UPPCL dropped RSA-OAEP + AES-GCM encryption on their API — all endpoints
  * now accept plaintext JSON. The only crypto still needed:
  *   1. solveAltcha() — SHA-256 proof-of-work for login captcha
- *   2. appsavyEncrypt() — AES-128-CBC for appsavy complaint portal headers
+ *   2. wssEncrypt()/wssDecrypt() — AES-256-CBC for the /wss bill portal
+ *
+ * Appsavy header encryption lives server-side in src/app/api/complaints/route.ts.
  */
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function hexEncode(buf: ArrayBuffer): string {
-  return Array.from(new Uint8Array(buf))
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
+function bytesToHex(bytes: Uint8Array): string {
+  return Array.from(bytes).map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
 function b64Encode(buf: ArrayBuffer | Uint8Array): string {
@@ -43,7 +43,7 @@ export async function solveAltcha(c: AltchaChallenge): Promise<string> {
   for (let n = 0; n <= maxnum; n++) {
     const data = encoder.encode(`${c.salt}${n}`);
     const hash = await crypto.subtle.digest("SHA-256", data);
-    if (hexEncode(hash) === target) {
+    if (bytesToHex(new Uint8Array(hash)) === target) {
       const took = Date.now() - startMs;
       return btoa(
         JSON.stringify({
@@ -60,37 +60,6 @@ export async function solveAltcha(c: AltchaChallenge): Promise<string> {
   throw new Error(`ALTCHA challenge unsolvable within ${maxnum}`);
 }
 
-// ─── Appsavy AES-128-CBC (constant key, deterministic) ───────────────────────
-
-const APPSAVY_KEY = new TextEncoder().encode("8080808080808080");
-const APPSAVY_IV = new TextEncoder().encode("8080808080808080");
-
-/**
- * AES-128-CBC encrypt for appsavy headers.
- * Web Crypto adds PKCS7 padding automatically — do NOT pad manually.
- */
-export async function appsavyEncrypt(plain: string): Promise<string> {
-  const data = new TextEncoder().encode(plain);
-  const key = await crypto.subtle.importKey("raw", APPSAVY_KEY, "AES-CBC", false, [
-    "encrypt",
-  ]);
-  const ct = await crypto.subtle.encrypt({ name: "AES-CBC", iv: APPSAVY_IV }, key, data);
-  return b64Encode(ct);
-}
-
-/**
- * The 5 constant encrypted headers for appsavy.com anonymous sessions.
- */
-export async function appsavyHeaders(): Promise<Record<string, string>> {
-  return {
-    appsavylogin: await appsavyEncrypt("anonymous"),
-    formid: await appsavyEncrypt("4235"),
-    roleid: await appsavyEncrypt("883"),
-    sourcetype: await appsavyEncrypt("WEB"),
-    token: await appsavyEncrypt(""),
-  };
-}
-
 // ─── UPPCL /wss bill portal crypto (AES-256-CBC + PBKDF2-SHA1) ────────────────
 // consumer.uppcl.org/wss encrypts request & response bodies as `_cdata`:
 //   _cdata = saltHex(32B) + ivHex(16B) + base64( AES-256-CBC(plaintext) )
@@ -99,9 +68,6 @@ export async function appsavyHeaders(): Promise<Record<string, string>> {
 // This is the path to the official bill PDF (see docs/api-reverse-engineering.md).
 const WSS_PASSPHRASE = "2b57ea4715h#2d6abf1360e8";
 
-function bytesToHex(bytes: Uint8Array): string {
-  return Array.from(bytes).map((b) => b.toString(16).padStart(2, "0")).join("");
-}
 function hexToBytes(hex: string): Uint8Array {
   const out = new Uint8Array(hex.length / 2);
   for (let i = 0; i < out.length; i++) out[i] = parseInt(hex.substr(i * 2, 2), 16);

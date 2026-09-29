@@ -64,7 +64,7 @@ export function ComplaintLookup() {
                 </Tooltip>
               ) : (
                 <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-surface-container-high px-2 py-0.5 font-mono text-[9px] uppercase tracking-[0.14em] text-on-surface-variant">
-                  from /me
+                  account phone
                 </span>
               )}
             </div>

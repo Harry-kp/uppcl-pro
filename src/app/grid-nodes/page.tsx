@@ -22,8 +22,8 @@ import { Tooltip } from "@/components/ui/Tooltip";
 
 export default function GridNodesPage() {
   const { data: bills } = useBills(365);
-  const { data: cons } = useConsumption(90);
-  const { data: yearly } = useYearlyHistory();
+  const { data: cons, isLoading: consLoading } = useConsumption(90);
+  const { data: yearly, isLoading: yearlyLoading } = useYearlyHistory();
   const { data: sitesResp } = useSites();
   const { data: balanceResp } = useBalance();
   const { data: outstandingResp } = useOutstanding();
@@ -72,7 +72,7 @@ export default function GridNodesPage() {
   const pfLatest = pfSeries.length ? pfSeries[pfSeries.length - 1].y : null;
   const pfAccent: GaugeAccent = pfLatest === null ? "default" : pfLatest >= 0.95 ? "good" : pfLatest >= 0.9 ? "default" : "warn";
   const pfAdvice =
-    pfLatest === null ? "No power-factor history yet."
+    pfLatest === null ? (yearlyLoading ? "Loading power-factor history…" : "No power-factor history yet.")
     : pfLatest >= 0.95 ? "Excellent — no surcharge, and you may qualify for a PF incentive."
     : pfLatest >= 0.9 ? "Healthy. Stay above 0.90 to avoid a power-factor surcharge."
     : "Below 0.90 — UPPCL levies a PF surcharge. Check for lightly-loaded motors or idle inductive loads.";
@@ -83,7 +83,7 @@ export default function GridNodesPage() {
   const demandPct = sanctioned > 0 && peakKw > 0 ? Math.round((peakKw / sanctioned) * 100) : null;
   const demandAccent: GaugeAccent = demandPct === null ? "default" : demandPct >= 100 ? "critical" : demandPct >= 85 ? "warn" : "default";
   const demandAdvice =
-    demandPct === null ? "No demand data yet."
+    demandPct === null ? (consLoading ? "Loading demand data…" : "No demand data yet.")
     : demandPct >= 100 ? "Exceeding sanctioned load — overload trips and penalties likely. Apply for load enhancement."
     : demandPct >= 85 ? "Near your sanctioned load. Frequent peaks risk MD penalties; consider load enhancement."
     : demandPct >= 70 ? "Approaching sanctioned load — avoid running heavy appliances at once."
@@ -99,7 +99,7 @@ export default function GridNodesPage() {
         <h1 className="text-[15px] text-on-surface">Meter</h1>
         <p className="mt-0.5 max-w-[680px] text-[12px] text-on-surface-variant">
           Two things that quietly affect your bill — <span className="text-on-surface">power factor</span> and{" "}
-          <span className="text-on-surface">peak demand vs your sanctioned load</span> — plus your meter&apos;s official reading and identity.
+          <span className="text-on-surface">peak demand vs your sanctioned load</span>{" "}— plus your meter&apos;s official reading and identity.
         </p>
       </div>
 
@@ -155,7 +155,7 @@ export default function GridNodesPage() {
           <Kv k="make / type" v={wm?.manufacturerCode ? `${wm.manufacturerCode}${wm.meterConfigType ? ` · ${wm.meterConfigType}` : ""}` : site?.meterType} />
           <Kv k="phase" v={site?.meterPhase} />
           <Kv k="connection type" v={site?.connectionType} />
-          <Kv k="discom" v={site?.tenantId} />
+          <Kv k="discom" v={site?.tenantId?.toUpperCase()} />
           <Kv k="pincode" v={site?.pincode} />
           {billsAsc.length > 0 && <Kv k="actual reads" v={`${actualPct.toFixed(0)}% of ${totalReads}`} />}
           <Kv k="last msi" v={msiNow} />
@@ -167,13 +167,13 @@ export default function GridNodesPage() {
         <section className="rounded-xl bg-surface-container-low p-5 sm:p-6">
           <div className="mb-3 flex items-center justify-between">
             <div className="text-[10px] uppercase tracking-[0.24em] text-on-surface-variant">Peak kW — 90-day trend</div>
-            <span className="font-mono text-[11px] text-on-surface-variant">avg {avgKw.toFixed(2)} kW</span>
+            <span className="font-mono text-[11px] text-on-surface-variant">{consLoading ? "loading…" : `avg ${avgKw.toFixed(2)} kW`}</span>
           </div>
           {powerSeries.length ? (
             <LineChart height={180} format={(y) => y.toFixed(2)} xFormat={(x) => powerSeries[Math.round(x)]?.label ?? ""}
               series={[{ label: "kW", color: chart.a, glow: true, points: powerSeries }]} />
           ) : (
-            <div className="py-14 text-center text-[11px] text-on-surface-variant">no peak-power history</div>
+            <div className="py-14 text-center text-[11px] text-on-surface-variant">{consLoading ? "Loading 90 days of peaks…" : "no peak-power history"}</div>
           )}
         </section>
         <section className="rounded-xl bg-surface-container-low p-5 sm:p-6">
@@ -188,7 +188,7 @@ export default function GridNodesPage() {
                 { label: "target", color: chart.b, dashed: true, points: pfSeries.map((p) => ({ x: p.x, y: 0.95 })) },
               ]} />
           ) : (
-            <div className="py-14 text-center text-[11px] text-on-surface-variant">no PF history yet</div>
+            <div className="py-14 text-center text-[11px] text-on-surface-variant">{yearlyLoading ? "Loading monthly power factor…" : "no PF history yet"}</div>
           )}
         </section>
       </div>

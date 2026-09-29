@@ -20,12 +20,16 @@ import { chart } from "@/lib/chartColors";
 import { Info, TrendingUp, TrendingDown, Minus, PlugZap, Lightbulb, Leaf } from "lucide-react";
 
 const APPLIANCES = [
+  { code: "ac", label: "AC" },
   { code: "fridge", label: "Fridge" },
   { code: "geyser", label: "Geyser" },
   { code: "washing_machine", label: "Washing m/c" },
   { code: "nightbaseload", label: "Night load" },
+  { code: "tv", label: "TV" },
   { code: "others", label: "Others" },
 ] as const;
+// savingTip/getOne rejects "nightbaseload" ("Invalid appliance") — label-only for the breakdown.
+const TIP_APPLIANCES = APPLIANCES.filter((a) => a.code !== "nightbaseload");
 const APPLIANCE_KEYS = ["ac", "fridge", "geyser", "washing_machine", "nightbaseload", "others"] as const;
 
 export default function AnalyticsPage() {
@@ -34,10 +38,10 @@ export default function AnalyticsPage() {
   // cap, verified live — older `from` dates return []). The full-year view comes
   // from the monthly groupBy:year rollup below, not from daily data.
   const { data: daily } = useConsumption(150);
-  const { data: yearly } = useYearlyHistory();
+  const { data: yearly, isLoading: yearlyLoading } = useYearlyHistory();
   const { data: applianceResp } = useApplianceData();
   const [tipAppliance, setTipAppliance] = useState<string>("fridge");
-  const { data: tipsResp } = useSavingTip(tipAppliance);
+  const { data: tipsResp, isLoading: tipsLoading } = useSavingTip(tipAppliance);
 
   // One cell per day, from eventsummary energyImportKWH.
   const cells: CalendarCell[] = useMemo(
@@ -64,6 +68,7 @@ export default function AnalyticsPage() {
   const last7 = sortedCells.slice(-7);
   const total30 = last30.reduce((a, c) => a + c.value, 0);
   const avg30 = last30.length ? total30 / last30.length : 0;
+  const peak30 = last30.length ? Math.max(...last30.map((c) => c.value)) : 0;
   const avgPrev7 =
     sortedCells.length >= 14 ? mean(sortedCells.slice(-14, -7).map((c) => c.value)) : 0;
   const last7Avg = mean(last7.map((c) => c.value));
@@ -105,7 +110,7 @@ export default function AnalyticsPage() {
       <div className="px-1">
         <h1 className="text-[15px] text-on-surface">Usage</h1>
         <p className="mt-0.5 max-w-[680px] text-[12px] text-on-surface-variant">
-          How much electricity you use and <span className="text-on-surface">when</span> — daily kWh, weekday patterns,
+          How much electricity you use and <span className="text-on-surface">when</span>{" "}— daily kWh, weekday patterns,
           the year at a glance, and where it goes. Power factor and demand live on the Meter tab.
         </p>
       </div>
@@ -126,7 +131,7 @@ export default function AnalyticsPage() {
               </div>
               <div className="mt-2 flex flex-wrap items-center gap-3 text-[12px] text-on-surface-variant sm:text-[11px]">
                 <span>
-                  avg <span className="font-mono text-on-surface">{kwh(avg30, 2)}</span> kWh/day
+                  30-day avg <span className="font-mono text-on-surface">{kwh(avg30, 2)}</span>{" "}kWh/day
                 </span>
                 <DeltaPill value={wowDelta} />
                 <Tooltip
@@ -147,9 +152,9 @@ export default function AnalyticsPage() {
             </div>
 
             <div className="hidden gap-6 md:flex">
-              <Stat label="Avg"   value={`${kwh(avg)}`} sub="kWh/day" />
-              <Stat label="σ"     value={`${kwh(sd)}`} sub="kWh/day" />
-              <Stat label="Peak"  value={`${kwh(peak)}`} sub="kWh/day" />
+              <Stat label="All-time avg" value={`${kwh(avg)}`} sub="kWh/day" />
+              <Stat label="Spread" value={`±${kwh(sd)}`} sub="kWh/day" />
+              <Stat label="Peak day" value={`${kwh(peak)}`} sub="kWh" />
               <Stat label="Days"  value={String(sortedCells.length)} sub="on record" />
             </div>
           </div>
@@ -157,7 +162,7 @@ export default function AnalyticsPage() {
           <div className="mt-6">
             <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2 text-[11px] uppercase tracking-[0.24em] text-on-surface-variant sm:text-[10px]">
               <span>last {last30.length}-day consumption trend</span>
-              <span className="font-mono text-primary-fixed-dim">peak {kwh(peak)} kWh</span>
+              <span className="font-mono text-primary-fixed-dim">peak {kwh(peak30)} kWh</span>
             </div>
             <Sparkline
               values={last30.map((c) => c.value)}
@@ -199,14 +204,14 @@ export default function AnalyticsPage() {
         <div className="mb-3 flex items-center justify-between">
           <div>
             <div className="text-[10px] uppercase tracking-[0.24em] text-on-surface-variant">
-              Daily kWh — crosshair scrub
+              Every day on record
             </div>
             <p className="mt-1 text-[11px] text-on-surface-variant">
-              {dailyPoints.length} days plotted · dashed line = mean · hover for delta-from-mean
+              {dailyPoints.length} days · dashed line = your average · hover a day to compare
             </p>
           </div>
           <span className="font-mono text-[11px] text-on-surface-variant">
-            mean {avg.toFixed(2)} kWh · σ {sd.toFixed(2)}
+            avg {avg.toFixed(2)} kWh · ±{sd.toFixed(2)} typical swing
           </span>
         </div>
         {dailyPoints.length >= 2 ? (
@@ -233,7 +238,7 @@ export default function AnalyticsPage() {
             <div className="text-[10px] uppercase tracking-[0.24em] text-on-surface-variant">
               Annual profile
             </div>
-            <div className="font-mono text-[10px] text-on-surface-variant/70">monthly · groupBy:year</div>
+            <div className="font-mono text-[10px] text-on-surface-variant/70">monthly totals</div>
           </div>
           {monthly.length ? (
             <div className="flex gap-1.5" style={{ height: 180 }}>
@@ -270,7 +275,7 @@ export default function AnalyticsPage() {
             </div>
           ) : (
             <div className="flex h-[180px] items-center justify-center text-[11px] text-on-surface-variant">
-              no yearly rollups yet
+              {yearlyLoading ? "loading monthly totals…" : "no yearly rollups yet"}
             </div>
           )}
         </section>
@@ -311,7 +316,7 @@ export default function AnalyticsPage() {
             <div className="mt-4 flex items-start gap-3 rounded-lg bg-surface-container p-4">
               <span className="h-1.5 w-1.5 shrink-0 translate-y-2 rounded-full bg-primary-fixed-dim glow-primary" />
               <p className="text-[13px] leading-relaxed text-on-surface-variant">
-                <span className="text-on-surface">Learning your usage.</span> UPPCL&apos;s appliance model needs a few
+                <span className="text-on-surface">Learning your usage.</span>{" "}UPPCL&apos;s appliance model needs a few
                 more weeks of metered data before it can split your consumption by appliance. This panel lights up
                 automatically once it&apos;s ready.
               </p>
@@ -329,9 +334,10 @@ export default function AnalyticsPage() {
             </p>
           )}
           <div className="mt-4 flex flex-wrap gap-2">
-            {APPLIANCES.map((a) => (
+            {TIP_APPLIANCES.map((a) => (
               <button
                 key={a.code}
+                aria-pressed={tipAppliance === a.code}
                 onClick={() => setTipAppliance(a.code)}
                 className={cn(
                   "rounded-full px-3 py-1.5 text-[11px] font-medium transition",
@@ -353,7 +359,7 @@ export default function AnalyticsPage() {
                 </div>
               ))
             ) : (
-              <div className="text-[12px] text-on-surface-variant">No tips available right now.</div>
+              <div className="text-[12px] text-on-surface-variant">{tipsLoading ? "Loading tips…" : "No tips available right now."}</div>
             )}
           </div>
         </section>

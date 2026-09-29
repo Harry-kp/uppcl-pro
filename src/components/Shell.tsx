@@ -10,6 +10,7 @@ import { LoginGate } from "./LoginGate";
 import { ToastProvider, useToast } from "@/components/ui/Toast";
 import { useKeyboardShortcuts } from "@/lib/useKeyboardShortcuts";
 import { useHealth } from "@/lib/api";
+import { useTheme } from "@/lib/theme";
 import { Loader2 } from "lucide-react";
 
 export function Shell({ children }: { children: React.ReactNode }) {
@@ -18,28 +19,6 @@ export function Shell({ children }: { children: React.ReactNode }) {
       <ShellInner>{children}</ShellInner>
     </ToastProvider>
   );
-}
-
-type Theme = "dark" | "light";
-
-function useTheme() {
-  const [theme, setThemeState] = useState<Theme>("dark");
-
-  useEffect(() => {
-    const stored = (typeof window !== "undefined" && (localStorage.getItem("theme") as Theme | null)) || "dark";
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: one-time client-side theme init from localStorage
-    setThemeState(stored);
-    document.documentElement.classList.toggle("dark", stored === "dark");
-    document.documentElement.classList.toggle("light", stored === "light");
-  }, []);
-
-  const setTheme = (t: Theme) => {
-    setThemeState(t);
-    localStorage.setItem("theme", t);
-    document.documentElement.classList.toggle("dark", t === "dark");
-    document.documentElement.classList.toggle("light", t === "light");
-  };
-  return { theme, setTheme, toggle: () => setTheme(theme === "dark" ? "light" : "dark") };
 }
 
 function ShellInner({ children }: { children: React.ReactNode }) {

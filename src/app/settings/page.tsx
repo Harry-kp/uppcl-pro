@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
 import { useHealth, useSites, useWssConsumer, logout } from "@/lib/api";
 import { useToast } from "@/components/ui/Toast";
 import { mutate as swrMutate } from "swr";
 import { ExternalLink, LogOut, Sun, Moon, Laptop, Info, Code2 } from "lucide-react";
 import { Tooltip } from "@/components/ui/Tooltip";
+import { useTheme, getThemeChoice, setTheme, type ThemeChoice } from "@/lib/theme";
 
 export default function SettingsPage() {
   const { data: h } = useHealth();
@@ -23,18 +23,11 @@ export default function SettingsPage() {
     : null;
   const { push } = useToast();
 
-  const [theme, setTheme] = useState<"dark" | "light" | "system">(
-    typeof window !== "undefined"
-      ? ((localStorage.getItem("theme") as "dark" | "light") || "dark")
-      : "dark"
-  );
+  useTheme(); // re-render when the theme changes anywhere (e.g. Topbar toggle)
+  const theme: ThemeChoice = typeof window !== "undefined" ? getThemeChoice() : "system";
 
-  const applyTheme = (t: "dark" | "light" | "system") => {
+  const applyTheme = (t: ThemeChoice) => {
     setTheme(t);
-    const resolved = t === "system" ? (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light") : t;
-    localStorage.setItem("theme", resolved);
-    document.documentElement.classList.toggle("dark", resolved === "dark");
-    document.documentElement.classList.toggle("light", resolved === "light");
     push(`Theme: ${t}`, { kind: "info" });
   };
 
@@ -101,10 +94,10 @@ export default function SettingsPage() {
             Primary connection
           </div>
           <div className="mt-4 space-y-3 font-mono text-[13px]">
-            <Row k="connectionId"        v={s?.connectionId ?? "—"} />
-            <Row k="deviceId (meter)"    v={s?.deviceId ?? "—"} />
+            <Row k="connection id"       v={s?.connectionId ?? "—"} />
+            <Row k="meter serial"        v={s?.deviceId ?? "—"} />
             <Row k="installation #"      v={s?.meterInstallationNumber ?? "—"} />
-            <Row k="discom"              v={s?.tenantId ?? "—"} />
+            <Row k="discom"              v={s?.tenantId?.toUpperCase() ?? "—"} />
             <Row k="meter phase"         v={s?.meterPhase ?? "—"} />
             <Row k="meter type"          v={s?.meterType ?? "—"} />
             <Row k="sanctioned load"     v={s?.sanctionedLoad ? `${s.sanctionedLoad} kW` : "—"} />
@@ -126,8 +119,7 @@ export default function SettingsPage() {
             } />
           </div>
           <p className="mt-4 text-[10px] text-on-surface-variant/70">
-            Connection IDs from <code>/site/search</code>; billing office &amp; scheme from the official
-            UPPCL <code>getConsumerDetails</code> profile. Nothing hardcoded.
+            Straight from your UPPCL account and the official consumer profile — nothing is hard-coded.
           </p>
         </section>
 
@@ -161,7 +153,7 @@ export default function SettingsPage() {
             })}
           </div>
           <p className="mt-3 text-[10px] text-on-surface-variant/70">
-            Shortcut: <span className="font-mono">t</span> toggles dark ↔ light.
+            Shortcut: <span className="font-mono">t</span>{" "}toggles dark ↔ light.
           </p>
         </section>
 

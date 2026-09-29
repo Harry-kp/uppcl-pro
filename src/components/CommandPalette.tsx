@@ -4,9 +4,10 @@ import { Command } from "cmdk";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { mutate as swrMutate } from "swr";
-import { Home, Activity, ScrollText, Radio, Settings, Zap, Bell, Download, Clock, RefreshCw, LogOut, ExternalLink, AlertTriangle, LifeBuoy } from "lucide-react";
+import { Home, Activity, ScrollText, Radio, Settings, Zap, Download, Clock, RefreshCw, LogOut, ExternalLink, AlertTriangle, LifeBuoy } from "lucide-react";
 import { useToast } from "@/components/ui/Toast";
 import { logout } from "@/lib/api";
+import { isAuthenticated } from "@/lib/session";
 
 export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenChange: (v: boolean) => void }) {
   const router = useRouter();
@@ -83,11 +84,15 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
               >
                 Report power outage
               </PItem>
-              <PItem onSelect={act("Refreshed all data", () => swrMutate(() => true))} icon={<RefreshCw className="h-4 w-4" />}>
+              <PItem onSelect={act("Refreshed all data", async () => {
+                if (!navigator.onLine) {
+                  await swrMutate("/health"); // flip the sidebar to "Offline"
+                  throw new Error("You're offline — reconnect to refresh.");
+                }
+                await swrMutate(() => true);
+                if (!isAuthenticated()) throw new Error("Session expired — sign in again.");
+              })} icon={<RefreshCw className="h-4 w-4" />}>
                 Refresh all data
-              </PItem>
-              <PItem onSelect={act("Alert scheduled", () => {})} icon={<Bell className="h-4 w-4" />}>
-                Set low-balance alert
               </PItem>
               <PItem
                 onSelect={act("Opening UPPCL payment portal", () => {
@@ -95,15 +100,15 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
                 })}
                 icon={<Zap className="h-4 w-4 text-secondary" />}
               >
-                Recharge now
+                Pay or recharge on UPPCL
               </PItem>
               <PItem
-                onSelect={act("Opening Ledger for CSV export", () => {
+                onSelect={act("Opening Bills — CSV export is on the daily usage card", () => {
                   router.push("/ledger");
                 })}
                 icon={<Download className="h-4 w-4" />}
               >
-                Export bills (CSV) -- via Ledger page
+                Export daily usage (CSV)
               </PItem>
             </PGroup>
 
@@ -129,7 +134,7 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
             </PGroup>
 
             <PGroup heading="Learn">
-              <PItem onSelect={act("Shortcuts", () => push("⌘K = palette · g+[h/a/l/r/n/s] = nav · ? = help", { kind: "info", ttl: 6000 }))} icon={<Clock className="h-4 w-4" />}>
+              <PItem onSelect={() => { onOpenChange(false); push("⌘K palette · g + [h/u/b/m/p/s] navigate · t toggle theme · ? help", { kind: "info", ttl: 6000 }); }} icon={<Clock className="h-4 w-4" />}>
                 Keyboard shortcuts
               </PItem>
             </PGroup>

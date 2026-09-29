@@ -18,7 +18,7 @@ description: Capture fresh screenshots for the README gallery. Use when user say
 No automated script yet. Use Playwright manually:
 
 1. Launch Chromium via `npx playwright`
-2. Navigate to each route: `/`, `/analytics`, `/ledger`, `/recharges`, `/grid-nodes`, `/complaints`, `/settings`
+2. Navigate to each route: `/`, `/analytics`, `/ledger`, `/grid-nodes`, `/support`, `/settings` (`/recharges`, `/complaints`, `/insights` are redirects)
 3. Capture dark + light for each
 4. Apply PII redactions from `scripts/redactions.js`
 5. Save to `docs/screenshots/<route>-<theme>.png`

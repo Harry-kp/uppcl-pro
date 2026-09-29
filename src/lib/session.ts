@@ -9,6 +9,7 @@
  */
 
 const STORAGE_KEY = "uppcl_session";
+const EXPIRED_KEY = "uppcl_session_expired";
 
 export interface Session {
   jwt: string;
@@ -55,10 +56,23 @@ export function getSession(): Session | null {
 
 export function saveSession(s: Session): void {
   sessionStorage.setItem(STORAGE_KEY, JSON.stringify(s));
+  sessionStorage.removeItem(EXPIRED_KEY);
 }
 
 export function clearSession(): void {
   sessionStorage.removeItem(STORAGE_KEY);
+}
+
+
+/** Clear the session because UPPCL rejected it, so the login gate can say why. */
+export function expireSession(): void {
+  clearSession();
+  sessionStorage.setItem(EXPIRED_KEY, "1");
+}
+
+/** True after expireSession() until the next successful sign-in. */
+export function sessionWasExpired(): boolean {
+  return typeof window !== "undefined" && sessionStorage.getItem(EXPIRED_KEY) === "1";
 }
 
 export function isAuthenticated(): boolean {

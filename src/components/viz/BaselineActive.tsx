@@ -31,7 +31,7 @@ export function BaselineActive({ dayValues, unit = "kWh" }: Props) {
   const baseShare = (alwaysOn / avg) * 100;
 
   return (
-    <div className="flex h-full flex-col items-center justify-center gap-5">
+    <div className="mt-4 flex flex-col items-center justify-center gap-5">
       <Donut
         size={172}
         stroke={12}

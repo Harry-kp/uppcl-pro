@@ -44,18 +44,33 @@ export function billingPeriod(billDt: string | Date): { label: string; from: Dat
   return { label, from, to };
 }
 
+/** ₹/kWh used when no billed month can be matched (≈ UP LMV-1 151–300 slab). */
+export const FALLBACK_RATE = 6.5;
+
+type MonthlyRow = { energyImportKWH?: { measureTime?: string | number | null; value?: unknown } | null };
+
+/** kWh of the month a bill covers — the month *before* its bill date (see billingPeriod). 0 if absent. */
+export function billedMonthKwh(monthly: MonthlyRow[], billDt: string | Date): number {
+  const { from } = billingPeriod(billDt);
+  const row = monthly.find((r) => {
+    const t = r.energyImportKWH?.measureTime;
+    const d = t ? new Date(String(t)) : null;
+    return d !== null && d.getFullYear() === from.getFullYear() && d.getMonth() === from.getMonth();
+  });
+  const v = parseFloat(String(row?.energyImportKWH?.value));
+  return Number.isFinite(v) ? v : 0;
+}
+
 export function formatRelative(d: string | Date): string {
   const da = typeof d === "string" ? new Date(d) : d;
-  const now = new Date();
-  const diffMs = now.getTime() - da.getTime();
-  const days = Math.floor(diffMs / 86_400_000);
-  if (days < 1) {
-    const hrs = Math.floor(diffMs / 3_600_000);
-    if (hrs < 1) return "just now";
-    return `${hrs} h ago`;
-  }
+  const mins = Math.floor((Date.now() - da.getTime()) / 60_000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins} min ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs} h ago`;
+  const days = Math.floor(hrs / 24);
   if (days === 1) return "yesterday";
   if (days < 30) return `${days} d ago`;
   const months = Math.floor(days / 30);
-  return `${months} mo ago`;
+  return months === 1 ? "a month ago" : `${months} mo ago`;
 }
