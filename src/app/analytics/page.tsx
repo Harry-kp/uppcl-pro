@@ -20,12 +20,16 @@ import { chart } from "@/lib/chartColors";
 import { Info, TrendingUp, TrendingDown, Minus, PlugZap, Lightbulb, Leaf } from "lucide-react";
 
 const APPLIANCES = [
+  { code: "ac", label: "AC" },
   { code: "fridge", label: "Fridge" },
   { code: "geyser", label: "Geyser" },
   { code: "washing_machine", label: "Washing m/c" },
   { code: "nightbaseload", label: "Night load" },
+  { code: "tv", label: "TV" },
   { code: "others", label: "Others" },
 ] as const;
+// savingTip/getOne rejects "nightbaseload" ("Invalid appliance") — label-only for the breakdown.
+const TIP_APPLIANCES = APPLIANCES.filter((a) => a.code !== "nightbaseload");
 const APPLIANCE_KEYS = ["ac", "fridge", "geyser", "washing_machine", "nightbaseload", "others"] as const;
 
 export default function AnalyticsPage() {
@@ -330,9 +334,10 @@ export default function AnalyticsPage() {
             </p>
           )}
           <div className="mt-4 flex flex-wrap gap-2">
-            {APPLIANCES.map((a) => (
+            {TIP_APPLIANCES.map((a) => (
               <button
                 key={a.code}
+                aria-pressed={tipAppliance === a.code}
                 onClick={() => setTipAppliance(a.code)}
                 className={cn(
                   "rounded-full px-3 py-1.5 text-[11px] font-medium transition",
