@@ -44,6 +44,23 @@ export function billingPeriod(billDt: string | Date): { label: string; from: Dat
   return { label, from, to };
 }
 
+/** ₹/kWh used when no billed month can be matched (≈ UP LMV-1 151–300 slab). */
+export const FALLBACK_RATE = 6.5;
+
+type MonthlyRow = { energyImportKWH?: { measureTime?: string | number | null; value?: unknown } | null };
+
+/** kWh of the month a bill covers — the month *before* its bill date (see billingPeriod). 0 if absent. */
+export function billedMonthKwh(monthly: MonthlyRow[], billDt: string | Date): number {
+  const { from } = billingPeriod(billDt);
+  const row = monthly.find((r) => {
+    const t = r.energyImportKWH?.measureTime;
+    const d = t ? new Date(String(t)) : null;
+    return d !== null && d.getFullYear() === from.getFullYear() && d.getMonth() === from.getMonth();
+  });
+  const v = parseFloat(String(row?.energyImportKWH?.value));
+  return Number.isFinite(v) ? v : 0;
+}
+
 export function formatRelative(d: string | Date): string {
   const da = typeof d === "string" ? new Date(d) : d;
   const mins = Math.floor((Date.now() - da.getTime()) / 60_000);

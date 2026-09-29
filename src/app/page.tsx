@@ -25,7 +25,7 @@ import { SidePanel } from "@/components/ui/SidePanel";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { useToast } from "@/components/ui/Toast";
 import { mean, stddev, toNum } from "@/lib/stats";
-import { rupees, kwh, daysBetween, formatRelative, billingPeriod } from "@/lib/utils";
+import { rupees, kwh, daysBetween, formatRelative, billingPeriod, billedMonthKwh, FALLBACK_RATE } from "@/lib/utils";
 import {
   History,
   FileText,
@@ -488,7 +488,7 @@ function PrepaidHome({ dashboard: data }: { dashboard: DashboardResponse }) {
 // ── Postpaid home (amount due + bill cycle + projection) ───────────────────────
 function PostpaidHome({ dashboard: data }: { dashboard: DashboardResponse }) {
   const { data: outstanding } = useOutstanding();
-  const { data: invoiceResp } = useLatestInvoice();
+  const { data: invoiceResp, isLoading: invoiceLoading } = useLatestInvoice();
   const { data: statsResp } = useUsageStats();
   const { data: yearly } = useYearlyHistory();
   const { data: wssConsumer } = useWssConsumer();
@@ -535,31 +535,23 @@ function PostpaidHome({ dashboard: data }: { dashboard: DashboardResponse }) {
     const billDt = inv?.bill_dt ? new Date(inv.bill_dt) : null;
     const dueDt = inv?.due_dt ? new Date(inv.due_dt) : null;
     const daysToDue = dueDt ? daysBetween(today, dueDt) : null;
-    const daysSinceBill = billDt ? daysBetween(billDt, today) : null;
-    const cycleLen = 30;
-    const cycleProgress = daysSinceBill !== null ? Math.min(Math.max(daysSinceBill, 0) / cycleLen, 1) : 0;
+    // The unbilled cycle is the current calendar month (a bill covers the previous month — see billingPeriod).
+    const cycleStart = new Date(today.getFullYear(), today.getMonth(), 1);
+    const cycleLen = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+    const cycleProgress = Math.min(today.getDate() / cycleLen, 1);
 
-    // kWh consumed this cycle (since the last bill date).
-    const cycleKwh = billDt
-      ? dailyRows
-          .filter((r) => new Date(r.energyImportKWH?.measureTime ?? "") >= billDt)
-          .reduce((s, r) => s + toNum(r.energyImportKWH?.value), 0)
-      : data.consumption_30d.kwh;
+    // kWh consumed this cycle (since the 1st of the month).
+    const cycleKwh = dailyRows
+      .filter((r) => new Date(r.energyImportKWH?.measureTime ?? "") >= cycleStart)
+      .reduce((s, r) => s + toNum(r.energyImportKWH?.value), 0);
 
     // Effective ₹/kWh: last bill amount ÷ that month's kWh (from yearly monthly rollups).
     const lastBillAmt = Math.abs(toNum(inv?.bill_amt));
     const monthlyRows = yearly?.data ?? [];
-    let billMonthKwh = 0;
-    if (billDt) {
-      const m = monthlyRows.find((r) => {
-        const t = r.energyImportKWH?.measureTime;
-        return t && new Date(t).getMonth() === billDt.getMonth();
-      });
-      billMonthKwh = toNum(m?.energyImportKWH?.value);
-    }
+    const billMonthKwh = billDt ? billedMonthKwh(monthlyRows, billDt) : 0;
     const effectiveRate = billMonthKwh > 0 && lastBillAmt > 0
       ? lastBillAmt / billMonthKwh
-      : (data.consumption_30d.effective_rate || 7.5);
+      : (data.consumption_30d.effective_rate || FALLBACK_RATE);
 
     const projectedKwh = avgDailyKwh * cycleLen;
     const projectedBill = projectedKwh * effectiveRate;
@@ -598,7 +590,10 @@ function PostpaidHome({ dashboard: data }: { dashboard: DashboardResponse }) {
   const addr = wssConsumer?.ConsumerDetails?.currentAddress ?? "";
   const schemeMatch = addr.match(/\$(True|False)[^,]*?[Ee]ligible [Ff]or ([^,]+)/);
   const schemeName = schemeMatch && schemeMatch[1].toLowerCase() === "true" ? schemeMatch[2].trim() : null;
-  const dueDate = inv?.due_dt ? new Date(inv.due_dt).toLocaleDateString("en-IN", { day: "numeric", month: "short" }) : null;
+  // Paid → the next bill is generated about a month after the last one.
+  const nextBillDate = inv?.bill_dt
+    ? (() => { const d = new Date(inv.bill_dt); d.setMonth(d.getMonth() + 1); return d.toLocaleDateString("en-IN", { day: "numeric", month: "short" }); })()
+    : null;
 
   // The strip carries ONLY things that need attention or action — not echoes of
   // the hero/ring. When nothing needs action, a single calm "all good" chip.
@@ -631,7 +626,7 @@ function PostpaidHome({ dashboard: data }: { dashboard: DashboardResponse }) {
   if (insights.length === 0) {
     insights.push({ id: "ok", tone: "good", icon: <Check className="h-3 w-3" />,
       title: <>Paid up and on track</>,
-      detail: dueDate ? <>next bill due {dueDate}</> : <>nothing needs your attention</> });
+      detail: nextBillDate ? <>next bill around {nextBillDate}</> : <>nothing needs your attention</> });
   }
 
   return (
@@ -692,7 +687,7 @@ function PostpaidHome({ dashboard: data }: { dashboard: DashboardResponse }) {
           onClick={() => setPanel("projection")}
           className="flex flex-col items-center justify-center rounded-xl bg-surface-container-low p-5 text-center transition-colors hover:bg-surface-container sm:p-6"
         >
-          <BillCycleRing projectedInr={projectedBill} daysToDue={daysToDue} cycleProgress={cycleProgress} vsLastPct={lastBillAmt > 0 ? projVsLast : null} />
+          <BillCycleRing projectedInr={projectedBill} daysToDue={billPaid ? null : daysToDue} cycleProgress={cycleProgress} vsLastPct={lastBillAmt > 0 ? projVsLast : null} />
           <div className="mt-4 text-[12px] text-on-surface-variant/80 sm:text-[11px]">
             {Math.round(cycleProgress * 100)}% through this billing cycle
           </div>
@@ -764,7 +759,7 @@ function PostpaidHome({ dashboard: data }: { dashboard: DashboardResponse }) {
                   {" "}— get the PDF or pay below
                 </>
               ) : (
-                <>No monthly bill is available yet for this connection.</>
+                <>{invoiceLoading ? "Loading your latest bill…" : "No monthly bill is available yet for this connection."}</>
               )}
             </div>
           </div>

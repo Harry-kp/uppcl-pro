@@ -17,7 +17,7 @@ import { SlabBar, UP_DOMESTIC_SLABS } from "@/components/viz/SlabBar";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { useToast } from "@/components/ui/Toast";
 import { toNum } from "@/lib/stats";
-import { rupees, kwh, billingPeriod } from "@/lib/utils";
+import { rupees, kwh, billingPeriod, billedMonthKwh, FALLBACK_RATE } from "@/lib/utils";
 import { Receipt, ArrowUpRight, Download, Info, CalendarDays } from "lucide-react";
 
 /** Postpaid money hub: monthly invoices + official PDF download, tariff/slab,
@@ -63,24 +63,27 @@ export function BillsPostpaid() {
       t: String(r.energyImportKWH?.measureTime ?? ""),
       kwhVal: toNum(r.energyImportKWH?.value),
     }));
-    const thisMonthKwh = monthly.at(-1)?.kwhVal ?? dashboard?.consumption_30d.kwh ?? 0;
+    // Latest complete month in the rollup (the current month appears only once it closes).
+    const lastMonthKwh = monthly.at(-1)?.kwhVal ?? dashboard?.consumption_30d.kwh ?? 0;
+    const lastMonthLabel = monthly.at(-1)?.t
+      ? new Date(monthly.at(-1)!.t).toLocaleDateString("en-IN", { month: "long" })
+      : "the last 30 days";
     const avgDailyKwh = dashboard?.consumption_30d.avg_daily_kwh ?? 0;
 
     const lastInvoice = invoices.find((b) => Math.abs(toNum(b.bill_amt)) > 0);
     let effectiveRate = dashboard?.consumption_30d.effective_rate || 0;
     if (lastInvoice) {
-      const m = monthly.find((r) => r.t && new Date(r.t).getMonth() === new Date(lastInvoice.bill_dt).getMonth());
-      const billKwh = toNum(m?.kwhVal);
+      const billKwh = billedMonthKwh(yearly?.data ?? [], lastInvoice.bill_dt);
       if (billKwh > 0) effectiveRate = Math.abs(toNum(lastInvoice.bill_amt)) / billKwh;
     }
-    if (!effectiveRate || !Number.isFinite(effectiveRate)) effectiveRate = 6.5;
+    if (!effectiveRate || !Number.isFinite(effectiveRate)) effectiveRate = FALLBACK_RATE;
 
     const projectedKwh = avgDailyKwh * 30;
     const projectedBill = projectedKwh * effectiveRate;
-    return { thisMonthKwh, avgDailyKwh, effectiveRate, projectedKwh, projectedBill };
+    return { lastMonthKwh, lastMonthLabel, avgDailyKwh, effectiveRate, projectedKwh, projectedBill };
   }, [yearly, dashboard, invoices]);
 
-  const { thisMonthKwh, avgDailyKwh, effectiveRate, projectedKwh, projectedBill } = derived;
+  const { lastMonthKwh, lastMonthLabel, avgDailyKwh, effectiveRate, projectedKwh, projectedBill } = derived;
 
   // Daily ledger — the granular per-day view postpaid lost, rebuilt from meter
   // telemetry. Surfaces fields UPPCL never shows: apparent energy (kVAh) and a
@@ -172,9 +175,9 @@ export function BillsPostpaid() {
                 Tariff slab position
                 {tariffCategory && <span className="ml-2 rounded-full bg-surface-container-high px-2 py-0.5 font-mono text-[10px] text-primary-fixed-dim">{tariffCategory}</span>}
               </span>
-              <span className="font-mono">{kwh(thisMonthKwh, 0)} units this month</span>
+              <span className="font-mono">{kwh(lastMonthKwh, 0)} units in {lastMonthLabel}</span>
             </div>
-            <SlabBar units={thisMonthKwh} slabs={UP_DOMESTIC_SLABS} />
+            <SlabBar units={lastMonthKwh} slabs={UP_DOMESTIC_SLABS} />
             <div className="text-[10px] text-on-surface-variant/70">
               {tariffCategory
                 ? <>Official tariff category <span className="text-on-surface">{tariffCategory}</span> (UP domestic). Slab rates are indicative; your effective ₹/kWh above is derived from your actual bills.</>
