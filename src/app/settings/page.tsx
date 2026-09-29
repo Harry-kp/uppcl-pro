@@ -94,10 +94,10 @@ export default function SettingsPage() {
             Primary connection
           </div>
           <div className="mt-4 space-y-3 font-mono text-[13px]">
-            <Row k="connectionId"        v={s?.connectionId ?? "—"} />
-            <Row k="deviceId (meter)"    v={s?.deviceId ?? "—"} />
+            <Row k="connection id"       v={s?.connectionId ?? "—"} />
+            <Row k="meter serial"        v={s?.deviceId ?? "—"} />
             <Row k="installation #"      v={s?.meterInstallationNumber ?? "—"} />
-            <Row k="discom"              v={s?.tenantId ?? "—"} />
+            <Row k="discom"              v={s?.tenantId?.toUpperCase() ?? "—"} />
             <Row k="meter phase"         v={s?.meterPhase ?? "—"} />
             <Row k="meter type"          v={s?.meterType ?? "—"} />
             <Row k="sanctioned load"     v={s?.sanctionedLoad ? `${s.sanctionedLoad} kW` : "—"} />
@@ -119,8 +119,7 @@ export default function SettingsPage() {
             } />
           </div>
           <p className="mt-4 text-[10px] text-on-surface-variant/70">
-            Connection IDs from <code>/site/search</code>; billing office &amp; scheme from the official
-            UPPCL <code>getConsumerDetails</code>{" "}profile. Nothing hardcoded.
+            Straight from your UPPCL account and the official consumer profile — nothing is hard-coded.
           </p>
         </section>
 
