@@ -204,14 +204,14 @@ export default function AnalyticsPage() {
         <div className="mb-3 flex items-center justify-between">
           <div>
             <div className="text-[10px] uppercase tracking-[0.24em] text-on-surface-variant">
-              Daily kWh — crosshair scrub
+              Every day on record
             </div>
             <p className="mt-1 text-[11px] text-on-surface-variant">
-              {dailyPoints.length} days plotted · dashed line = mean · hover for delta-from-mean
+              {dailyPoints.length} days · dashed line = your average · hover a day to compare
             </p>
           </div>
           <span className="font-mono text-[11px] text-on-surface-variant">
-            mean {avg.toFixed(2)} kWh · σ {sd.toFixed(2)}
+            avg {avg.toFixed(2)} kWh · ±{sd.toFixed(2)} typical swing
           </span>
         </div>
         {dailyPoints.length >= 2 ? (
@@ -238,7 +238,7 @@ export default function AnalyticsPage() {
             <div className="text-[10px] uppercase tracking-[0.24em] text-on-surface-variant">
               Annual profile
             </div>
-            <div className="font-mono text-[10px] text-on-surface-variant/70">monthly · groupBy:year</div>
+            <div className="font-mono text-[10px] text-on-surface-variant/70">monthly totals</div>
           </div>
           {monthly.length ? (
             <div className="flex gap-1.5" style={{ height: 180 }}>
