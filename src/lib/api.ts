@@ -977,16 +977,6 @@ export const useWssArrears = () =>
 
 /* ── Complaint hooks (same signatures, different backend route) ── */
 
-export interface ComplaintSummary {
-  data_id: string;
-  complaint_no: string;
-  type: string;
-  sub_type: string;
-  mobile_no: string;
-  status: string;
-  is_open: boolean;
-}
-
 export interface ComplaintDetail {
   data_id: string;
   complaint_no: string;
@@ -1018,26 +1008,9 @@ export interface ComplaintDetail {
   raw_fields: Record<string, string>;
 }
 
-export const useComplaintList = (phone: string | null) =>
-  useSWR<{ phone: string; complaints: ComplaintSummary[] }>(
-    phone ? `/complaints?phone=${phone}` : null,
-    fetcher,
-    { ...swrOpts, revalidateOnFocus: true }
-  );
-
 export const useMyComplaints = (phone: string | null | undefined) =>
   useSWR<{ phone: string; complaints: ComplaintDetail[] }>(
     phone ? `/complaints?action=my&phone=${phone}` : null,
     fetcher,
     { ...swrOpts, revalidateOnFocus: true }
   );
-
-export const useComplaintDetail = (dataId: string | null) =>
-  useSWR<ComplaintDetail>(
-    dataId ? `/complaints?action=detail&data_id=${dataId}` : null,
-    fetcher,
-    swrOpts
-  );
-
-// Re-export API_BASE for backward compat (LoginGate uses it for display)
-export const API_BASE = typeof window !== "undefined" ? window.location.origin : "";
