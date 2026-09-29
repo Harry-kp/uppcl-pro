@@ -76,7 +76,8 @@ function humanizeError(status: number, raw: string): string {
   if (lower.includes("tenant id is missing")) return "Could not load your data. Try signing out and back in.";
   if (lower.includes("missing login params")) return "Login failed. Please check your credentials.";
   if (lower.includes("wrong captcha")) return "Verification failed. Please try again.";
-  if (lower.includes("invalid credentials") || lower.includes("invalid username")) return "Invalid username or password.";
+  // UPPCL says "Incorrect Username or Password." (HTTP 409) on a bad login.
+  if (/(invalid|incorrect) (credentials|username|password)/.test(lower)) return "Invalid username or password.";
   if (lower.includes("network") || lower.includes("fetch failed")) return "Network error — check your internet connection.";
   if (lower.includes("timeout")) return "Request timed out. UPPCL servers may be slow — try again.";
   if (status === 502 || status === 503 || status === 504) return "UPPCL servers are temporarily unavailable. Try again in a few minutes.";
