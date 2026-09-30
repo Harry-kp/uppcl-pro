@@ -2,6 +2,7 @@ import { THEME_INIT_SCRIPT } from "@/lib/theme";
 import type { Metadata, Viewport } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import { Shell } from "@/components/Shell";
+import { MovedBanner } from "@/components/MovedBanner";
 import { I18nProvider } from "@/components/I18nProvider";
 import "./globals.css";
 
@@ -73,6 +74,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="antialiased">
         <I18nProvider>
+          <MovedBanner />
           <Shell>{children}</Shell>
         </I18nProvider>
       </body>
