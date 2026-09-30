@@ -1,3 +1,7 @@
+> [!IMPORTANT]
+> **UPPCL Pro is now an Android app → [Harry-kp/uppcl-pro-app](https://github.com/Harry-kp/uppcl-pro-app)** (in-app bill payment, one-tap no-power complaints, Hindi, widget).
+> This web version is **discontinued** and no longer receives updates. Its API routes stay online because the app uses them (`/api/complaints`).
+
 <div align="center">
 
 # UPPCL Pro
